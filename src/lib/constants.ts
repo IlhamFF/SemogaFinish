@@ -1,5 +1,6 @@
+
 import type { Role } from '@/types';
-import { LayoutDashboard, Users, BarChart3, Bell, Settings, UserPlus, LogOut, ShieldCheck, VerifiedIcon } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, Settings, LogOut, BookOpenText } from 'lucide-react'; // Tambahkan Settings
 
 export const APP_NAME = 'EduCentral';
 
@@ -16,14 +17,16 @@ export const ROUTES = {
   LOGIN: '/login',
   REGISTER: '/register',
   VERIFY_EMAIL: '/verify-email',
+  FORGOT_PASSWORD: '/forgot-password', // Nama sebelumnya LUPA_KATA_SANDI
+  RESET_PASSWORD: '/reset-password', // Nama sebelumnya RESET_KATA_SANDI
   ADMIN_DASHBOARD: '/admin/dashboard',
   ADMIN_USERS: '/admin/users',
   GURU_DASHBOARD: '/guru/dashboard',
   SISWA_DASHBOARD: '/siswa/dashboard',
   PIMPINAN_DASHBOARD: '/pimpinan/dashboard',
   DATA_VISUALIZATION: '/data-visualization',
-  NOTIFICATIONS: '/notifications', // Placeholder for a dedicated notifications page
-  SETTINGS: '/settings', // Placeholder
+  NOTIFICATIONS: '/notifications', 
+  SETTINGS: '/settings', 
 };
 
 export const NAV_LINKS_CONFIG = [
@@ -34,14 +37,12 @@ export const NAV_LINKS_CONFIG = [
   
   { href: ROUTES.ADMIN_USERS, label: 'Manajemen Pengguna', icon: Users, roles: ['admin', 'superadmin'] as Role[] },
   { href: ROUTES.DATA_VISUALIZATION, label: 'Visualisasi Data', icon: BarChart3, roles: ['admin', 'guru', 'siswa', 'pimpinan', 'superadmin'] as Role[] },
-  // { href: ROUTES.NOTIFICATIONS, label: 'Notifikasi', icon: Bell, roles: ['admin', 'guru', 'siswa', 'pimpinan', 'superadmin'] as Role[] },
-  // { href: ROUTES.SETTINGS, label: 'Pengaturan', icon: Settings, roles: ['admin', 'guru', 'siswa', 'pimpinan', 'superadmin'] as Role[] },
 ];
 
 export const USER_NAV_ITEMS = [
-    // { href: ROUTES.SETTINGS, label: 'Pengaturan', icon: Settings },
+    { href: ROUTES.SETTINGS, label: 'Pengaturan Profil', icon: Settings }, // Diaktifkan dan label disesuaikan
     { href: ROUTES.LOGIN, label: 'Keluar', icon: LogOut, action: 'logout' },
 ];
 
-export const DEFAULT_USERS_STORAGE_KEY = 'educentral_users';
-export const AUTH_USER_STORAGE_KEY = 'educentral_auth_user';
+export const DEFAULT_USERS_STORAGE_KEY = 'educentral_users_mock';
+export const AUTH_USER_STORAGE_KEY = 'educentral_auth_user_mock';
