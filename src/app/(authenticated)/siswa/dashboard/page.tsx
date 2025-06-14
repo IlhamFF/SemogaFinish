@@ -2,15 +2,17 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Book, CheckSquare, CalendarClock, Award } from "lucide-react";
+import { Book, CheckSquare, CalendarClock, Award, CalendarDays, ClipboardCheck, BookOpen as BookOpenIcon, FileText as FileTextIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Progress } from "@/components/ui/progress";
+import Link from "next/link";
+import { ROUTES } from "@/lib/constants";
 
 const siswaStats = [
-  { title: "Kursus Terdaftar", value: "4", icon: Book, color: "text-primary" },
-  { title: "Tugas Harus Dikumpulkan", value: "2", icon: CalendarClock, color: "text-red-500" },
-  { title: "Tugas Selesai", value: "15", icon: CheckSquare, color: "text-green-500" },
-  { title: "Kemajuan Keseluruhan", value: "75%", icon: Award, color: "text-yellow-500", isProgress: true, progressValue: 75 },
+  { title: "Kursus & Jadwal", value: "Lihat Detail", icon: CalendarDays, color: "text-primary", href: ROUTES.SISWA_JADWAL },
+  { title: "Tugas Saya", value: "2 Harus Dikumpulkan", icon: ClipboardCheck, color: "text-red-500", href: ROUTES.SISWA_TUGAS },
+  { title: "Materi Pelajaran", value: "Akses Materi", icon: BookOpenIcon, color: "text-green-500", href: ROUTES.SISWA_MATERI },
+  { title: "Test, Nilai & Rapor", value: "Cek Kemajuan", icon: Award, color: "text-yellow-500", href: ROUTES.SISWA_NILAI, isProgress: false, progressValue: 75 }, // Changed from progress to direct link
 ];
 
 export default function SiswaDashboardPage() {
@@ -21,30 +23,48 @@ export default function SiswaDashboardPage() {
   }
   
   if (!user.isVerified) {
-     return <p>Silakan verifikasi email Anda untuk mengakses dasbor.</p>;
+     return (
+        <div className="flex flex-col items-center justify-center h-full text-center p-6">
+            <Card className="w-full max-w-md shadow-lg">
+                <CardHeader>
+                    <CardTitle className="text-2xl text-primary">Verifikasi Email Diperlukan</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground mb-4">
+                        Akun Anda belum diverifikasi. Silakan periksa email Anda untuk tautan verifikasi atau hubungi administrator.
+                    </p>
+                    <Link href={ROUTES.VERIFY_EMAIL}>
+                        <Button>Ke Halaman Verifikasi</Button>
+                    </Link>
+                </CardContent>
+            </Card>
+        </div>
+     );
   }
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-headline font-semibold">Dasbor Siswa</h1>
-      <p className="text-muted-foreground">Selamat datang, {user.name || user.email}! Lacak kursus, tugas, dan kemajuan Anda.</p>
+      <p className="text-muted-foreground">Selamat datang, {user.fullName || user.name || user.email}! Lacak kursus, tugas, dan kemajuan Anda.</p>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {siswaStats.map((card) => (
-          <Card key={card.title} className="shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-              <card.icon className={`h-5 w-5 ${card.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
-              {card.isProgress && card.progressValue !== undefined ? (
-                <Progress value={card.progressValue} className="h-2 mt-2" indicatorClassName={card.color.replace('text-','bg-')} />
-              ) : (
-                <p className="text-xs text-muted-foreground">Lihat detail &rarr;</p>
-              )}
-            </CardContent>
-          </Card>
+          <Link href={card.href || "#"} key={card.title} passHref>
+            <Card className="shadow-lg hover:shadow-xl transition-shadow h-full flex flex-col">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                <card.icon className={`h-5 w-5 ${card.color}`} />
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <div className="text-2xl font-bold">{card.value}</div>
+                {card.isProgress && card.progressValue !== undefined ? (
+                  <Progress value={card.progressValue} className="h-2 mt-2" />
+                ) : (
+                  <p className="text-xs text-muted-foreground">Lihat detail &rarr;</p>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
@@ -52,7 +72,7 @@ export default function SiswaDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Tenggat Waktu Mendatang</CardTitle>
-            <CardDescription>Tugas dan pekerjaan yang harus segera dikumpulkan.</CardDescription>
+            <CardDescription>Tugas dan ujian yang harus segera dikerjakan.</CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="space-y-3">
@@ -61,35 +81,36 @@ export default function SiswaDashboardPage() {
                   <h4 className="font-semibold text-primary">Matematika - Kuis Bab 5</h4>
                   <p className="text-xs text-muted-foreground">Batas Waktu: Besok, 23:59</p>
                 </div>
-                <span className="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-600">Prioritas Tinggi</span>
+                <Link href={ROUTES.SISWA_TEST} className="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-600 hover:bg-red-200">
+                  Kerjakan
+                </Link>
               </li>
               <li className="flex items-center justify-between p-3 rounded-md bg-secondary/20 border border-secondary/40">
                  <div>
                   <h4 className="font-semibold">Fisika - Pengumpulan Laporan Lab</h4>
                   <p className="text-xs text-muted-foreground">Batas Waktu: Dalam 3 hari</p>
                 </div>
+                 <Link href={ROUTES.SISWA_TUGAS} className="text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
+                  Upload
+                </Link>
               </li>
             </ul>
           </CardContent>
         </Card>
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Nilai Saya</CardTitle>
-            <CardDescription>Nilai dan umpan balik terkini.</CardDescription>
+            <CardTitle>Pengumuman Terbaru</CardTitle>
+            <CardDescription>Informasi penting dari sekolah atau guru.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                    <span>Matematika - Tugas 4</span>
-                    <span className="font-semibold text-green-600">A (92%)</span>
+                <div className="p-3 rounded-md bg-accent/10 border border-accent/30">
+                    <h4 className="font-semibold text-accent-foreground">Jadwal Ujian Akhir Semester</h4>
+                    <p className="text-xs text-muted-foreground mt-1">Jadwal UAS telah dirilis. Silakan cek di bagian Test & Ujian.</p>
                 </div>
-                <div className="flex justify-between items-center">
-                    <span>Sastra Inggris - Esai</span>
-                    <span className="font-semibold text-yellow-600">B+ (88%)</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <span>Sejarah - Ujian Tengah Semester</span>
-                    <span className="font-semibold text-primary">A- (90%)</span>
+                 <div className="p-3 rounded-md bg-muted/50 border">
+                    <h4 className="font-semibold">Libur Nasional</h4>
+                    <p className="text-xs text-muted-foreground mt-1">Kegiatan belajar mengajar diliburkan pada tanggal 17 Agustus.</p>
                 </div>
             </div>
           </CardContent>
@@ -98,3 +119,4 @@ export default function SiswaDashboardPage() {
     </div>
   );
 }
+

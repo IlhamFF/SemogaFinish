@@ -1,6 +1,6 @@
 
 import type { Role } from '@/types';
-import { LayoutDashboard, Users, BarChart3, Settings, LogOut, BookOpenText, BookOpenCheck, CalendarDays, ClipboardList, Presentation, FilePlus2, UserCheck, UploadCloud, ScrollText, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, Settings, LogOut, BookOpenText, BookOpenCheck, CalendarDays, ClipboardList, Presentation, FilePlus2, UserCheck, UploadCloud, ScrollText, GraduationCap, ClipboardCheck, BookOpen, FileText, Award, CalendarClock, CheckSquare } from 'lucide-react';
 
 export const APP_NAME = 'EduCentral';
 
@@ -35,6 +35,12 @@ export const ROUTES = {
   GURU_PENILAIAN: '/guru/penilaian',
 
   SISWA_DASHBOARD: '/siswa/dashboard',
+  SISWA_JADWAL: '/siswa/jadwal',
+  SISWA_TUGAS: '/siswa/tugas',
+  SISWA_MATERI: '/siswa/materi',
+  SISWA_TEST: '/siswa/test',
+  SISWA_NILAI: '/siswa/nilai',
+
   PIMPINAN_DASHBOARD: '/pimpinan/dashboard',
   
   DATA_VISUALIZATION: '/data-visualization',
@@ -61,6 +67,13 @@ export const NAV_LINKS_CONFIG = [
   { href: ROUTES.GURU_MATERI, label: 'Upload Materi', icon: UploadCloud, roles: ['guru', 'superadmin'] as Role[] },
   { href: ROUTES.GURU_TEST, label: 'Manajemen Test', icon: ScrollText, roles: ['guru', 'superadmin'] as Role[] },
   { href: ROUTES.GURU_PENILAIAN, label: 'Penilaian Siswa', icon: GraduationCap, roles: ['guru', 'superadmin'] as Role[] },
+
+  // Siswa Links
+  { href: ROUTES.SISWA_JADWAL, label: 'Jadwal Pelajaran', icon: CalendarDays, roles: ['siswa', 'superadmin'] as Role[] },
+  { href: ROUTES.SISWA_TUGAS, label: 'Tugas Saya', icon: ClipboardCheck, roles: ['siswa', 'superadmin'] as Role[] },
+  { href: ROUTES.SISWA_MATERI, label: 'Materi Pelajaran', icon: BookOpen, roles: ['siswa', 'superadmin'] as Role[] },
+  { href: ROUTES.SISWA_TEST, label: 'Test & Ujian', icon: FileText, roles: ['siswa', 'superadmin'] as Role[] },
+  { href: ROUTES.SISWA_NILAI, label: 'Nilai & Rapor', icon: Award, roles: ['siswa', 'superadmin'] as Role[] },
   
   // Common Links
   { href: ROUTES.DATA_VISUALIZATION, label: 'Visualisasi Data', icon: BarChart3, roles: ['admin', 'guru', 'siswa', 'pimpinan', 'superadmin'] as Role[] },
@@ -73,3 +86,4 @@ export const USER_NAV_ITEMS = [
 
 export const DEFAULT_USERS_STORAGE_KEY = 'educentral_users_mock';
 export const AUTH_USER_STORAGE_KEY = 'educentral_auth_user_mock';
+
