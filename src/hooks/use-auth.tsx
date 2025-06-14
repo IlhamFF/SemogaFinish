@@ -58,6 +58,7 @@ interface AuthContextType {
   updateUserProfile: (userId: string, profileData: Partial<User>) => Promise<boolean>;
   requestPasswordReset: (email: string) => Promise<boolean>;
   resetPassword: (email: string, newPassword: string) => Promise<boolean>;
+  changePassword: (userId: string, currentPasswordAttempt: string, newPassword: string) => Promise<boolean>;
   isLoading: boolean;
 }
 
@@ -65,7 +66,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [users, setUsersState] = useState<User[]>([]); // Renamed to avoid conflict
+  const [users, setUsersState] = useState<User[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -79,7 +80,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const persistUsers = useCallback((updatedUsers: User[]) => {
-    setUsersState(updatedUsers); // Update local state
+    setUsersState(updatedUsers); 
     if (typeof window !== 'undefined') {
       localStorage.setItem(DEFAULT_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
     }
@@ -98,7 +99,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const loadedUsers = getStoredUsers();
-    // Ensure all initialUsers have default avatar if missing
     const usersWithDefaults = loadedUsers.map(u => ({
         ...u,
         avatarUrl: u.avatarUrl || `https://placehold.co/100x100.png?text=${(u.fullName || u.name || u.email).substring(0,2).toUpperCase()}`
@@ -109,7 +109,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const storedAuthUser = localStorage.getItem(AUTH_USER_STORAGE_KEY);
       if (storedAuthUser) {
         const parsedUser = JSON.parse(storedAuthUser);
-        // Ensure loaded auth user also has default avatar if missing
         parsedUser.avatarUrl = parsedUser.avatarUrl || `https://placehold.co/100x100.png?text=${(parsedUser.fullName || parsedUser.name || parsedUser.email).substring(0,2).toUpperCase()}`;
         persistAuthUser(parsedUser);
       }
@@ -164,7 +163,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isVerified: false,
       name: defaultName,
       fullName: defaultName, 
-      joinDate: new Date().toISOString().split('T')[0], // Today's date
+      joinDate: new Date().toISOString().split('T')[0],
       avatarUrl: `https://placehold.co/100x100.png?text=${defaultName.substring(0,2).toUpperCase()}`,
     };
     mockPasswords[email] = passwordAttempt;
@@ -193,7 +192,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
     persistUsers(updatedUsers);
 
-    const currentUser = user; // capture current user state
+    const currentUser = user;
     if (currentUser && currentUser.id === targetUserId) {
       const updatedCurrentUser = { ...currentUser, isVerified: true };
       persistAuthUser(updatedCurrentUser);
@@ -229,14 +228,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       fullName: defaultFullName,
       phone: userData.phone,
       address: userData.address,
-      birthDate: userData.birthDate, // YYYY-MM-DD
+      birthDate: userData.birthDate,
       bio: userData.bio,
       nis: userData.role === 'siswa' ? userData.nis : undefined,
       nip: userData.role !== 'siswa' ? userData.nip : undefined,
       joinDate: userData.joinDate || new Date().toISOString().split('T')[0],
       avatarUrl: userData.avatarUrl || `https://placehold.co/100x100.png?text=${defaultFullName.substring(0,2).toUpperCase()}`,
     };
-    mockPasswords[userData.email] = userData.password || 'password'; // Default password if not provided
+    mockPasswords[userData.email] = userData.password || 'password';
     
     const updatedUsers = [...currentUsers, newUser];
     persistUsers(updatedUsers);
@@ -250,7 +249,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       u.id === userId ? { ...u, role: newRole } : u
     );
     persistUsers(updatedUsers);
-    const currentUser = user; // capture current user state
+    const currentUser = user;
     if (currentUser && currentUser.id === userId) {
       persistAuthUser({ ...currentUser, role: newRole });
     }
@@ -258,7 +257,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const deleteUser = (userId: string) => {
-    const currentUser = user; // capture current user state
+    const currentUser = user;
     if (currentUser && currentUser.id === userId) {
         toast({ title: "Tindakan Ditolak", description: "Tidak dapat menghapus pengguna yang sedang login.", variant: "destructive" });
         return;
@@ -283,7 +282,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (userUpdated) {
       persistUsers(updatedUsers);
-      const currentUser = user; // capture
+      const currentUser = user;
       if (currentUser && currentUser.id === userId) {
         persistAuthUser({ ...currentUser, ...profileData });
       }
@@ -303,7 +302,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const existingUser = currentUsers.find(u => u.email === email);
     if (existingUser) {
       toast({ title: "Permintaan Reset Terkirim", description: `Jika email ${email} terdaftar, instruksi reset akan dikirim (disimulasikan).` });
-      router.push(`${ROUTES.RESET_KATA_SANDI}?email=${encodeURIComponent(email)}`);
+      router.push(`${ROUTES.RESET_PASSWORD}?email=${encodeURIComponent(email)}`);
       setIsLoading(false);
       return true;
     }
@@ -329,6 +328,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return false;
   };
 
+  const changePassword = async (userId: string, currentPasswordAttempt: string, newPassword: string): Promise<boolean> => {
+    setIsLoading(true);
+    const userToChange = users.find(u => u.id === userId);
+
+    if (!userToChange) {
+      toast({ title: "Gagal Mengubah Kata Sandi", description: "Pengguna tidak ditemukan.", variant: "destructive" });
+      setIsLoading(false);
+      return false;
+    }
+
+    if (mockPasswords[userToChange.email] !== currentPasswordAttempt) {
+      toast({ title: "Gagal Mengubah Kata Sandi", description: "Kata sandi saat ini salah.", variant: "destructive" });
+      setIsLoading(false);
+      return false;
+    }
+
+    if (currentPasswordAttempt === newPassword) {
+      toast({ title: "Gagal Mengubah Kata Sandi", description: "Kata sandi baru tidak boleh sama dengan kata sandi saat ini.", variant: "destructive" });
+      setIsLoading(false);
+      return false;
+    }
+
+    mockPasswords[userToChange.email] = newPassword;
+    // Tidak perlu memperbarui 'users' atau 'user' state karena kata sandi tidak disimpan di sana.
+    // Jika menggunakan backend nyata, ini akan menjadi panggilan API.
+
+    toast({ title: "Kata Sandi Diubah", description: "Kata sandi Anda telah berhasil diperbarui." });
+    setIsLoading(false);
+    return true;
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -343,6 +373,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       updateUserProfile,
       requestPasswordReset,
       resetPassword,
+      changePassword,
       isLoading 
     }}>
       {children}
@@ -357,3 +388,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

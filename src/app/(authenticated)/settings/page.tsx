@@ -2,14 +2,14 @@
 "use client";
 
 import * as React from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
 import { CalendarIcon, Loader2 } from "lucide-react";
@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isValid } from 'date-fns';
-import { id as localeID } from 'date-fns/locale'; // Import locale Indonesia
+import { id as localeID } from 'date-fns/locale';
 import Image from "next/image";
 import { ROLES } from "@/lib/constants";
 
@@ -28,18 +28,37 @@ const profileFormSchema = z.object({
   birthDate: z.date().optional(),
   bio: z.string().max(300, { message: "Bio maksimal 300 karakter." }).optional(),
   avatarUrl: z.string().url({ message: "URL Avatar tidak valid." }).optional().or(z.literal('')),
-  // NIS dan NIP tidak diedit pengguna di sini, hanya ditampilkan
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-export default function SettingsPage() {
-  const { user, updateUserProfile, isLoading: authLoading } = useAuth();
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+const changePasswordFormSchema = z.object({
+  currentPassword: z.string().min(1, { message: "Kata sandi saat ini wajib diisi." }),
+  newPassword: z.string().min(6, { message: "Kata sandi baru minimal 6 karakter." }),
+  confirmNewPassword: z.string().min(6, { message: "Konfirmasi kata sandi baru minimal 6 karakter." }),
+}).refine((data) => data.newPassword === data.confirmNewPassword, {
+  message: "Kata sandi baru dan konfirmasi tidak cocok.",
+  path: ["confirmNewPassword"],
+});
 
-  const form = useForm<ProfileFormValues>({
+type ChangePasswordFormValues = z.infer<typeof changePasswordFormSchema>;
+
+export default function SettingsPage() {
+  const { user, updateUserProfile, changePassword, isLoading: authLoading } = useAuth();
+  const [isProfileSubmitting, setIsProfileSubmitting] = React.useState(false);
+  const [isPasswordSubmitting, setIsPasswordSubmitting] = React.useState(false);
+
+  const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
-    // Default values diisi di useEffect
+  });
+
+  const passwordForm = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordFormSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmNewPassword: "",
+    }
   });
 
   React.useEffect(() => {
@@ -52,7 +71,7 @@ export default function SettingsPage() {
         }
       }
       
-      form.reset({
+      profileForm.reset({
         fullName: user.fullName || user.name || "",
         phone: user.phone || "",
         address: user.address || "",
@@ -61,11 +80,11 @@ export default function SettingsPage() {
         avatarUrl: user.avatarUrl || "",
       });
     }
-  }, [user, form]);
+  }, [user, profileForm]);
 
-  async function onSubmit(data: ProfileFormValues) {
+  async function onProfileSubmit(data: ProfileFormValues) {
     if (!user) return;
-    setIsSubmitting(true);
+    setIsProfileSubmitting(true);
 
     const profileDataToUpdate = {
       ...data,
@@ -73,7 +92,18 @@ export default function SettingsPage() {
     };
 
     await updateUserProfile(user.id, profileDataToUpdate);
-    setIsSubmitting(false);
+    setIsProfileSubmitting(false);
+  }
+
+  async function onPasswordSubmit(data: ChangePasswordFormValues) {
+    if (!user) return;
+    setIsPasswordSubmitting(true);
+    
+    const success = await changePassword(user.id, data.currentPassword, data.newPassword);
+    if (success) {
+      passwordForm.reset(); // Reset form on success
+    }
+    setIsPasswordSubmitting(false);
   }
   
   const getInitials = (name?: string, email?: string) => {
@@ -100,11 +130,8 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-headline font-semibold">Pengaturan Profil</h1>
-      <p className="text-muted-foreground">
-        Kelola informasi profil Anda.
-      </p>
-
+      <h1 className="text-3xl font-headline font-semibold">Pengaturan</h1>
+      
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Informasi Akun</CardTitle>
@@ -144,11 +171,11 @@ export default function SettingsPage() {
           <CardDescription>Perbarui detail pribadi Anda di bawah ini.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <Form {...profileForm}>
+            <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
-                  control={form.control}
+                  control={profileForm.control}
                   name="fullName"
                   render={({ field }) => (
                     <FormItem>
@@ -161,7 +188,7 @@ export default function SettingsPage() {
                   )}
                 />
                 <FormField
-                  control={form.control}
+                  control={profileForm.control}
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
@@ -176,7 +203,7 @@ export default function SettingsPage() {
               </div>
 
               <FormField
-                control={form.control}
+                control={profileForm.control}
                 name="address"
                 render={({ field }) => (
                   <FormItem>
@@ -190,7 +217,7 @@ export default function SettingsPage() {
               />
               
               <FormField
-                control={form.control}
+                control={profileForm.control}
                 name="birthDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
@@ -235,7 +262,7 @@ export default function SettingsPage() {
               />
 
               <FormField
-                control={form.control}
+                control={profileForm.control}
                 name="bio"
                 render={({ field }) => (
                   <FormItem>
@@ -250,7 +277,7 @@ export default function SettingsPage() {
               />
               
               <FormField
-                control={form.control}
+                control={profileForm.control}
                 name="avatarUrl"
                 render={({ field }) => (
                   <FormItem>
@@ -264,9 +291,65 @@ export default function SettingsPage() {
                 )}
               />
 
-              <Button type="submit" disabled={isSubmitting || authLoading} className="w-full md:w-auto">
-                {(isSubmitting || authLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Simpan Perubahan
+              <Button type="submit" disabled={isProfileSubmitting || authLoading} className="w-full md:w-auto">
+                {(isProfileSubmitting || authLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Simpan Perubahan Profil
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle>Ubah Kata Sandi</CardTitle>
+          <CardDescription>Perbarui kata sandi akun Anda.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...passwordForm}>
+            <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6">
+              <FormField
+                control={passwordForm.control}
+                name="currentPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kata Sandi Saat Ini</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={passwordForm.control}
+                name="newPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kata Sandi Baru</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={passwordForm.control}
+                name="confirmNewPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={isPasswordSubmitting || authLoading} className="w-full md:w-auto">
+                {(isPasswordSubmitting || authLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Ubah Kata Sandi
               </Button>
             </form>
           </Form>
