@@ -70,17 +70,13 @@ const SidebarProvider = React.forwardRef<
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
     
-    // Read initial state from cookie, default to true if not found or SSR
     const getInitialOpenState = () => {
       if (typeof window !== 'undefined') {
         return document.cookie.includes(`${SIDEBAR_COOKIE_NAME}=true`);
       }
-      return true; // Default for SSR or if cookie not set
+      return true; 
     };
 
-
-    // This is the internal state of the sidebar.
-    // We use openProp and setOpenProp for control from outside the component.
     const [_open, _setOpen] = React.useState(getInitialOpenState());
     const open = openProp ?? _open
     const setOpen = React.useCallback(
@@ -92,7 +88,6 @@ const SidebarProvider = React.forwardRef<
           _setOpen(openState)
         }
 
-        // This sets the cookie to keep the sidebar state.
         if (typeof window !== 'undefined') {
           document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
         }
@@ -100,14 +95,12 @@ const SidebarProvider = React.forwardRef<
       [setOpenProp, open]
     )
 
-    // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
       return isMobile
         ? setOpenMobile((open) => !open)
         : setOpen((open) => !open)
     }, [isMobile, setOpen, setOpenMobile])
 
-    // Adds a keyboard shortcut to toggle the sidebar.
     React.useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
         if (
@@ -123,8 +116,6 @@ const SidebarProvider = React.forwardRef<
       return () => window.removeEventListener("keydown", handleKeyDown)
     }, [toggleSidebar])
 
-    // We add a state so that we can do data-state="expanded" or "collapsed".
-    // This makes it easier to style the sidebar with Tailwind classes.
     const state = open ? "expanded" : "collapsed"
 
     const contextValue = React.useMemo<SidebarContext>(
@@ -232,7 +223,6 @@ const Sidebar = React.forwardRef<
         data-variant={variant}
         data-side={side}
       >
-        {/* This is what handles the sidebar gap on desktop */}
         <div
           className={cn(
             "duration-200 relative h-svh w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
@@ -249,7 +239,6 @@ const Sidebar = React.forwardRef<
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
-            // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
@@ -472,7 +461,6 @@ const SidebarGroupAction = React.forwardRef<
       data-sidebar="group-action"
       className={cn(
         "absolute right-3 top-3.5 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-none ring-sidebar-ring transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
-        // Increases the hit area of the button on mobile.
         "after:absolute after:-inset-2 after:md:hidden",
         "group-data-[collapsible=icon]:hidden",
         className
@@ -511,15 +499,35 @@ SidebarMenu.displayName = "SidebarMenu"
 
 const SidebarMenuItem = React.forwardRef<
   HTMLLIElement,
-  React.ComponentProps<"li">
->(({ className, ...props }, ref) => (
-  <li
-    ref={ref}
-    data-sidebar="menu-item"
-    className={cn("group/menu-item relative", className)}
-    {...props}
-  />
-))
+  React.ComponentProps<"li"> & { tooltipContent?: string }
+>(({ className, children, tooltipContent, ...props }, ref) => {
+  const { state, isMobile } = useSidebar();
+  const showTooltip = tooltipContent && (state === "collapsed" || isMobile);
+
+  const itemContent = (
+    <li
+      ref={ref}
+      data-sidebar="menu-item"
+      className={cn("group/menu-item relative", className)}
+      {...props}
+    >
+      {children}
+    </li>
+  );
+
+  if (showTooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{itemContent}</TooltipTrigger>
+        <TooltipContent side="right" align="center">
+          {tooltipContent}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return itemContent;
+});
 SidebarMenuItem.displayName = "SidebarMenuItem"
 
 const sidebarMenuButtonVariants = cva(
@@ -546,62 +554,41 @@ const sidebarMenuButtonVariants = cva(
 
 const SidebarMenuButton = React.forwardRef<
   HTMLAnchorElement,
-  React.ComponentProps<"a"> & { // Changed from HTMLButtonElement and React.ComponentProps<"button">
-    asChild?: boolean
-    isActive?: boolean
-    tooltip?: string | React.ComponentProps<typeof TooltipContent>
+  Omit<React.ComponentPropsWithoutRef<"a">, "asChild"> & { // Ensure 'a' props, excluding asChild from direct type
+    isActive?: boolean;
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
     {
-      asChild = false,
       isActive = false,
       variant = "default",
       size = "default",
-      tooltip,
       className,
-      ...props
+      children, // These are the icon and span
+      ...props // This will receive `href` and potentially `asChild` from `Link`
     },
     ref
   ) => {
-    const Comp = asChild ? Slot : "a"; // Changed from "button" to "a"
-    const { isMobile, state } = useSidebar()
+    // Explicitly destructure and ignore `asChild` if it's passed down from <Link asChild>.
+    // We want SidebarMenuButton to always render an 'a' tag itself here.
+    const { asChild: _forwardedAsChild, ...anchorSpecificProps } = props as React.ComponentPropsWithoutRef<"a"> & { asChild?: boolean };
 
-    const button = (
-      <Comp
+    return (
+      <a // Always render an 'a' tag.
         ref={ref}
         data-sidebar="menu-button"
         data-size={size}
         data-active={isActive}
-        className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        {...props}
-      />
-    )
-
-    if (!tooltip) {
-      return button
-    }
-
-    if (typeof tooltip === "string") {
-      tooltip = {
-        children: tooltip,
-      }
-    }
-
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent
-          side="right"
-          align="center"
-          hidden={state !== "collapsed" || isMobile}
-          {...tooltip}
-        />
-      </Tooltip>
-    )
+        className={cn(sidebarMenuButtonVariants({ variant, size, className }))} // Apply variants and className
+        {...anchorSpecificProps} // Spread the href, onClick etc. from Link, but not asChild
+      >
+        {children} {/* Render the icon and span inside the <a> tag */}
+      </a>
+    );
   }
-)
+);
 SidebarMenuButton.displayName = "SidebarMenuButton"
+
 
 const SidebarMenuAction = React.forwardRef<
   HTMLButtonElement,
@@ -618,7 +605,6 @@ const SidebarMenuAction = React.forwardRef<
       data-sidebar="menu-action"
       className={cn(
         "absolute right-1 top-1.5 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-none ring-sidebar-ring transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 peer-hover/menu-button:text-sidebar-accent-foreground [&>svg]:size-4 [&>svg]:shrink-0",
-        // Increases the hit area of the button on mobile.
         "after:absolute after:-inset-2 after:md:hidden",
         "peer-data-[size=sm]/menu-button:top-1",
         "peer-data-[size=default]/menu-button:top-1.5",
@@ -661,7 +647,6 @@ const SidebarMenuSkeleton = React.forwardRef<
     showIcon?: boolean
   }
 >(({ className, showIcon = false, ...props }, ref) => {
-  // Random width between 50 to 90%.
   const width = React.useMemo(() => {
     return `${Math.floor(Math.random() * 40) + 50}%`
   }, [])
