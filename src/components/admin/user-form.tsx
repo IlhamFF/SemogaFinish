@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 import { format, parseISO, isValid } from 'date-fns';
 import { id as localeID } from 'date-fns/locale';
 
-// Skema diperluas untuk mencakup field profil
 const userFormSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
   password: z.string().min(6, { message: "Kata sandi minimal 6 karakter." }).optional().or(z.literal('')),
@@ -35,6 +34,8 @@ const userFormSchema = z.object({
   nip: z.string().optional(),
   joinDate: z.date().optional(),
   avatarUrl: z.string().url({ message: "URL Avatar tidak valid." }).optional().or(z.literal('')),
+  kelas: z.string().optional(),
+  mataPelajaran: z.string().optional(),
 });
 
 type UserFormValues = z.infer<typeof userFormSchema>;
@@ -62,8 +63,10 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
       bio: "",
       nis: "",
       nip: "",
-      joinDate: new Date(), // Default to today for new user
+      joinDate: new Date(), 
       avatarUrl: "",
+      kelas: "",
+      mataPelajaran: "",
     },
   });
 
@@ -96,12 +99,15 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
         nip: editingUser.nip || "",
         joinDate: parsedJoinDate,
         avatarUrl: editingUser.avatarUrl || "",
+        kelas: editingUser.kelas || "",
+        mataPelajaran: editingUser.mataPelajaran || "",
       });
     } else {
       form.reset({ 
         email: "", password: "", role: "siswa", name: "", fullName: "",
         phone: "", address: "", birthDate: undefined, bio: "",
-        nis: "", nip: "", joinDate: new Date(), avatarUrl: ""
+        nis: "", nip: "", joinDate: new Date(), avatarUrl: "",
+        kelas: "", mataPelajaran: "",
       });
     }
   }, [editingUser, form, isOpen]);
@@ -181,7 +187,15 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
                   <FormItem>
                     <FormLabel>Peran</FormLabel>
                     <Select 
-                      onValueChange={field.onChange} 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Reset role-specific fields when role changes
+                        if (value !== 'siswa') form.setValue('nis', '');
+                        if (value !== 'siswa') form.setValue('kelas', '');
+                        if (value !== 'guru') form.setValue('mataPelajaran', '');
+                        if (value === 'siswa' || value === 'pimpinan') form.setValue('nip', '');
+
+                      }} 
                       defaultValue={field.value} 
                       value={field.value} 
                       disabled={!!editingUser && editingUser.role === 'superadmin'}
@@ -313,21 +327,36 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {selectedRole === 'siswa' && (
-                  <FormField
-                      control={form.control}
-                      name="nis"
-                      render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>NIS (Nomor Induk Siswa)</FormLabel>
-                          <FormControl>
-                          <Input placeholder="Nomor Induk Siswa" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                      </FormItem>
-                      )}
-                  />
+                  <>
+                    <FormField
+                        control={form.control}
+                        name="nis"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>NIS (Nomor Induk Siswa)</FormLabel>
+                            <FormControl>
+                            <Input placeholder="Nomor Induk Siswa" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="kelas"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Kelas</FormLabel>
+                            <FormControl>
+                            <Input placeholder="Contoh: Kelas X-A" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                  </>
                 )}
-                {selectedRole && selectedRole !== 'siswa' && (
+                {selectedRole && (selectedRole === 'guru' || selectedRole === 'admin' || selectedRole === 'pimpinan') && (
                   <FormField
                       control={form.control}
                       name="nip"
@@ -341,6 +370,21 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
                       </FormItem>
                       )}
                   />
+                )}
+                 {selectedRole === 'guru' && (
+                    <FormField
+                        control={form.control}
+                        name="mataPelajaran"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Mata Pelajaran yang Diampu</FormLabel>
+                            <FormControl>
+                            <Input placeholder="Contoh: Matematika" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
                 )}
                  <FormField
                     control={form.control}

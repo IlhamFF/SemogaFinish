@@ -17,6 +17,8 @@ export interface User {
   nis?: string; // Nomor Induk Siswa
   nip?: string; // Nomor Induk Pegawai/Pengajar
   joinDate?: string; // Tanggal bergabung, simpan sebagai string "YYYY-MM-DD"
+  kelas?: string; // Untuk siswa
+  mataPelajaran?: string; // Untuk guru
 }
 
 export interface NavItem {

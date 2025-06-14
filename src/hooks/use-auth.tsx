@@ -10,8 +10,10 @@ import { DEFAULT_USERS_STORAGE_KEY, AUTH_USER_STORAGE_KEY, ROUTES, ROLES, APP_NA
 // Kata sandi mock (dalam aplikasi nyata, ini akan ditangani oleh backend)
 const mockPasswords: Record<string, string> = {
   'admin@example.com': 'password',
-  'guru@example.com': 'password',
-  'siswa@example.com': 'password',
+  'guru.matematika@example.com': 'password',
+  'guru.fisika@example.com': 'password',
+  'siswa.x@example.com': 'password',
+  'siswa.xi@example.com': 'password',
   'pimpinan@example.com': 'password',
   'super@example.com': 'password',
   'verified.siswa@example.com': 'password',
@@ -23,12 +25,20 @@ const initialUsers: User[] = [
     phone: '081234567890', address: 'Jl. Merdeka No. 1, Jakarta', birthDate: '1980-01-01', bio: 'Pengelola sistem EduCentral.', nip: 'P.ADM.001', joinDate: '2020-01-15', avatarUrl: `https://placehold.co/100x100.png?text=AE`
   },
   { 
-    id: '2', email: 'guru@example.com', role: 'guru', isVerified: true, name: 'Bu Guru Ani', fullName: 'Ani Suryani, S.Pd.',
-    phone: '081234567891', address: 'Jl. Pendidikan No. 10, Bandung', birthDate: '1985-05-10', bio: 'Guru Matematika berpengalaman.', nip: 'G.MTK.001', joinDate: '2018-07-20', avatarUrl: `https://placehold.co/100x100.png?text=AS`
+    id: '2', email: 'guru.matematika@example.com', role: 'guru', isVerified: true, name: 'Bu Ani', fullName: 'Ani Suryani, S.Pd.',
+    phone: '081234567891', address: 'Jl. Pendidikan No. 10, Bandung', birthDate: '1985-05-10', bio: 'Guru Matematika berpengalaman.', nip: 'G.MTK.001', joinDate: '2018-07-20', avatarUrl: `https://placehold.co/100x100.png?text=AS`, mataPelajaran: 'Matematika'
+  },
+   { 
+    id: '7', email: 'guru.fisika@example.com', role: 'guru', isVerified: true, name: 'Pak Eko', fullName: 'Eko Prasetyo, M.Sc.',
+    phone: '081234567897', address: 'Jl. Sains No. 5, Jakarta', birthDate: '1982-11-15', bio: 'Guru Fisika ahli.', nip: 'G.FSK.002', joinDate: '2019-01-10', avatarUrl: `https://placehold.co/100x100.png?text=EP`, mataPelajaran: 'Fisika'
   },
   { 
-    id: '3', email: 'siswa@example.com', role: 'siswa', isVerified: false, name: 'Siswa Budi', fullName: 'Budi Hartono',
-    phone: '081234567892', address: 'Jl. Pelajar No. 5, Surabaya', birthDate: '2005-08-17', bio: 'Siswa kelas X, minat pada sains.', nis: 'S.10.001', joinDate: '2023-07-10', avatarUrl: `https://placehold.co/100x100.png?text=BH`
+    id: '3', email: 'siswa.x@example.com', role: 'siswa', isVerified: false, name: 'Budi X', fullName: 'Budi Hartono',
+    phone: '081234567892', address: 'Jl. Pelajar No. 5, Surabaya', birthDate: '2007-08-17', bio: 'Siswa kelas X, minat pada sains.', nis: 'S.10.001', joinDate: '2023-07-10', avatarUrl: `https://placehold.co/100x100.png?text=BH`, kelas: 'Kelas X-A'
+  },
+   { 
+    id: '8', email: 'siswa.xi@example.com', role: 'siswa', isVerified: true, name: 'Citra XI', fullName: 'Citra Lestari',
+    phone: '081234567898', address: 'Jl. Prestasi No. 8, Surabaya', birthDate: '2006-04-22', bio: 'Siswa kelas XI, aktif di OSIS.', nis: 'S.11.003', joinDate: '2022-07-12', avatarUrl: `https://placehold.co/100x100.png?text=CL`, kelas: 'Kelas XI-IPA'
   },
   { 
     id: '4', email: 'pimpinan@example.com', role: 'pimpinan', isVerified: true, name: 'Pak Kepsek', fullName: 'Dr. H. Bambang Susetyo, M.Pd.',
@@ -40,7 +50,7 @@ const initialUsers: User[] = [
   },
    { 
     id: '6', email: 'verified.siswa@example.com', role: 'siswa', isVerified: true, name: 'Siti Terverifikasi', fullName: 'Siti Aminah',
-    phone: '081234567899', address: 'Jl. Cendekia No. 7, Medan', birthDate: '2006-02-14', bio: 'Siswa rajin dan aktif.', nis: 'S.11.002', joinDate: '2023-07-10', avatarUrl: `https://placehold.co/100x100.png?text=SA`
+    phone: '081234567899', address: 'Jl. Cendekia No. 7, Medan', birthDate: '2006-02-14', bio: 'Siswa rajin dan aktif.', nis: 'S.11.002', joinDate: '2023-07-10', avatarUrl: `https://placehold.co/100x100.png?text=SA`, kelas: 'Kelas XI-IPS'
   },
 ];
 
@@ -234,6 +244,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       nip: userData.role !== 'siswa' ? userData.nip : undefined,
       joinDate: userData.joinDate || new Date().toISOString().split('T')[0],
       avatarUrl: userData.avatarUrl || `https://placehold.co/100x100.png?text=${defaultFullName.substring(0,2).toUpperCase()}`,
+      kelas: userData.role === 'siswa' ? userData.kelas : undefined,
+      mataPelajaran: userData.role === 'guru' ? userData.mataPelajaran : undefined,
     };
     mockPasswords[userData.email] = userData.password || 'password';
     
@@ -275,7 +287,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const updatedUsers = currentUsers.map(u => {
       if (u.id === userId) {
         userUpdated = true;
-        return { ...u, ...profileData };
+        // Ensure kelas and mataPelajaran are only set if the role matches
+        const roleSpecificData = {
+          kelas: profileData.role === 'siswa' || (u.role === 'siswa' && profileData.role === undefined) ? profileData.kelas ?? u.kelas : undefined,
+          mataPelajaran: profileData.role === 'guru' || (u.role === 'guru' && profileData.role === undefined) ? profileData.mataPelajaran ?? u.mataPelajaran : undefined,
+        };
+        return { ...u, ...profileData, ...roleSpecificData };
       }
       return u;
     });
@@ -284,7 +301,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       persistUsers(updatedUsers);
       const currentUser = user;
       if (currentUser && currentUser.id === userId) {
-        persistAuthUser({ ...currentUser, ...profileData });
+        const updatedCurrentUser = updatedUsers.find(u => u.id === userId);
+        if (updatedCurrentUser) persistAuthUser(updatedCurrentUser);
       }
       toast({ title: "Profil Diperbarui", description: "Informasi profil Anda telah berhasil disimpan." });
       setIsLoading(false);
@@ -351,9 +369,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     mockPasswords[userToChange.email] = newPassword;
-    // Tidak perlu memperbarui 'users' atau 'user' state karena kata sandi tidak disimpan di sana.
-    // Jika menggunakan backend nyata, ini akan menjadi panggilan API.
-
     toast({ title: "Kata Sandi Diubah", description: "Kata sandi Anda telah berhasil diperbarui." });
     setIsLoading(false);
     return true;
@@ -388,4 +403,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
