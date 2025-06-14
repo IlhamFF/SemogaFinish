@@ -1,7 +1,7 @@
 
 "use client";
 
-import *_React from "react"; // Renamed to avoid conflict if React is used directly
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -17,11 +17,10 @@ import { useToast } from "@/hooks/use-toast";
 export default function AdminUsersPage() {
   const { user: currentUser, users, createUser, verifyUserEmail, updateUserRole, deleteUser, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [_React_useState, _React_useEffect] = [_React.useState, _React.useEffect]; // Alias for clarity
 
-  const [isFormOpen, setIsFormOpen] = _React_useState(false);
-  const [editingUser, setEditingUser] = _React_useState<User | null>(null);
-  const [pageLoading, setPageLoading] = _React_useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [pageLoading, setPageLoading] = useState(false);
 
   const handleCreateUser = () => {
     setEditingUser(null);
@@ -181,4 +180,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-
