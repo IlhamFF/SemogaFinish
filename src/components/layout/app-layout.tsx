@@ -35,14 +35,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
   
-  // Default open state for sidebar can be read from cookie or set to true
-  // For simplicity, we'll default to true for desktop.
-  // The SidebarProvider component already handles cookie persistence.
-  const defaultSidebarOpen = typeof window !== 'undefined' ? document.cookie.includes('sidebar_state=true') : true;
-
-
   return (
-    <SidebarProvider defaultOpen={defaultSidebarOpen}>
+    <SidebarProvider>
       <Sidebar collapsible="icon" variant="sidebar" side="left">
         <AppSidebarContent />
         <SidebarRail />
