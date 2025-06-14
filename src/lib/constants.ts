@@ -1,6 +1,6 @@
 
 import type { Role } from '@/types';
-import { LayoutDashboard, Users, BarChart3, Settings, LogOut, BookOpenText, BookOpenCheck, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, Settings, LogOut, BookOpenText, BookOpenCheck, CalendarDays, ClipboardList } from 'lucide-react';
 
 export const APP_NAME = 'EduCentral';
 
@@ -22,6 +22,7 @@ export const ROUTES = {
   ADMIN_DASHBOARD: '/admin/dashboard',
   ADMIN_USERS: '/admin/users',
   ADMIN_KURIKULUM: '/admin/kurikulum',
+  ADMIN_MATA_PELAJARAN: '/admin/mata-pelajaran',
   ADMIN_JADWAL: '/admin/jadwal',
   GURU_DASHBOARD: '/guru/dashboard',
   SISWA_DASHBOARD: '/siswa/dashboard',
@@ -39,6 +40,7 @@ export const NAV_LINKS_CONFIG = [
   
   { href: ROUTES.ADMIN_USERS, label: 'Manajemen Pengguna', icon: Users, roles: ['admin', 'superadmin'] as Role[] },
   { href: ROUTES.ADMIN_KURIKULUM, label: 'Manajemen Kurikulum', icon: BookOpenCheck, roles: ['admin', 'superadmin'] as Role[] },
+  { href: ROUTES.ADMIN_MATA_PELAJARAN, label: 'Manajemen Mapel', icon: ClipboardList, roles: ['admin', 'superadmin'] as Role[] },
   { href: ROUTES.ADMIN_JADWAL, label: 'Manajemen Jadwal', icon: CalendarDays, roles: ['admin', 'superadmin'] as Role[] },
   
   { href: ROUTES.DATA_VISUALIZATION, label: 'Visualisasi Data', icon: BarChart3, roles: ['admin', 'guru', 'siswa', 'pimpinan', 'superadmin'] as Role[] },
@@ -51,3 +53,4 @@ export const USER_NAV_ITEMS = [
 
 export const DEFAULT_USERS_STORAGE_KEY = 'educentral_users_mock';
 export const AUTH_USER_STORAGE_KEY = 'educentral_auth_user_mock';
+

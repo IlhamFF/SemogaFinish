@@ -3,7 +3,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { BookOpenCheck, ClipboardList, Target, BookCopy, BookOpenText } from "lucide-react";
+import { BookOpenCheck, Target, BookCopy, BookOpenText, ClipboardList } from "lucide-react";
+import Link from "next/link";
+import { ROUTES } from "@/lib/constants";
 
 export default function AdminKurikulumPage() {
   const { user } = useAuth();
@@ -24,7 +26,7 @@ export default function AdminKurikulumPage() {
             Pengembangan dan Pengelolaan Kurikulum
           </CardTitle>
           <CardDescription>
-            Area ini didedikasikan untuk membuat, melihat, memperbarui, dan mengelola struktur kurikulum sekolah secara komprehensif.
+            Area ini didedikasikan untuk merancang, menyusun, dan mengelola struktur kurikulum sekolah secara komprehensif, mengacu pada daftar mata pelajaran yang telah ditentukan.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -34,29 +36,29 @@ export default function AdminKurikulumPage() {
               <li className="flex items-start">
                 <ClipboardList className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
                 <div>
-                  <h4 className="font-medium text-foreground">Definisi Mata Pelajaran</h4>
-                  <p className="text-sm">Membuat dan mengelola daftar mata pelajaran yang ditawarkan, termasuk kode, nama, dan deskripsi singkat.</p>
+                  <h4 className="font-medium text-foreground">Referensi Mata Pelajaran</h4>
+                  <p className="text-sm">Kurikulum akan disusun berdasarkan <Link href={ROUTES.ADMIN_MATA_PELAJARAN} className="text-primary hover:underline">daftar mata pelajaran</Link> yang telah dikelola secara terpusat.</p>
                 </div>
               </li>
               <li className="flex items-start">
                 <Target className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
                 <div>
                   <h4 className="font-medium text-foreground">Standar Kompetensi & Capaian Pembelajaran</h4>
-                  <p className="text-sm">Menetapkan standar kompetensi lulusan (SKL) dan capaian pembelajaran (CP) untuk setiap jenjang dan mata pelajaran.</p>
+                  <p className="text-sm">Menetapkan standar kompetensi lulusan (SKL) dan capaian pembelajaran (CP) untuk setiap jenjang dan program pendidikan, yang terintegrasi dengan mata pelajaran.</p>
                 </div>
               </li>
               <li className="flex items-start">
                 <BookCopy className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
                 <div>
-                  <h4 className="font-medium text-foreground">Penyusunan Silabus & RPP</h4>
-                  <p className="text-sm">Memfasilitasi pembuatan dan pengelolaan silabus serta Rencana Pelaksanaan Pembelajaran (RPP) yang terstruktur.</p>
+                  <h4 className="font-medium text-foreground">Penyusunan Struktur Kurikulum, Silabus & RPP</h4>
+                  <p className="text-sm">Memfasilitasi pembuatan dan pengelolaan struktur kurikulum per jenjang/tingkat, silabus, serta Rencana Pelaksanaan Pembelajaran (RPP) yang terstruktur untuk setiap mata pelajaran dalam kurikulum.</p>
                 </div>
               </li>
                <li className="flex items-start">
                 <BookOpenText className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
                 <div>
                   <h4 className="font-medium text-foreground">Manajemen Materi Pembelajaran</h4>
-                  <p className="text-sm">Mengaitkan materi pembelajaran, sumber belajar, dan bahan ajar dengan setiap topik dalam kurikulum.</p>
+                  <p className="text-sm">Mengaitkan materi pembelajaran, sumber belajar, dan bahan ajar dengan setiap topik dalam silabus mata pelajaran.</p>
                 </div>
               </li>
             </ul>
@@ -69,3 +71,4 @@ export default function AdminKurikulumPage() {
     </div>
   );
 }
+
