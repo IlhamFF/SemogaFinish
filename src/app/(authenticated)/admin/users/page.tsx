@@ -15,12 +15,12 @@ import { UserTableActions } from "@/components/admin/user-table-actions";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminUsersPage() {
-  const { user: currentUser, users, createUser, verifyUserEmail, updateUserRole, deleteUser, isLoading: authLoading } = useAuth();
+  const { user: currentUser, users: allUsers, createUser, verifyUserEmail, updateUserRole, deleteUser, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [pageLoading, setPageLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(false); // For actions like delete, verify
 
   const handleCreateUser = () => {
     setEditingUser(null);
@@ -34,46 +34,64 @@ export default function AdminUsersPage() {
 
   const handleDeleteUser = async (userId: string) => {
     setPageLoading(true);
-    try {
-        deleteUser(userId); 
-    } catch (error) {
-        toast({ title: "Kesalahan", description: "Gagal menghapus pengguna.", variant: "destructive" });
-    } finally {
-        setPageLoading(false);
-    }
+    // useAuth.deleteUser handles toasts and state updates
+    deleteUser(userId); 
+    setPageLoading(false);
   };
   
   const handleVerifySiswa = (userId: string) => {
     setPageLoading(true);
-    try {
-        verifyUserEmail(userId);
-    } catch (error) {
-        toast({ title: "Kesalahan", description: "Gagal memverifikasi pengguna.", variant: "destructive" });
-    } finally {
-        setPageLoading(false);
-    }
+    // useAuth.verifyUserEmail handles toasts and state updates
+    verifyUserEmail(userId);
+    setPageLoading(false);
   };
 
   const handleChangeRole = (userToUpdate: User, newRole: Role) => {
     setPageLoading(true);
-    try {
-        updateUserRole(userToUpdate.id, newRole);
-    } catch (error) {
-        toast({ title: "Kesalahan", description: "Gagal memperbarui peran pengguna.", variant: "destructive" });
-    } finally {
-        setPageLoading(false);
-    }
+    // useAuth.updateUserRole handles toasts and state updates
+    updateUserRole(userToUpdate.id, newRole);
+    setPageLoading(false);
   }
 
-  const handleFormSubmit = async (data: any, currentlyEditingUser: User | null) => {
+  const handleFormSubmit = async (data: Partial<User> & { email: string; role: Role; password?: string }, currentlyEditingUser: User | null) => {
     setPageLoading(true);
     try {
       if (currentlyEditingUser) {
-        toast({ title: "Edit Pengguna", description: "Fungsionalitas edit pengguna (mis. nama, kata sandi) dapat diimplementasikan lebih lanjut di sini." });
+        // For mock, we'll update all editable fields passed. Password update is illustrative.
+        // In a real backend, password would be handled separately and hashed.
+        const { email, role, password, ...profileData } = data;
+        const success = await createUser({ // This is effectively an update for mock
+            ...currentlyEditingUser, 
+            ...profileData, 
+            role: role // Role can be changed via form for editing if needed
+        });
+        if (success) {
+             toast({ title: "Pengguna Diperbarui", description: "Detail pengguna telah diperbarui." });
+             setIsFormOpen(false);
+        } else {
+            toast({ title: "Gagal Memperbarui", description: "Tidak dapat menyimpan perubahan pengguna.", variant: "destructive" });
+        }
       } else {
-        const newUser = await createUser({ email: data.email, password: data.password, role: data.role, name: data.name });
+        // Creating a new user
+        const newUser = createUser({ 
+            email: data.email!, 
+            password: data.password, 
+            role: data.role!, 
+            name: data.name,
+            fullName: data.fullName,
+            phone: data.phone,
+            address: data.address,
+            birthDate: data.birthDate,
+            bio: data.bio,
+            nis: data.nis,
+            nip: data.nip,
+            joinDate: data.joinDate,
+            avatarUrl: data.avatarUrl,
+         });
         if (newUser) {
           setIsFormOpen(false);
+        } else {
+             // createUser in useAuth handles toast for creation failure (e.g. email exists)
         }
       }
     } catch (error) {
@@ -83,7 +101,7 @@ export default function AdminUsersPage() {
     }
   };
   
-  if (authLoading) {
+  if (authLoading && !allUsers.length) { // Show loader if auth is loading AND no users yet
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
 
@@ -103,58 +121,60 @@ export default function AdminUsersPage() {
         </Button>
       </div>
       
-      <Card className="shadow-lg">
+      <Card className="shadow-lg relative">
         <CardHeader>
           <CardTitle>Semua Pengguna</CardTitle>
-          <CardDescription>Daftar semua pengguna di sistem. Jumlah pengguna saat ini: {users.length}.</CardDescription>
+          <CardDescription>Daftar semua pengguna di sistem. Jumlah pengguna saat ini: {allUsers.length}.</CardDescription>
         </CardHeader>
         <CardContent>
-          {pageLoading && <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Peran</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Tindakan</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name || user.email.split('@')[0]}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.role === 'admin' || user.role === 'superadmin' ? "default" : "secondary"}>
-                      {ROLES[user.role]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {user.isVerified ? (
-                      <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white">
-                        <CheckCircle className="mr-1 h-3 w-3" /> Terverifikasi
-                      </Badge>
-                    ) : (
-                      <Badge variant="destructive">
-                        <ShieldAlert className="mr-1 h-3 w-3" /> Belum Terverifikasi
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <UserTableActions 
-                      user={user} 
-                      currentUser={currentUser}
-                      onEdit={handleEditUser} 
-                      onDelete={handleDeleteUser}
-                      onVerify={handleVerifySiswa}
-                      onChangeRole={handleChangeRole}
-                    />
-                  </TableCell>
+          {(pageLoading || authLoading) && <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama Lengkap</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Peran</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Tindakan</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {allUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.fullName || user.name || user.email.split('@')[0]}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={user.role === 'admin' || user.role === 'superadmin' ? "default" : "secondary"}>
+                        {ROLES[user.role]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {user.isVerified ? (
+                        <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                          <CheckCircle className="mr-1 h-3 w-3" /> Terverifikasi
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive">
+                          <ShieldAlert className="mr-1 h-3 w-3" /> Belum Terverifikasi
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <UserTableActions 
+                        user={user} 
+                        currentUser={currentUser}
+                        onEdit={handleEditUser} 
+                        onDelete={handleDeleteUser}
+                        onVerify={handleVerifySiswa}
+                        onChangeRole={handleChangeRole}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
       <UserForm 
@@ -162,7 +182,7 @@ export default function AdminUsersPage() {
         onClose={() => setIsFormOpen(false)} 
         onSubmit={handleFormSubmit}
         editingUser={editingUser}
-        isLoading={pageLoading}
+        isLoading={pageLoading || authLoading}
       />
     </div>
   );

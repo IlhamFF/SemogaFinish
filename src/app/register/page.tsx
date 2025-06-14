@@ -1,13 +1,14 @@
 
 "use client";
 import { AuthForm } from "@/components/auth/auth-form";
-import { AuthProvider, useAuth } from "@/hooks/use-auth"; // Import AuthProvider
+import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ROUTES } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
 
-function RegisterPageContent() {
+// Hapus AuthProvider dari sini
+export default function RegisterPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
@@ -16,7 +17,6 @@ function RegisterPageContent() {
       if (user.role === 'siswa' && !user.isVerified) {
         router.push(ROUTES.VERIFY_EMAIL);
       } else {
-        // Redirect to appropriate dashboard if already logged in and verified
         switch (user.role) {
             case 'admin': router.push(ROUTES.ADMIN_DASHBOARD); break;
             case 'guru': router.push(ROUTES.GURU_DASHBOARD); break;
@@ -38,12 +38,4 @@ function RegisterPageContent() {
   }
 
   return <AuthForm mode="register" />;
-}
-
-export default function RegisterPage() {
-  return (
-    <AuthProvider>
-      <RegisterPageContent />
-    </AuthProvider>
-  );
 }

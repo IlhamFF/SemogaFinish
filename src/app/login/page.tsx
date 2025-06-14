@@ -1,19 +1,22 @@
 
 "use client";
 import { AuthForm } from "@/components/auth/auth-form";
-import { AuthProvider, useAuth } from "@/hooks/use-auth"; // Import AuthProvider
+import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ROUTES } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
 
-function LoginPageContent() {
+// Hapus AuthProvider dari sini karena sudah ada di RootLayout
+// function LoginPageContent() { ... }
+// export default function LoginPage() { <AuthProvider><LoginPageContent /></AuthProvider> }
+
+export default function LoginPage() { // Langsung export default component
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!isLoading && user) {
-       // Redirect based on role
       switch (user.role) {
         case 'admin': router.push(ROUTES.ADMIN_DASHBOARD); break;
         case 'guru': router.push(ROUTES.GURU_DASHBOARD); break;
@@ -37,13 +40,4 @@ function LoginPageContent() {
   }
   
   return <AuthForm mode="login" />;
-}
-
-
-export default function LoginPage() {
-  return (
-    <AuthProvider>
-      <LoginPageContent />
-    </AuthProvider>
-  );
 }

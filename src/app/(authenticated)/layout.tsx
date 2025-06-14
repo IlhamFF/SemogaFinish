@@ -1,5 +1,5 @@
 
-import { AuthProvider } from "@/hooks/use-auth";
+// Tidak perlu AuthProvider lagi di sini karena sudah ada di RootLayout
 import { AppLayout } from "@/components/layout/app-layout";
 
 export default function AuthenticatedLayout({
@@ -8,10 +8,8 @@ export default function AuthenticatedLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthProvider>
-      <AppLayout>
-        {children}
-      </AppLayout>
-    </AuthProvider>
+    <AppLayout>
+      {children}
+    </AppLayout>
   );
 }

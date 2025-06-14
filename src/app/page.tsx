@@ -3,11 +3,11 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthProvider, useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth'; // Tidak perlu AuthProvider lagi
 import { ROUTES } from '@/lib/constants';
 import { Loader2 } from 'lucide-react';
 
-function HomePageContent() {
+export default function HomePage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
@@ -17,14 +17,13 @@ function HomePageContent() {
         if (user.role === 'siswa' && !user.isVerified) {
           router.replace(ROUTES.VERIFY_EMAIL);
         } else {
-          // Redirect to appropriate dashboard
            switch (user.role) {
             case 'admin': router.replace(ROUTES.ADMIN_DASHBOARD); break;
             case 'guru': router.replace(ROUTES.GURU_DASHBOARD); break;
             case 'siswa': router.replace(ROUTES.SISWA_DASHBOARD); break;
             case 'pimpinan': router.replace(ROUTES.PIMPINAN_DASHBOARD); break;
-            case 'superadmin': router.replace(ROUTES.ADMIN_DASHBOARD); break; // Superadmin can go to admin dash
-            default: router.replace(ROUTES.LOGIN); // Fallback
+            case 'superadmin': router.replace(ROUTES.ADMIN_DASHBOARD); break;
+            default: router.replace(ROUTES.LOGIN);
           }
         }
       } else {
@@ -38,12 +37,4 @@ function HomePageContent() {
       <Loader2 className="h-16 w-16 animate-spin text-primary" />
     </div>
   );
-}
-
-export default function HomePage() {
-  return (
-    <AuthProvider>
-      <HomePageContent />
-    </AuthProvider>
-  )
 }
