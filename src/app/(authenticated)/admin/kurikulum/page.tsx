@@ -2,8 +2,9 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { BookOpenCheck, Target, BookCopy, BookOpenText, ClipboardList } from "lucide-react";
+import { BookOpenCheck, Target, BookCopy, BookUp, Layers, FileText, FolderKanban, PlusCircle, Edit, Search } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 
@@ -14,11 +15,19 @@ export default function AdminKurikulumPage() {
     return <p>Akses Ditolak. Anda harus menjadi admin untuk melihat halaman ini.</p>;
   }
 
+  const handlePlaceholderAction = (action: string) => {
+    alert(`Fungsi "${action}" belum diimplementasikan.`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-headline font-semibold">Manajemen Kurikulum</h1>
+        <Button onClick={() => handlePlaceholderAction("Buat Kurikulum Baru")}>
+          <PlusCircle className="mr-2 h-4 w-4" /> Buat Kurikulum Baru
+        </Button>
       </div>
+      
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -26,51 +35,114 @@ export default function AdminKurikulumPage() {
             Pengembangan dan Pengelolaan Kurikulum
           </CardTitle>
           <CardDescription>
-            Fasilitas komprehensif untuk merancang, mengembangkan, dan mengelola seluruh aspek kurikulum pendidikan. Modul ini memungkinkan administrator untuk menyusun standar pembelajaran, struktur kurikulum, hingga materi ajar yang relevan dengan daftar mata pelajaran yang tersedia.
+            Fasilitas komprehensif untuk merancang, mengembangkan, dan mengelola seluruh aspek kurikulum pendidikan. Modul ini memungkinkan administrator untuk menyusun standar pembelajaran, struktur kurikulum, hingga materi ajar yang relevan.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="p-6 text-muted-foreground bg-muted/20 rounded-md border">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Komponen Utama Manajemen Kurikulum:</h3>
-            <ul className="space-y-4">
-              <li className="flex items-start">
-                <ClipboardList className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
+        <CardContent className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center text-xl">
+                <Target className="mr-3 h-5 w-5 text-primary" />
+                Standar Kompetensi & Capaian Pembelajaran
+              </CardTitle>
+              <CardDescription>
+                Kelola Standar Kompetensi Lulusan (SKL) dan Capaian Pembelajaran (CP) sebagai acuan utama.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <Button variant="outline" onClick={() => handlePlaceholderAction("Kelola SKL")} className="justify-start text-left h-auto py-3">
+                <Layers className="mr-3 h-5 w-5" />
                 <div>
-                  <h4 className="font-medium text-foreground">Referensi Mata Pelajaran</h4>
-                  <p className="text-sm">
-                    Fondasi utama penyusunan kurikulum adalah <Link href={ROUTES.ADMIN_MATA_PELAJARAN} className="text-primary hover:underline">daftar mata pelajaran</Link> yang telah ditetapkan dan dikelola secara terpusat. Semua elemen kurikulum akan merujuk pada mata pelajaran ini untuk memastikan konsistensi dan integrasi.
-                  </p>
+                  <p className="font-semibold">Standar Kompetensi Lulusan (SKL)</p>
+                  <p className="text-xs text-muted-foreground">Definisikan profil lulusan.</p>
                 </div>
-              </li>
-              <li className="flex items-start">
-                <Target className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
+              </Button>
+              <Button variant="outline" onClick={() => handlePlaceholderAction("Kelola CP")} className="justify-start text-left h-auto py-3">
+                <FileText className="mr-3 h-5 w-5" />
+                 <div>
+                  <p className="font-semibold">Capaian Pembelajaran (CP)</p>
+                  <p className="text-xs text-muted-foreground">Tetapkan target per fase/tingkat.</p>
+                </div>
+              </Button>
+               <Button variant="outline" onClick={() => handlePlaceholderAction("Pemetaan SKL-CP")} className="justify-start text-left h-auto py-3">
+                <Search className="mr-3 h-5 w-5" />
+                 <div>
+                  <p className="font-semibold">Pemetaan & Analisis</p>
+                  <p className="text-xs text-muted-foreground">Hubungkan SKL dengan CP.</p>
+                </div>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center text-xl">
+                <BookCopy className="mr-3 h-5 w-5 text-primary" />
+                Struktur Kurikulum, Silabus & RPP
+              </CardTitle>
+              <CardDescription>
+                Susun kerangka kurikulum, alokasi waktu, materi pokok, hingga rencana pelaksanaan pembelajaran. Pastikan merujuk pada <Link href={ROUTES.ADMIN_MATA_PELAJARAN} className="text-primary hover:underline">daftar mata pelajaran</Link> yang sudah ada.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <Button variant="outline" onClick={() => handlePlaceholderAction("Kelola Struktur Kurikulum")} className="justify-start text-left h-auto py-3">
+                <Layers className="mr-3 h-5 w-5" />
                 <div>
-                  <h4 className="font-medium text-foreground">Standar Kompetensi & Capaian Pembelajaran</h4>
-                  <p className="text-sm">
-                    Kelola Standar Kompetensi Lulusan (SKL) dan Capaian Pembelajaran (CP) untuk setiap jenjang pendidikan, program studi, dan mata pelajaran. SKL dan CP ini menjadi acuan utama dalam pengembangan silabus dan RPP, memastikan bahwa pembelajaran terarah, terukur, dan relevan dengan tujuan pendidikan.
-                  </p>
+                  <p className="font-semibold">Struktur Kurikulum</p>
+                  <p className="text-xs text-muted-foreground">Atur mata pelajaran per tingkat.</p>
                 </div>
-              </li>
-              <li className="flex items-start">
-                <BookCopy className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
+              </Button>
+              <Button variant="outline" onClick={() => handlePlaceholderAction("Manajemen Silabus")} className="justify-start text-left h-auto py-3">
+                <FileText className="mr-3 h-5 w-5" />
                 <div>
-                  <h4 className="font-medium text-foreground">Penyusunan Struktur Kurikulum, Silabus & RPP</h4>
-                  <p className="text-sm">
-                    Buat dan kelola struktur kurikulum yang detail untuk setiap tingkatan kelas atau program studi. Kembangkan Silabus yang mencakup alokasi waktu, kompetensi dasar, materi pokok, kegiatan pembelajaran, indikator pencapaian, metode penilaian, dan sumber belajar. Susun Rencana Pelaksanaan Pembelajaran (RPP) yang operasional bagi guru.
-                  </p>
+                  <p className="font-semibold">Pengembangan Silabus</p>
+                  <p className="text-xs text-muted-foreground">Rancang silabus per mapel.</p>
                 </div>
-              </li>
-               <li className="flex items-start">
-                <BookOpenText className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
+              </Button>
+              <Button variant="outline" onClick={() => handlePlaceholderAction("Manajemen RPP")} className="justify-start text-left h-auto py-3">
+                 <BookUp className="mr-3 h-5 w-5" />
+                 <div>
+                  <p className="font-semibold">Penyusunan RPP</p>
+                  <p className="text-xs text-muted-foreground">Buat rencana pembelajaran detail.</p>
+                </div>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center text-xl">
+                <FolderKanban className="mr-3 h-5 w-5 text-primary" />
+                Bank Materi & Sumber Pembelajaran
+              </CardTitle>
+              <CardDescription>
+                Kelola dan organisasikan materi ajar, modul, video, dan referensi pendukung lainnya.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <Button variant="outline" onClick={() => handlePlaceholderAction("Upload Materi Ajar")} className="justify-start text-left h-auto py-3">
+                <PlusCircle className="mr-3 h-5 w-5" />
                 <div>
-                  <h4 className="font-medium text-foreground">Manajemen Materi Pembelajaran</h4>
-                  <p className="text-sm">
-                    Integrasikan materi pembelajaran digital maupun fisik. Unggah, kelola, dan kaitkan berbagai sumber belajar, bahan ajar, modul, video pembelajaran, dan referensi lainnya dengan setiap topik atau sub-topik dalam silabus mata pelajaran. Materi ini akan mudah diakses oleh guru dan siswa.
-                  </p>
+                  <p className="font-semibold">Tambah Materi Baru</p>
+                  <p className="text-xs text-muted-foreground">Unggah file atau tautan.</p>
                 </div>
-              </li>
-            </ul>
-          </div>
+              </Button>
+              <Button variant="outline" onClick={() => handlePlaceholderAction("Kelola Kategori Materi")} className="justify-start text-left h-auto py-3">
+                 <Edit className="mr-3 h-5 w-5" />
+                 <div>
+                  <p className="font-semibold">Kategorisasi Materi</p>
+                  <p className="text-xs text-muted-foreground">Susun materi per mapel/topik.</p>
+                </div>
+              </Button>
+              <Button variant="outline" onClick={() => handlePlaceholderAction("Cari Materi")} className="justify-start text-left h-auto py-3">
+                <Search className="mr-3 h-5 w-5" />
+                <div>
+                  <p className="font-semibold">Pencarian Materi</p>
+                  <p className="text-xs text-muted-foreground">Temukan sumber belajar.</p>
+                </div>
+              </Button>
+            </CardContent>
+          </Card>
         </CardContent>
       </Card>
     </div>
