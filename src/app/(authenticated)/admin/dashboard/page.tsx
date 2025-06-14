@@ -2,6 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { BarChart3, Users, Bell, BookOpenText } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
@@ -76,15 +77,15 @@ export default function AdminDashboardPage() {
             <CardDescription>Perform common tasks quickly.</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-4">
-             <Link href={ROUTES.ADMIN_USERS} className="block">
-                <Button variant="outline" className="w-full justify-start text-left h-auto py-3">
+             <Button asChild variant="outline" className="w-full justify-start text-left h-auto py-3">
+                <Link href={ROUTES.ADMIN_USERS}>
                   <Users className="mr-3 h-5 w-5" />
                   <div>
                     <p className="font-semibold">Manage Users</p>
                     <p className="text-xs text-muted-foreground">View, add, or edit users.</p>
                   </div>
-                </Button>
-             </Link>
+                </Link>
+             </Button>
              <Button variant="outline" className="w-full justify-start text-left h-auto py-3">
                 <BarChart3 className="mr-3 h-5 w-5" />
                  <div>
@@ -105,4 +106,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-
