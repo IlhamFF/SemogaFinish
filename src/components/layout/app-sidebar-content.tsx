@@ -55,7 +55,7 @@ export function AppSidebarContent() {
         <SidebarMenu>
           {displayLinks.map((link) => (
             <SidebarMenuItem key={link.href}>
-              <Link href={link.href} asChild>
+              <Link href={link.href} passHref legacyBehavior={false}>
                 <SidebarMenuButton
                   isActive={pathname === link.href || pathname.startsWith(`${link.href}/`)}
                   tooltip={{ children: link.label, side: "right", align: "center" }}
@@ -78,3 +78,4 @@ export function AppSidebarContent() {
     </>
   );
 }
+
