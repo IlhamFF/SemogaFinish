@@ -55,8 +55,9 @@ export function AppSidebarContent() {
         <SidebarMenu>
           {displayLinks.map((link) => (
             <SidebarMenuItem key={link.href}>
-              <Link href={link.href} passHref legacyBehavior={false}>
+              <Link href={link.href} asChild legacyBehavior={false}>
                 <SidebarMenuButton
+                  asChild 
                   isActive={pathname === link.href || pathname.startsWith(`${link.href}/`)}
                   tooltip={{ children: link.label, side: "right", align: "center" }}
                   className="justify-start"
@@ -78,4 +79,3 @@ export function AppSidebarContent() {
     </>
   );
 }
-
