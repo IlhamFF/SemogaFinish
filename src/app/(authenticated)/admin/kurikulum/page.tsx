@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { BookOpenCheck } from "lucide-react";
+import { BookOpenCheck, ClipboardList, Target, BookCopy } from "lucide-react";
 
 export default function AdminKurikulumPage() {
   const { user } = useAuth();
@@ -21,22 +21,48 @@ export default function AdminKurikulumPage() {
         <CardHeader>
           <CardTitle className="flex items-center">
             <BookOpenCheck className="mr-2 h-6 w-6 text-primary" />
-            Pengembangan Kurikulum
+            Pengembangan dan Pengelolaan Kurikulum
           </CardTitle>
           <CardDescription>
-            Area ini akan digunakan untuk membuat, melihat, dan mengelola kurikulum sekolah.
+            Area ini didedikasikan untuk membuat, melihat, memperbarui, dan mengelola struktur kurikulum sekolah secara komprehensif.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="p-6 text-center text-muted-foreground bg-muted/30 rounded-md">
-            <p className="mb-2">Fitur manajemen kurikulum sedang dalam pengembangan.</p>
-            <p>Di sini Anda akan dapat:</p>
-            <ul className="list-disc list-inside text-left max-w-md mx-auto mt-2">
-              <li>Menentukan mata pelajaran</li>
-              <li>Mengatur standar kompetensi</li>
-              <li>Menyusun silabus</li>
-              <li>Dan lainnya terkait struktur pembelajaran</li>
+          <div className="p-6 text-muted-foreground bg-muted/20 rounded-md border">
+            <h3 className="text-lg font-semibold text-foreground mb-3">Fitur Utama (Dalam Pengembangan):</h3>
+            <ul className="space-y-3">
+              <li className="flex items-start">
+                <ClipboardList className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-foreground">Definisi Mata Pelajaran</h4>
+                  <p className="text-sm">Membuat dan mengelola daftar mata pelajaran yang ditawarkan, termasuk kode, nama, dan deskripsi singkat.</p>
+                </div>
+              </li>
+              <li className="flex items-start">
+                <Target className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-foreground">Standar Kompetensi & Capaian Pembelajaran</h4>
+                  <p className="text-sm">Menetapkan standar kompetensi lulusan (SKL) dan capaian pembelajaran (CP) untuk setiap jenjang dan mata pelajaran.</p>
+                </div>
+              </li>
+              <li className="flex items-start">
+                <BookCopy className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-foreground">Penyusunan Silabus & RPP</h4>
+                  <p className="text-sm">Memfasilitasi pembuatan dan pengelolaan silabus serta Rencana Pelaksanaan Pembelajaran (RPP) yang terstruktur.</p>
+                </div>
+              </li>
+               <li className="flex items-start">
+                <BookOpenText className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-foreground">Manajemen Materi Pembelajaran</h4>
+                  <p className="text-sm">Mengaitkan materi pembelajaran, sumber belajar, dan bahan ajar dengan setiap topik dalam kurikulum.</p>
+                </div>
+              </li>
             </ul>
+            <p className="mt-6 text-sm text-center">
+              Fungsionalitas penuh untuk manajemen kurikulum akan segera hadir.
+            </p>
           </div>
         </CardContent>
       </Card>
