@@ -1,11 +1,13 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/hooks/use-auth"; // Import AuthProvider versi mock
+import { AuthProvider } from "@/hooks/use-auth"; 
+import { APP_NAME } from '@/lib/constants';
 
 export const metadata: Metadata = {
-  title: 'EduCentral',
-  description: 'Sistem Manajemen Pendidikan Komprehensif',
+  title: APP_NAME,
+  description: 'Sistem Manajemen Pendidikan Komprehensif untuk SMA Az-Bail',
 };
 
 export default function RootLayout({
@@ -22,7 +24,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning={true}>
-        <AuthProvider> {/* Bungkus dengan AuthProvider mock */}
+        <AuthProvider>
           {children}
           <Toaster />
         </AuthProvider>
@@ -30,3 +32,4 @@ export default function RootLayout({
     </html>
   );
 }
+

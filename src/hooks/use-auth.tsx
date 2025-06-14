@@ -5,54 +5,113 @@ import React, { useState, useEffect, createContext, useContext, useCallback } fr
 import { useRouter } from 'next/navigation';
 import type { User, Role } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { DEFAULT_USERS_STORAGE_KEY, AUTH_USER_STORAGE_KEY, ROUTES, ROLES, APP_NAME } from '@/lib/constants';
+import { 
+    DEFAULT_USERS_STORAGE_KEY, 
+    AUTH_USER_STORAGE_KEY, 
+    ROUTES, 
+    ROLES, 
+    APP_NAME,
+    SCHOOL_MAJORS,
+    SCHOOL_GRADE_LEVELS,
+    SCHOOL_CLASSES_PER_MAJOR_GRADE
+} from '@/lib/constants';
 
 // Kata sandi mock (dalam aplikasi nyata, ini akan ditangani oleh backend)
 const mockPasswords: Record<string, string> = {
-  'admin@example.com': 'password',
-  'guru.matematika@example.com': 'password',
-  'guru.fisika@example.com': 'password',
-  'siswa.x@example.com': 'password',
-  'siswa.xi@example.com': 'password',
-  'pimpinan@example.com': 'password',
-  'super@example.com': 'password',
-  'verified.siswa@example.com': 'password',
+  'admin@sma-azbail.sch.id': 'password',
+  'pimpinan@sma-azbail.sch.id': 'password',
+  'super@sma-azbail.sch.id': 'password',
+  // Guru passwords
+  'guru.matematika@sma-azbail.sch.id': 'password',
+  'guru.fisika@sma-azbail.sch.id': 'password',
+  'guru.kimia@sma-azbail.sch.id': 'password',
+  'guru.biologi@sma-azbail.sch.id': 'password',
+  'guru.bing@sma-azbail.sch.id': 'password',
+  'guru.bindo@sma-azbail.sch.id': 'password',
+  'guru.eko@sma-azbail.sch.id': 'password',
+  'guru.geo@sma-azbail.sch.id': 'password',
+  'guru.sosio@sma-azbail.sch.id': 'password',
+  'guru.sejindo@sma-azbail.sch.id': 'password',
+  // Siswa passwords will be generated
 };
 
-const initialUsers: User[] = [
-  { 
-    id: '1', email: 'admin@example.com', role: 'admin', isVerified: true, name: 'Admin Edu', fullName: 'Administrator EduCentral',
-    phone: '081234567890', address: 'Jl. Merdeka No. 1, Jakarta', birthDate: '1980-01-01', bio: 'Pengelola sistem EduCentral.', nip: 'P.ADM.001', joinDate: '2020-01-15', avatarUrl: `https://placehold.co/100x100.png?text=AE`
-  },
-  { 
-    id: '2', email: 'guru.matematika@example.com', role: 'guru', isVerified: true, name: 'Bu Ani', fullName: 'Ani Suryani, S.Pd.',
-    phone: '081234567891', address: 'Jl. Pendidikan No. 10, Bandung', birthDate: '1985-05-10', bio: 'Guru Matematika berpengalaman.', nip: 'G.MTK.001', joinDate: '2018-07-20', avatarUrl: `https://placehold.co/100x100.png?text=AS`, mataPelajaran: 'Matematika'
-  },
-   { 
-    id: '7', email: 'guru.fisika@example.com', role: 'guru', isVerified: true, name: 'Pak Eko', fullName: 'Eko Prasetyo, M.Sc.',
-    phone: '081234567897', address: 'Jl. Sains No. 5, Jakarta', birthDate: '1982-11-15', bio: 'Guru Fisika ahli.', nip: 'G.FSK.002', joinDate: '2019-01-10', avatarUrl: `https://placehold.co/100x100.png?text=EP`, mataPelajaran: 'Fisika'
-  },
-  { 
-    id: '3', email: 'siswa.x@example.com', role: 'siswa', isVerified: false, name: 'Budi X', fullName: 'Budi Hartono',
-    phone: '081234567892', address: 'Jl. Pelajar No. 5, Surabaya', birthDate: '2007-08-17', bio: 'Siswa kelas X, minat pada sains.', nis: 'S.10.001', joinDate: '2023-07-10', avatarUrl: `https://placehold.co/100x100.png?text=BH`, kelas: 'Kelas X-A'
-  },
-   { 
-    id: '8', email: 'siswa.xi@example.com', role: 'siswa', isVerified: true, name: 'Citra XI', fullName: 'Citra Lestari',
-    phone: '081234567898', address: 'Jl. Prestasi No. 8, Surabaya', birthDate: '2006-04-22', bio: 'Siswa kelas XI, aktif di OSIS.', nis: 'S.11.003', joinDate: '2022-07-12', avatarUrl: `https://placehold.co/100x100.png?text=CL`, kelas: 'Kelas XI-IPA'
-  },
-  { 
-    id: '4', email: 'pimpinan@example.com', role: 'pimpinan', isVerified: true, name: 'Pak Kepsek', fullName: 'Dr. H. Bambang Susetyo, M.Pd.',
-    phone: '081234567893', address: 'Jl. Kepemimpinan No. 1, Yogyakarta', birthDate: '1975-03-20', bio: 'Kepala Sekolah dengan visi memajukan pendidikan.', nip: 'P.KPS.001', joinDate: '2015-03-01', avatarUrl: `https://placehold.co/100x100.png?text=BS`
-  },
-  { 
-    id: '5', email: 'super@example.com', role: 'superadmin', isVerified: true, name: 'Super Admin', fullName: 'Super Administrator Sistem',
-    phone: '081200000000', address: 'Pusat Data EduCentral', birthDate: '1970-01-01', bio: 'Pemegang kunci akses tertinggi.', nip: 'P.SUP.001', joinDate: '2010-01-01', avatarUrl: `https://placehold.co/100x100.png?text=SA`
-  },
-   { 
-    id: '6', email: 'verified.siswa@example.com', role: 'siswa', isVerified: true, name: 'Siti Terverifikasi', fullName: 'Siti Aminah',
-    phone: '081234567899', address: 'Jl. Cendekia No. 7, Medan', birthDate: '2006-02-14', bio: 'Siswa rajin dan aktif.', nis: 'S.11.002', joinDate: '2023-07-10', avatarUrl: `https://placehold.co/100x100.png?text=SA`, kelas: 'Kelas XI-IPS'
-  },
-];
+const generateInitialUsers = (): User[] => {
+    const users: User[] = [
+        { 
+            id: 'admin-001', email: 'admin@sma-azbail.sch.id', role: 'admin', isVerified: true, name: 'Admin Sekolah', fullName: 'Administrator EduCentral SMA Az-Bail',
+            phone: '08123450000', address: 'Jl. Administrasi No. 1, Kota Az-Bail', birthDate: '1980-01-01', bio: 'Pengelola sistem EduCentral SMA Az-Bail.', nip: 'P.ADM.001', joinDate: '2020-01-15', avatarUrl: `https://placehold.co/100x100.png?text=AD`
+        },
+        { 
+            id: 'pimpinan-001', email: 'pimpinan@sma-azbail.sch.id', role: 'pimpinan', isVerified: true, name: 'Kepala Sekolah', fullName: 'Dr. H. Abdullah Said, M.Pd.',
+            phone: '08123450001', address: 'Jl. Kepemimpinan No. 1, Kota Az-Bail', birthDate: '1975-03-20', bio: 'Kepala Sekolah SMA Az-Bail.', nip: 'P.KPS.001', joinDate: '2015-03-01', avatarUrl: `https://placehold.co/100x100.png?text=AS`
+        },
+        { 
+            id: 'superadmin-001', email: 'super@sma-azbail.sch.id', role: 'superadmin', isVerified: true, name: 'Super Admin', fullName: 'Super Administrator Sistem',
+            phone: '081200000000', address: 'Pusat Data EduCentral', birthDate: '1970-01-01', bio: 'Pemegang kunci akses tertinggi.', nip: 'P.SUP.001', joinDate: '2010-01-01', avatarUrl: `https://placehold.co/100x100.png?text=SA`
+        },
+    ];
+
+    const guruData = [
+        { idPrefix: 'guru-mtk', emailPrefix: 'guru.matematika', name: 'Bu Ratna', fullName: 'Ratna Dewi, S.Pd.', mataPelajaran: 'Matematika Wajib', birthDate: '1985-05-10', nipSuffix: 'MTK' },
+        { idPrefix: 'guru-fsk', emailPrefix: 'guru.fisika', name: 'Pak Dimas', fullName: 'Dimas Prasetyo, M.Sc.', mataPelajaran: 'Fisika', birthDate: '1982-11-15', nipSuffix: 'FSK' },
+        { idPrefix: 'guru-kim', emailPrefix: 'guru.kimia', name: 'Bu Indah', fullName: 'Indah Permatasari, S.Si.', mataPelajaran: 'Kimia', birthDate: '1988-02-20', nipSuffix: 'KIM' },
+        { idPrefix: 'guru-bio', emailPrefix: 'guru.biologi', name: 'Pak Agus', fullName: 'Agus Setiawan, S.Pd.', mataPelajaran: 'Biologi', birthDate: '1986-07-12', nipSuffix: 'BIO' },
+        { idPrefix: 'guru-big', emailPrefix: 'guru.bing', name: 'Ms. Sarah', fullName: 'Sarah Johnson, B.A.', mataPelajaran: 'Bahasa Inggris', birthDate: '1990-01-30', nipSuffix: 'BIG' },
+        { idPrefix: 'guru-bin', emailPrefix: 'guru.bindo', name: 'Pak Budi', fullName: 'Budi Santoso, S.S.', mataPelajaran: 'Bahasa Indonesia', birthDate: '1983-09-05', nipSuffix: 'BIN' },
+        { idPrefix: 'guru-eko', emailPrefix: 'guru.eko', name: 'Bu Lia', fullName: 'Lia Amalia, S.E.', mataPelajaran: 'Ekonomi', birthDate: '1989-04-18', nipSuffix: 'EKO' },
+        { idPrefix: 'guru-geo', emailPrefix: 'guru.geo', name: 'Pak Rudi', fullName: 'Rudi Hartono, S.Geo.', mataPelajaran: 'Geografi', birthDate: '1987-12-01', nipSuffix: 'GEO' },
+        { idPrefix: 'guru-sos', emailPrefix: 'guru.sosio', name: 'Bu Siti', fullName: 'Siti Khadijah, S.Sos.', mataPelajaran: 'Sosiologi', birthDate: '1991-06-25', nipSuffix: 'SOS' },
+        { idPrefix: 'guru-sej', emailPrefix: 'guru.sejindo', name: 'Pak Hendra', fullName: 'Hendra Gunawan, M.Hum.', mataPelajaran: 'Sejarah Indonesia', birthDate: '1980-10-08', nipSuffix: 'SEJ' },
+    ];
+
+    guruData.forEach((g, index) => {
+        const email = `${g.emailPrefix}@sma-azbail.sch.id`;
+        users.push({
+            id: `${g.idPrefix}-${String(index+1).padStart(3,'0')}`, email, role: 'guru', isVerified: true, name: g.name, fullName: g.fullName,
+            phone: `0812345${String(index+1).padStart(5,'0')}`, address: `Jl. Guru No. ${index+1}`, birthDate: g.birthDate, bio: `Guru ${g.mataPelajaran} di SMA Az-Bail.`,
+            nip: `G.${g.nipSuffix}.${String(index+1).padStart(3,'0')}`, joinDate: `201${Math.floor(Math.random() * 4) + 5}-07-15`, // Joined between 2015-2018
+            avatarUrl: `https://placehold.co/100x100.png?text=${g.name.substring(0,1)}${g.fullName.split(" ")[1]?.[0] || ''}`, mataPelajaran: g.mataPelajaran
+        });
+        mockPasswords[email] = 'password';
+    });
+
+    const firstNames = ["Ahmad", "Budi", "Citra", "Dewi", "Eko", "Fajar", "Gita", "Hasan", "Indra", "Joko", "Kartika", "Lina", "Mega", "Nina", "Omar"];
+    const lastNames = ["Subagyo", "Wijaya", "Lestari", "Permata", "Prasetyo", "Nugroho", "Wati", "Ali", "Kusuma", "Susanto", "Dewi", " Sari", "Putri", "Rahayu", "Maulana"];
+    let studentIdCounter = 1;
+
+    SCHOOL_GRADE_LEVELS.forEach(grade => {
+        SCHOOL_MAJORS.forEach(major => {
+            for (let classNum = 1; classNum <= SCHOOL_CLASSES_PER_MAJOR_GRADE; classNum++) {
+                const className = `${grade} ${major} ${classNum}`;
+                // Add 2 students per class for brevity in mock data
+                for (let i = 0; i < 2; i++) {
+                    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+                    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+                    const fullName = `${firstName} ${lastName}`;
+                    const name = firstName;
+                    const email = `${name.toLowerCase().replace(/\s/g, '.')}.${grade.toLowerCase()}${major.toLowerCase()}${classNum}${i+1}@sma-azbail.sch.id`;
+                    const birthYear = 2008 - SCHOOL_GRADE_LEVELS.indexOf(grade); // Approx age
+                    
+                    users.push({
+                        id: `siswa-${String(studentIdCounter++).padStart(3,'0')}`, email, role: 'siswa', 
+                        isVerified: Math.random() > 0.2, // Some unverified
+                        name, fullName,
+                        phone: `0812346${String(studentIdCounter).padStart(5,'0')}`, address: `Jl. Siswa No. ${studentIdCounter}`, 
+                        birthDate: `${birthYear}-${String(Math.floor(Math.random()*12)+1).padStart(2,'0')}-${String(Math.floor(Math.random()*28)+1).padStart(2,'0')}`,
+                        bio: `Siswa ${className} di SMA Az-Bail.`, 
+                        nis: `S.${grade}.${major.substring(0,1)}.${String(studentIdCounter).padStart(3,'0')}`, 
+                        joinDate: `${2023 - SCHOOL_GRADE_LEVELS.indexOf(grade)}-07-10`, // Joined in July of their starting year
+                        avatarUrl: `https://placehold.co/100x100.png?text=${name.substring(0,1)}${lastName.substring(0,1)}`, kelas: className
+                    });
+                    mockPasswords[email] = 'password';
+                }
+            }
+        });
+    });
+    return users;
+};
+
+const initialUsers: User[] = generateInitialUsers();
 
 
 interface AuthContextType {
@@ -348,7 +407,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const changePassword = async (userId: string, currentPasswordAttempt: string, newPassword: string): Promise<boolean> => {
     setIsLoading(true);
-    const userToChange = users.find(u => u.id === userId);
+    const usersList = getStoredUsers();
+    const userToChange = usersList.find(u => u.id === userId);
 
     if (!userToChange) {
       toast({ title: "Gagal Mengubah Kata Sandi", description: "Pengguna tidak ditemukan.", variant: "destructive" });
@@ -403,3 +463,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

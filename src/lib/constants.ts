@@ -2,7 +2,7 @@
 import type { Role } from '@/types';
 import { LayoutDashboard, Users, BarChart3, Settings, LogOut, BookOpenText, BookOpenCheck, CalendarDays, ClipboardList, Presentation, FilePlus2, UserCheck, UploadCloud, ScrollText, GraduationCap, ClipboardCheck, BookOpen, FileText, Award, CalendarClock, CheckSquare } from 'lucide-react';
 
-export const APP_NAME = 'EduCentral';
+export const APP_NAME = 'EduCentral SMA Az-Bail';
 
 export const ROLES: Record<Role, string> = {
   admin: 'Admin',
@@ -84,6 +84,16 @@ export const USER_NAV_ITEMS = [
     { href: ROUTES.LOGIN, label: 'Keluar', icon: LogOut, action: 'logout' },
 ];
 
-export const DEFAULT_USERS_STORAGE_KEY = 'educentral_users_mock';
-export const AUTH_USER_STORAGE_KEY = 'educentral_auth_user_mock';
+export const DEFAULT_USERS_STORAGE_KEY = 'sma_azbail_users_mock';
+export const AUTH_USER_STORAGE_KEY = 'sma_azbail_auth_user_mock';
+
+export const SCHOOL_MAJORS = ["IPA", "IPS"];
+export const SCHOOL_GRADE_LEVELS = ["X", "XI", "XII"];
+export const SCHOOL_CLASSES_PER_MAJOR_GRADE = 5;
+
+export const MOCK_SUBJECTS = [
+  "Matematika Wajib", "Bahasa Indonesia", "Bahasa Inggris", "Pendidikan Agama", "PPKn", "Sejarah Indonesia",
+  "Fisika", "Kimia", "Biologi", "Matematika Peminatan", // IPA
+  "Geografi", "Sosiologi", "Ekonomi", "Sejarah Peminatan" // IPS
+];
 
