@@ -85,12 +85,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!existingUser.isVerified && existingUser.role === 'siswa') {
         persistAuthUser(existingUser); // Set user so they can be redirected to verify
         router.push(ROUTES.VERIFY_EMAIL);
-        toast({ title: "Verification Required", description: "Please verify your email to continue." });
+        toast({ title: "Verifikasi Diperlukan", description: "Silakan verifikasi email Anda untuk melanjutkan." });
         setIsLoading(false);
         return true; // Login successful, but needs verification
       }
       persistAuthUser(existingUser);
-      toast({ title: "Login Successful", description: `Welcome back, ${existingUser.name || existingUser.email}!` });
+      toast({ title: "Login Berhasil", description: `Selamat datang kembali, ${existingUser.name || existingUser.email}!` });
       // Redirect based on role
       switch (existingUser.role) {
         case 'admin': router.push(ROUTES.ADMIN_DASHBOARD); break;
@@ -103,7 +103,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(false);
       return true;
     }
-    toast({ title: "Login Failed", description: "Invalid email or password.", variant: "destructive" });
+    toast({ title: "Login Gagal", description: "Email atau kata sandi salah.", variant: "destructive" });
     setIsLoading(false);
     return false;
   };
@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const register = async (email: string, passwordAttempt: string): Promise<boolean> => {
     setIsLoading(true);
     if (users.some(u => u.email === email)) {
-      toast({ title: "Registration Failed", description: "Email already exists.", variant: "destructive" });
+      toast({ title: "Pendaftaran Gagal", description: "Email sudah ada.", variant: "destructive" });
       setIsLoading(false);
       return false;
     }
@@ -126,7 +126,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const updatedUsers = [...users, newUser];
     persistUsers(updatedUsers);
     persistAuthUser(newUser); // Log in the new user to redirect to verification
-    toast({ title: "Registration Successful", description: "Please verify your email." });
+    toast({ title: "Pendaftaran Berhasil", description: "Silakan verifikasi email Anda." });
     router.push(ROUTES.VERIFY_EMAIL);
     setIsLoading(false);
     return true;
@@ -135,7 +135,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = () => {
     persistAuthUser(null);
     router.push(ROUTES.LOGIN);
-    toast({ title: "Logged Out", description: "You have been successfully logged out." });
+    toast({ title: "Berhasil Keluar", description: "Anda telah berhasil keluar." });
   };
 
   const verifyUserEmail = (userIdToVerify?: string) => {
@@ -150,7 +150,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (user && user.id === targetUserId) {
       const updatedCurrentUser = { ...user, isVerified: true };
       persistAuthUser(updatedCurrentUser);
-      toast({ title: "Email Verified", description: "Your email has been verified. You can now log in." });
+      toast({ title: "Email Terverifikasi", description: "Email Anda telah diverifikasi. Anda sekarang dapat masuk." });
        // Redirect based on role after verification
       switch (updatedCurrentUser.role) {
         case 'admin': router.push(ROUTES.ADMIN_DASHBOARD); break;
@@ -161,13 +161,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         default: router.push(ROUTES.LOGIN); // Fallback to login if role dashboard not clear
       }
     } else if (userIdToVerify) { // Verification done by admin
-        toast({ title: "User Verified", description: `User email has been verified.` });
+        toast({ title: "Pengguna Diverifikasi", description: `Email pengguna telah diverifikasi.` });
     }
   };
   
   const createUser = (userData: Omit<User, 'id' | 'isVerified' | 'name'> & { password?: string }): User | null => {
     if (users.some(u => u.email === userData.email)) {
-      toast({ title: "Creation Failed", description: "Email already exists.", variant: "destructive" });
+      toast({ title: "Pembuatan Gagal", description: "Email sudah ada.", variant: "destructive" });
       return null;
     }
     const newUser: User = {
@@ -184,7 +184,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     const updatedUsers = [...users, newUser];
     persistUsers(updatedUsers);
-    toast({ title: "User Created", description: `${ROLES[newUser.role]} ${newUser.email} has been created.` });
+    toast({ title: "Pengguna Dibuat", description: `${ROLES[newUser.role]} ${newUser.email} telah dibuat.` });
     return newUser;
   };
 
@@ -196,17 +196,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (user && user.id === userId) {
       persistAuthUser({ ...user, role: newRole });
     }
-    toast({ title: "User Updated", description: `User role updated to ${ROLES[newRole]}.` });
+    toast({ title: "Pengguna Diperbarui", description: `Peran pengguna diperbarui menjadi ${ROLES[newRole]}.` });
   };
 
   const deleteUser = (userId: string) => {
     if (user && user.id === userId) {
-        toast({ title: "Action Denied", description: "Cannot delete the currently logged-in user.", variant: "destructive" });
+        toast({ title: "Tindakan Ditolak", description: "Tidak dapat menghapus pengguna yang sedang login.", variant: "destructive" });
         return;
     }
     const updatedUsers = users.filter(u => u.id !== userId);
     persistUsers(updatedUsers);
-    toast({ title: "User Deleted", description: "User has been successfully deleted." });
+    toast({ title: "Pengguna Dihapus", description: "Pengguna telah berhasil dihapus." });
   };
 
   const authContextValue = { 
@@ -228,8 +228,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth harus digunakan di dalam AuthProvider');
   }
   return context;
 };
-

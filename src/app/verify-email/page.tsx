@@ -54,20 +54,20 @@ function VerifyEmailContent() {
           </div>
           <CardTitle className="text-3xl font-headline text-primary">{APP_NAME}</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Verify Your Email Address
+            Verifikasi Alamat Email Anda
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 text-center">
           <p>
-            Thanks for registering! A verification link would typically be sent to <strong>{user.email}</strong>.
+            Terima kasih telah mendaftar! Tautan verifikasi biasanya akan dikirim ke <strong>{user.email}</strong>.
           </p>
-          <p>For this demo, please click the button below to simulate email verification.</p>
+          <p>Untuk demo ini, silakan klik tombol di bawah untuk mensimulasikan verifikasi email.</p>
           
           <Button onClick={handleVerify} className="w-full" disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Verify My Email"}
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Verifikasi Email Saya"}
           </Button>
           <Button variant="link" onClick={logout} className="text-sm text-muted-foreground">
-            Log out and try a different account
+            Keluar dan coba akun lain
           </Button>
         </CardContent>
       </Card>

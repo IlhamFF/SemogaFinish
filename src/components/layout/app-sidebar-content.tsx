@@ -26,7 +26,6 @@ export function AppSidebarContent() {
     link.roles.includes(user.role) || user.role === 'superadmin'
   );
 
-  // Filter out duplicate labels for the same role if dashboards point to same effective route
   const uniqueLinks = accessibleLinks.reduce((acc, current) => {
     const x = acc.find(item => item.label === current.label && item.roles.some(r => current.roles.includes(r)));
     if (!x) {
@@ -36,15 +35,11 @@ export function AppSidebarContent() {
     }
   }, [] as typeof NAV_LINKS_CONFIG);
   
-  // Superadmin specific logic: show all links if preferred, or just admin links + their own unique ones
-  // For now, superadmin sees all links listed under their role
   const finalLinks = user.role === 'superadmin' 
-    ? NAV_LINKS_CONFIG.filter(link => link.roles.includes('superadmin') || link.roles.includes('admin')) // Show admin links too
+    ? NAV_LINKS_CONFIG.filter(link => link.roles.includes('superadmin') || link.roles.includes('admin')) 
     : uniqueLinks;
   
-  // Further de-duplication for superadmin if admin links are duplicated
   const displayLinks = [...new Map(finalLinks.map(item => [item.href, item])).values()];
-
 
   return (
     <>
@@ -77,7 +72,7 @@ export function AppSidebarContent() {
       <SidebarFooter className="mt-auto border-t p-2">
         <Button variant="ghost" onClick={logout} className="w-full justify-start group-data-[collapsible=icon]:justify-center">
           <LogOut className="mr-2 h-5 w-5 group-data-[collapsible=icon]:mr-0" />
-           <span className="group-data-[collapsible=icon]:hidden">Logout</span>
+           <span className="group-data-[collapsible=icon]:hidden">Keluar</span>
         </Button>
       </SidebarFooter>
     </>

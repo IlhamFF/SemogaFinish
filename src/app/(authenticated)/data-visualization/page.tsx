@@ -7,18 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 
 const mockData = [
-  { id: "TASK-8782", title: "Physics Midterm Grades", status: "Completed", priority: "High", lastUpdated: "2024-07-15" },
-  { id: "TASK-7878", title: "Student Attendance Report - June", status: "In Progress", priority: "Medium", lastUpdated: "2024-07-20" },
-  { id: "TASK-1234", title: "Math Curriculum Review", status: "Pending", priority: "High", lastUpdated: "2024-07-01" },
-  { id: "TASK-4567", title: "School Event Participation", status: "Completed", priority: "Low", lastUpdated: "2024-06-28" },
-  { id: "TASK-9876", title: "Library Book Inventory", status: "To Do", priority: "Medium", lastUpdated: "2024-07-22" },
+  { id: "TUGAS-8782", title: "Nilai Ujian Tengah Semester Fisika", status: "Selesai", priority: "Tinggi", lastUpdated: "2024-07-15" },
+  { id: "TUGAS-7878", title: "Laporan Kehadiran Siswa - Juni", status: "Sedang Berjalan", priority: "Sedang", lastUpdated: "2024-07-20" },
+  { id: "TUGAS-1234", title: "Tinjauan Kurikulum Matematika", status: "Tertunda", priority: "Tinggi", lastUpdated: "2024-07-01" },
+  { id: "TUGAS-4567", title: "Partisipasi Acara Sekolah", status: "Selesai", priority: "Rendah", lastUpdated: "2024-06-28" },
+  { id: "TUGAS-9876", title: "Inventaris Buku Perpustakaan", status: "Akan Dikerjakan", priority: "Sedang", lastUpdated: "2024-07-22" },
 ];
 
 const statusVariantMap: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
-  "Completed": "default",
-  "In Progress": "secondary",
-  "Pending": "outline",
-  "To Do": "destructive",
+  "Selesai": "default",
+  "Sedang Berjalan": "secondary",
+  "Tertunda": "outline",
+  "Akan Dikerjakan": "destructive",
 };
 
 export default function DataVisualizationPage() {
@@ -26,29 +26,29 @@ export default function DataVisualizationPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-headline font-semibold">Data Visualization</h1>
+      <h1 className="text-3xl font-headline font-semibold">Visualisasi Data</h1>
       <p className="text-muted-foreground">
-        Hello {user?.name || user?.email}, here's an overview of relevant data. 
-        {user?.role === 'admin' && " You have access to comprehensive system data."}
-        {user?.role === 'guru' && " You can view data related to your courses and students."}
-        {user?.role === 'siswa' && " You can see your academic progress and course information."}
-        {user?.role === 'pimpinan' && " You have access to institutional analytics and reports."}
+        Halo {user?.name || user?.email}, berikut adalah gambaran umum data yang relevan. 
+        {user?.role === 'admin' && " Anda memiliki akses ke data sistem yang komprehensif."}
+        {user?.role === 'guru' && " Anda dapat melihat data terkait kursus dan siswa Anda."}
+        {user?.role === 'siswa' && " Anda dapat melihat kemajuan akademik dan informasi kursus Anda."}
+        {user?.role === 'pimpinan' && " Anda memiliki akses ke analitik dan laporan institusional."}
       </p>
       
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Sample Data Table</CardTitle>
-          <CardDescription>This is a placeholder table demonstrating data display capabilities.</CardDescription>
+          <CardTitle>Contoh Tabel Data</CardTitle>
+          <CardDescription>Ini adalah tabel placeholder yang menunjukkan kemampuan tampilan data.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Task ID</TableHead>
-                <TableHead>Title</TableHead>
+                <TableHead>ID Tugas</TableHead>
+                <TableHead>Judul</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead className="text-right">Last Updated</TableHead>
+                <TableHead>Prioritas</TableHead>
+                <TableHead className="text-right">Terakhir Diperbarui</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -60,7 +60,7 @@ export default function DataVisualizationPage() {
                     <Badge variant={statusVariantMap[item.status] || "default"}>{item.status}</Badge>
                   </TableCell>
                   <TableCell>
-                     <Badge variant={item.priority === "High" ? "destructive" : item.priority === "Medium" ? "secondary" : "outline"}>
+                     <Badge variant={item.priority === "Tinggi" ? "destructive" : item.priority === "Sedang" ? "secondary" : "outline"}>
                         {item.priority}
                      </Badge>
                   </TableCell>
@@ -75,11 +75,11 @@ export default function DataVisualizationPage() {
        {/* Placeholder for charts -  can be expanded based on roles */}
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Data Chart (Placeholder)</CardTitle>
-          <CardDescription>A visual representation of data will be shown here.</CardDescription>
+          <CardTitle>Grafik Data (Placeholder)</CardTitle>
+          <CardDescription>Representasi visual data akan ditampilkan di sini.</CardDescription>
         </CardHeader>
         <CardContent className="h-64 flex items-center justify-center bg-muted/50 rounded-md">
-          <p className="text-muted-foreground">Chart will be displayed here</p>
+          <p className="text-muted-foreground">Grafik akan ditampilkan di sini</p>
         </CardContent>
       </Card>
     </div>

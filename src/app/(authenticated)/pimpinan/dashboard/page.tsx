@@ -8,10 +8,10 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } fro
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 const pimpinanStats = [
-  { title: "Total Students", value: "1250", icon: Users, color: "text-primary", change: "+5% from last month" },
-  { title: "Teacher Performance", value: "92%", icon: TrendingUp, color: "text-green-500", change: "+2% from last quarter" },
-  { title: "Budget Utilization", value: "78%", icon: DollarSign, color: "text-yellow-500", change: "On track" },
-  { title: "Curriculum Completion", value: "85%", icon: BookOpenCheck, color: "text-indigo-500", change: "Target: 90%" },
+  { title: "Total Siswa", value: "1250", icon: Users, color: "text-primary", change: "+5% dari bulan lalu" },
+  { title: "Kinerja Guru", value: "92%", icon: TrendingUp, color: "text-green-500", change: "+2% dari kuartal lalu" },
+  { title: "Penggunaan Anggaran", value: "78%", icon: DollarSign, color: "text-yellow-500", change: "Sesuai rencana" },
+  { title: "Penyelesaian Kurikulum", value: "85%", icon: BookOpenCheck, color: "text-indigo-500", change: "Target: 90%" },
 ];
 
 const enrollmentData = [
@@ -19,12 +19,12 @@ const enrollmentData = [
   { month: "Feb", students: 850 },
   { month: "Mar", students: 900 },
   { month: "Apr", students: 920 },
-  { month: "May", students: 950 },
+  { month: "Mei", students: 950 },
   { month: "Jun", students: 1000 },
 ];
 const chartConfig = {
   students: {
-    label: "Students",
+    label: "Siswa",
     color: "hsl(var(--primary))",
   },
 } satisfies ChartConfig;
@@ -34,13 +34,13 @@ export default function PimpinanDashboardPage() {
   const { user } = useAuth();
 
   if (!user || (user.role !== 'pimpinan' && user.role !== 'superadmin')) {
-    return <p>Access Denied. You must be a Pimpinan to view this page.</p>;
+    return <p>Akses Ditolak. Anda harus menjadi Pimpinan untuk melihat halaman ini.</p>;
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-headline font-semibold">Pimpinan Dashboard</h1>
-      <p className="text-muted-foreground">Welcome, {user.name || user.email}! Overview of institutional performance and key metrics.</p>
+      <h1 className="text-3xl font-headline font-semibold">Dasbor Pimpinan</h1>
+      <p className="text-muted-foreground">Selamat datang, {user.name || user.email}! Gambaran umum kinerja institusi dan metrik utama.</p>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {pimpinanStats.map((card) => (
@@ -60,8 +60,8 @@ export default function PimpinanDashboardPage() {
       <div className="grid gap-6 md:grid-cols-1">
         <Card className="shadow-lg col-span-1">
           <CardHeader>
-            <CardTitle>Student Enrollment Trend</CardTitle>
-            <CardDescription>Monthly student enrollment over the past 6 months.</CardDescription>
+            <CardTitle>Tren Pendaftaran Siswa</CardTitle>
+            <CardDescription>Pendaftaran siswa bulanan selama 6 bulan terakhir.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ChartContainer config={chartConfig} className="w-full h-full">
@@ -78,24 +78,24 @@ export default function PimpinanDashboardPage() {
       </div>
        <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Key Performance Indicators (KPIs)</CardTitle>
+            <CardTitle>Indikator Kinerja Utama (KPI)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <h3 className="font-semibold">Graduation Rate</h3>
+                    <h3 className="font-semibold">Tingkat Kelulusan</h3>
                     <p className="text-2xl text-green-600">88%</p>
-                    <p className="text-xs text-muted-foreground">+3% from last year</p>
+                    <p className="text-xs text-muted-foreground">+3% dari tahun lalu</p>
                 </div>
                  <div>
-                    <h3 className="font-semibold">Student Retention</h3>
+                    <h3 className="font-semibold">Retensi Siswa</h3>
                     <p className="text-2xl text-primary">95%</p>
-                    <p className="text-xs text-muted-foreground">Stable</p>
+                    <p className="text-xs text-muted-foreground">Stabil</p>
                 </div>
                  <div>
-                    <h3 className="font-semibold">Faculty Satisfaction</h3>
+                    <h3 className="font-semibold">Kepuasan Fakultas</h3>
                     <p className="text-2xl text-yellow-600">4.2 / 5.0</p>
-                    <p className="text-xs text-muted-foreground">Survey Q2 2024</p>
+                    <p className="text-xs text-muted-foreground">Survei K2 2024</p>
                 </div>
             </div>
           </CardContent>

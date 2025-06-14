@@ -34,12 +34,10 @@ export default function AdminUsersPage() {
 
   const handleDeleteUser = async (userId: string) => {
     setPageLoading(true);
-    // No direct call to deleteUser from useAuth needed as UserTableActions handles it via prop
-    // This function is passed to UserTableActions, which calls useAuth's deleteUser
     try {
-        deleteUser(userId); // This is the deleteUser from useAuth
+        deleteUser(userId); 
     } catch (error) {
-        toast({ title: "Error", description: "Failed to delete user.", variant: "destructive" });
+        toast({ title: "Kesalahan", description: "Gagal menghapus pengguna.", variant: "destructive" });
     } finally {
         setPageLoading(false);
     }
@@ -50,7 +48,7 @@ export default function AdminUsersPage() {
     try {
         verifyUserEmail(userId);
     } catch (error) {
-        toast({ title: "Error", description: "Failed to verify user.", variant: "destructive" });
+        toast({ title: "Kesalahan", description: "Gagal memverifikasi pengguna.", variant: "destructive" });
     } finally {
         setPageLoading(false);
     }
@@ -61,28 +59,17 @@ export default function AdminUsersPage() {
     try {
         updateUserRole(userToUpdate.id, newRole);
     } catch (error) {
-        toast({ title: "Error", description: "Failed to update user role.", variant: "destructive" });
+        toast({ title: "Kesalahan", description: "Gagal memperbarui peran pengguna.", variant: "destructive" });
     } finally {
         setPageLoading(false);
     }
   }
 
-
   const handleFormSubmit = async (data: any, currentlyEditingUser: User | null) => {
     setPageLoading(true);
     try {
       if (currentlyEditingUser) {
-        // This is an edit operation. For this mock, only role changes are directly supported via UserTableActions.
-        // If name or other fields were editable, logic would go here.
-        // For now, UserForm is mostly for creation and password reset.
-        // A more robust edit would update the user object in the users array.
-        // For simplicity, we'll assume the form can only be used for creation in this simplified example.
-        // Or, one might implement an `updateUser` function in `useAuth`.
-        // Let's focus on creation for this form.
-        // For actual editing (like name), we'd need an updateUser in useAuth.
-        // The UserForm is setup to potentially handle edits, but the useAuth mock doesn't have a full updateUser yet.
-        // Role changes are handled by handleChangeRole.
-        toast({ title: "Edit User", description: "User edit functionality (e.g. name, password) can be further implemented here." });
+        toast({ title: "Edit Pengguna", description: "Fungsionalitas edit pengguna (mis. nama, kata sandi) dapat diimplementasikan lebih lanjut di sini." });
       } else {
         const newUser = await createUser({ email: data.email, password: data.password, role: data.role, name: data.name });
         if (newUser) {
@@ -90,7 +77,7 @@ export default function AdminUsersPage() {
         }
       }
     } catch (error) {
-      toast({ title: "Operation Failed", description: "Could not save user data.", variant: "destructive"});
+      toast({ title: "Operasi Gagal", description: "Tidak dapat menyimpan data pengguna.", variant: "destructive"});
     } finally {
       setPageLoading(false);
     }
@@ -101,36 +88,36 @@ export default function AdminUsersPage() {
   }
 
   if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'superadmin')) {
-    return <p>Access Denied. You must be an admin to view this page.</p>;
+    return <p>Akses Ditolak. Anda harus menjadi admin untuk melihat halaman ini.</p>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-headline font-semibold">User Management</h1>
-          <p className="text-muted-foreground">View, create, and manage user accounts in the system.</p>
+          <h1 className="text-3xl font-headline font-semibold">Manajemen Pengguna</h1>
+          <p className="text-muted-foreground">Lihat, buat, dan kelola akun pengguna di sistem.</p>
         </div>
         <Button onClick={handleCreateUser} disabled={pageLoading}>
-          <UserPlus className="mr-2 h-4 w-4" /> Create User
+          <UserPlus className="mr-2 h-4 w-4" /> Buat Pengguna
         </Button>
       </div>
       
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>All Users</CardTitle>
-          <CardDescription>A list of all users in the system. Current user count: {users.length}.</CardDescription>
+          <CardTitle>Semua Pengguna</CardTitle>
+          <CardDescription>Daftar semua pengguna di sistem. Jumlah pengguna saat ini: {users.length}.</CardDescription>
         </CardHeader>
         <CardContent>
           {pageLoading && <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead>Nama</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
+                <TableHead>Peran</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">Tindakan</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -146,11 +133,11 @@ export default function AdminUsersPage() {
                   <TableCell>
                     {user.isVerified ? (
                       <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white">
-                        <CheckCircle className="mr-1 h-3 w-3" /> Verified
+                        <CheckCircle className="mr-1 h-3 w-3" /> Terverifikasi
                       </Badge>
                     ) : (
                       <Badge variant="destructive">
-                        <ShieldAlert className="mr-1 h-3 w-3" /> Not Verified
+                        <ShieldAlert className="mr-1 h-3 w-3" /> Belum Terverifikasi
                       </Badge>
                     )}
                   </TableCell>

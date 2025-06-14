@@ -16,8 +16,8 @@ import { ROUTES, APP_NAME } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
-  email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  email: z.string().email({ message: "Alamat email tidak valid." }),
+  password: z.string().min(6, { message: "Kata sandi minimal 6 karakter." }),
 });
 
 type AuthFormProps = {
@@ -45,9 +45,9 @@ export function AuthForm({ mode }: AuthFormProps) {
       success = await register(values.email, values.password);
     }
     if (!success && mode === "login") {
-      setFormError("Invalid credentials or user not verified.");
+      setFormError("Kredensial tidak valid atau pengguna belum diverifikasi.");
     } else if (!success && mode === "register") {
-      setFormError("Registration failed. Email might already be in use.");
+      setFormError("Pendaftaran gagal. Email mungkin sudah digunakan.");
     }
   }
 
@@ -57,7 +57,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-headline text-primary">{APP_NAME}</CardTitle>
           <CardDescription className="text-muted-foreground">
-            {mode === "login" ? "Sign in to your account" : "Create a new account"}
+            {mode === "login" ? "Masuk ke akun Anda" : "Buat akun baru"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -70,7 +70,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="you@example.com" {...field} />
+                      <Input placeholder="anda@contoh.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -81,7 +81,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>Kata Sandi</FormLabel>
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
@@ -92,23 +92,23 @@ export function AuthForm({ mode }: AuthFormProps) {
               {formError && <p className="text-sm font-medium text-destructive">{formError}</p>}
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {mode === "login" ? "Sign In" : "Create Account"}
+                {mode === "login" ? "Masuk" : "Buat Akun"}
               </Button>
             </form>
           </Form>
           <div className="mt-6 text-center text-sm">
             {mode === "login" ? (
               <>
-                Don&apos;t have an account?{" "}
+                Belum punya akun?{" "}
                 <Link href={ROUTES.REGISTER} className="font-medium text-primary hover:underline">
-                  Sign up
+                  Daftar
                 </Link>
               </>
             ) : (
               <>
-                Already have an account?{" "}
+                Sudah punya akun?{" "}
                 <Link href={ROUTES.LOGIN} className="font-medium text-primary hover:underline">
-                  Sign in
+                  Masuk
                 </Link>
               </>
             )}

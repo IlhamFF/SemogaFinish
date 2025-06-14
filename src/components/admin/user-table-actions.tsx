@@ -49,41 +49,41 @@ export function UserTableActions({ user, currentUser, onEdit, onDelete, onVerify
     setIsRoleChangeDialogOpen(false);
   }
 
-  const canPerformActions = currentUser?.id !== user.id; // Prevent actions on self
+  const canPerformActions = currentUser?.id !== user.id; 
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0">
-            <span className="sr-only">Open menu</span>
+            <span className="sr-only">Buka menu</span>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuLabel>Tindakan</DropdownMenuLabel>
           <DropdownMenuItem onClick={() => onEdit(user)} disabled={!canPerformActions}>
             <Edit3 className="mr-2 h-4 w-4" />
-            Edit User
+            Edit Pengguna
           </DropdownMenuItem>
           
           {user.role === 'siswa' && !user.isVerified && (
             <DropdownMenuItem onClick={() => onVerify(user.id)}>
               <CheckCircle className="mr-2 h-4 w-4" />
-              Verify Siswa
+              Verifikasi Siswa
             </DropdownMenuItem>
           )}
 
           <DropdownMenuSeparator />
-          <DropdownMenuLabel>Change Role</DropdownMenuLabel>
-          {Object.keys(ROLES).filter(r => r !== 'superadmin').map((roleKey) => ( // Exclude superadmin from direct assignment
+          <DropdownMenuLabel>Ubah Peran</DropdownMenuLabel>
+          {Object.keys(ROLES).filter(r => r !== 'superadmin').map((roleKey) => (
             <DropdownMenuItem 
               key={roleKey} 
               onClick={() => { setSelectedRole(roleKey as Role); setIsRoleChangeDialogOpen(true); }}
               disabled={!canPerformActions || user.role === (roleKey as Role)}
             >
               {user.role === (roleKey as Role) ? <CheckCircle className="mr-2 h-4 w-4 text-primary" /> : <ShieldAlert className="mr-2 h-4 w-4" />}
-              Set as {ROLES[roleKey as Role]}
+              Atur sebagai {ROLES[roleKey as Role]}
             </DropdownMenuItem>
           ))}
 
@@ -94,7 +94,7 @@ export function UserTableActions({ user, currentUser, onEdit, onDelete, onVerify
             disabled={!canPerformActions}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete User
+            Hapus Pengguna
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -102,16 +102,15 @@ export function UserTableActions({ user, currentUser, onEdit, onDelete, onVerify
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the user account
-              for <span className="font-semibold">{user.email}</span>.
+              Tindakan ini tidak dapat dibatalkan. Ini akan menghapus akun pengguna untuk <span className="font-semibold">{user.email}</span> secara permanen.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-              Yes, delete user
+              Ya, hapus pengguna
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -120,15 +119,15 @@ export function UserTableActions({ user, currentUser, onEdit, onDelete, onVerify
       <AlertDialog open={isRoleChangeDialogOpen} onOpenChange={setIsRoleChangeDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Role Change</AlertDialogTitle>
+            <AlertDialogTitle>Konfirmasi Perubahan Peran</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to change the role of <span className="font-semibold">{user.email}</span> to <span className="font-semibold">{ROLES[selectedRole]}</span>?
+              Apakah Anda yakin ingin mengubah peran <span className="font-semibold">{user.email}</span> menjadi <span className="font-semibold">{ROLES[selectedRole]}</span>?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction onClick={handleRoleChangeConfirm}>
-              Confirm Change
+              Konfirmasi Perubahan
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
