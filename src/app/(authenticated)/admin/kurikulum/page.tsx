@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { BookOpenCheck, ClipboardList, Target, BookCopy } from "lucide-react";
+import { BookOpenCheck, ClipboardList, Target, BookCopy, BookOpenText } from "lucide-react";
 
 export default function AdminKurikulumPage() {
   const { user } = useAuth();
