@@ -1,3 +1,4 @@
+
 export type Role = 'admin' | 'guru' | 'siswa' | 'pimpinan' | 'superadmin';
 
 export interface User {
@@ -27,4 +28,11 @@ export interface NavItem {
   icon: React.ElementType;
   roles: Role[];
   subItems?: NavItem[];
+}
+
+export interface SKL {
+  id: string;
+  kode: string;
+  deskripsi: string;
+  kategori: "Sikap" | "Pengetahuan" | "Keterampilan";
 }
