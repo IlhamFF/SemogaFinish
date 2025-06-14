@@ -26,44 +26,52 @@ export default function AdminKurikulumPage() {
             Pengembangan dan Pengelolaan Kurikulum
           </CardTitle>
           <CardDescription>
-            Area ini didedikasikan untuk merancang, menyusun, dan mengelola struktur kurikulum sekolah secara komprehensif, mengacu pada daftar mata pelajaran yang telah ditentukan.
+            Fasilitas komprehensif untuk merancang, mengembangkan, dan mengelola seluruh aspek kurikulum pendidikan. Modul ini memungkinkan administrator untuk menyusun standar pembelajaran, struktur kurikulum, hingga materi ajar yang relevan dengan daftar mata pelajaran yang tersedia.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="p-6 text-muted-foreground bg-muted/20 rounded-md border">
-            <h3 className="text-lg font-semibold text-foreground mb-3">Fitur Utama (Dalam Pengembangan):</h3>
-            <ul className="space-y-3">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Komponen Utama Manajemen Kurikulum (Dalam Pengembangan):</h3>
+            <ul className="space-y-4">
               <li className="flex items-start">
                 <ClipboardList className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
                 <div>
                   <h4 className="font-medium text-foreground">Referensi Mata Pelajaran</h4>
-                  <p className="text-sm">Kurikulum akan disusun berdasarkan <Link href={ROUTES.ADMIN_MATA_PELAJARAN} className="text-primary hover:underline">daftar mata pelajaran</Link> yang telah dikelola secara terpusat.</p>
+                  <p className="text-sm">
+                    Fondasi utama penyusunan kurikulum adalah <Link href={ROUTES.ADMIN_MATA_PELAJARAN} className="text-primary hover:underline">daftar mata pelajaran</Link> yang telah ditetapkan dan dikelola secara terpusat. Semua elemen kurikulum akan merujuk pada mata pelajaran ini untuk memastikan konsistensi.
+                  </p>
                 </div>
               </li>
               <li className="flex items-start">
                 <Target className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
                 <div>
                   <h4 className="font-medium text-foreground">Standar Kompetensi & Capaian Pembelajaran</h4>
-                  <p className="text-sm">Menetapkan standar kompetensi lulusan (SKL) dan capaian pembelajaran (CP) untuk setiap jenjang dan program pendidikan, yang terintegrasi dengan mata pelajaran.</p>
+                  <p className="text-sm">
+                    Definisikan Standar Kompetensi Lulusan (SKL) dan Capaian Pembelajaran (CP) untuk setiap jenjang pendidikan dan program studi. SKL dan CP ini menjadi acuan utama dalam pengembangan silabus dan RPP, memastikan bahwa pembelajaran terarah dan terukur.
+                  </p>
                 </div>
               </li>
               <li className="flex items-start">
                 <BookCopy className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
                 <div>
                   <h4 className="font-medium text-foreground">Penyusunan Struktur Kurikulum, Silabus & RPP</h4>
-                  <p className="text-sm">Memfasilitasi pembuatan dan pengelolaan struktur kurikulum per jenjang/tingkat, silabus, serta Rencana Pelaksanaan Pembelajaran (RPP) yang terstruktur untuk setiap mata pelajaran dalam kurikulum.</p>
+                  <p className="text-sm">
+                    Buat dan kelola struktur kurikulum yang detail untuk setiap tingkatan kelas atau program. Kembangkan Silabus yang mencakup alokasi waktu, metode, dan penilaian. Susun Rencana Pelaksanaan Pembelajaran (RPP) yang operasional bagi guru, lengkap dengan kegiatan pembelajaran dan asesmen.
+                  </p>
                 </div>
               </li>
                <li className="flex items-start">
                 <BookOpenText className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
                 <div>
                   <h4 className="font-medium text-foreground">Manajemen Materi Pembelajaran</h4>
-                  <p className="text-sm">Mengaitkan materi pembelajaran, sumber belajar, dan bahan ajar dengan setiap topik dalam silabus mata pelajaran.</p>
+                  <p className="text-sm">
+                    Integrasikan materi pembelajaran digital maupun fisik. Unggah, kelola, dan kaitkan berbagai sumber belajar, bahan ajar, modul, dan referensi lainnya dengan setiap topik atau sub-topik dalam silabus mata pelajaran, sehingga mudah diakses oleh guru dan siswa.
+                  </p>
                 </div>
               </li>
             </ul>
-            <p className="mt-6 text-sm text-center">
-              Fungsionalitas penuh untuk manajemen kurikulum akan segera hadir.
+            <p className="mt-8 text-sm text-center text-muted-foreground">
+              Fungsionalitas penuh untuk manajemen kurikulum, termasuk pembuatan dan pengelolaan detail setiap komponen, akan segera hadir.
             </p>
           </div>
         </CardContent>
@@ -71,4 +79,3 @@ export default function AdminKurikulumPage() {
     </div>
   );
 }
-
