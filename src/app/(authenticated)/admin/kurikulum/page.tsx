@@ -38,7 +38,7 @@ export default function AdminKurikulumPage() {
                 <div>
                   <h4 className="font-medium text-foreground">Referensi Mata Pelajaran</h4>
                   <p className="text-sm">
-                    Fondasi utama penyusunan kurikulum adalah <Link href={ROUTES.ADMIN_MATA_PELAJARAN} className="text-primary hover:underline">daftar mata pelajaran</Link> yang telah ditetapkan dan dikelola secara terpusat. Semua elemen kurikulum akan merujuk pada mata pelajaran ini untuk memastikan konsistensi.
+                    Fondasi utama penyusunan kurikulum adalah <Link href={ROUTES.ADMIN_MATA_PELAJARAN} className="text-primary hover:underline">daftar mata pelajaran</Link> yang telah ditetapkan dan dikelola secara terpusat. Semua elemen kurikulum akan merujuk pada mata pelajaran ini untuk memastikan konsistensi dan integrasi.
                   </p>
                 </div>
               </li>
@@ -47,7 +47,7 @@ export default function AdminKurikulumPage() {
                 <div>
                   <h4 className="font-medium text-foreground">Standar Kompetensi & Capaian Pembelajaran</h4>
                   <p className="text-sm">
-                    Definisikan Standar Kompetensi Lulusan (SKL) dan Capaian Pembelajaran (CP) untuk setiap jenjang pendidikan dan program studi. SKL dan CP ini menjadi acuan utama dalam pengembangan silabus dan RPP, memastikan bahwa pembelajaran terarah dan terukur.
+                    Definisikan Standar Kompetensi Lulusan (SKL) dan Capaian Pembelajaran (CP) untuk setiap jenjang pendidikan, program studi, dan mata pelajaran. SKL dan CP ini menjadi acuan utama dalam pengembangan silabus dan RPP, memastikan bahwa pembelajaran terarah, terukur, dan relevan dengan tujuan pendidikan.
                   </p>
                 </div>
               </li>
@@ -56,7 +56,7 @@ export default function AdminKurikulumPage() {
                 <div>
                   <h4 className="font-medium text-foreground">Penyusunan Struktur Kurikulum, Silabus & RPP</h4>
                   <p className="text-sm">
-                    Buat dan kelola struktur kurikulum yang detail untuk setiap tingkatan kelas atau program. Kembangkan Silabus yang mencakup alokasi waktu, metode, dan penilaian. Susun Rencana Pelaksanaan Pembelajaran (RPP) yang operasional bagi guru, lengkap dengan kegiatan pembelajaran dan asesmen.
+                    Buat dan kelola struktur kurikulum yang detail untuk setiap tingkatan kelas atau program studi. Kembangkan Silabus yang mencakup alokasi waktu, kompetensi dasar, materi pokok, kegiatan pembelajaran, indikator pencapaian, metode penilaian, dan sumber belajar. Susun Rencana Pelaksanaan Pembelajaran (RPP) yang operasional bagi guru, lengkap dengan langkah-langkah pembelajaran, asesmen formatif dan sumatif.
                   </p>
                 </div>
               </li>
@@ -65,7 +65,7 @@ export default function AdminKurikulumPage() {
                 <div>
                   <h4 className="font-medium text-foreground">Manajemen Materi Pembelajaran</h4>
                   <p className="text-sm">
-                    Integrasikan materi pembelajaran digital maupun fisik. Unggah, kelola, dan kaitkan berbagai sumber belajar, bahan ajar, modul, dan referensi lainnya dengan setiap topik atau sub-topik dalam silabus mata pelajaran, sehingga mudah diakses oleh guru dan siswa.
+                    Integrasikan materi pembelajaran digital maupun fisik. Unggah, kelola, dan kaitkan berbagai sumber belajar, bahan ajar, modul, video pembelajaran, dan referensi lainnya dengan setiap topik atau sub-topik dalam silabus mata pelajaran. Materi ini akan mudah diakses oleh guru dan siswa.
                   </p>
                 </div>
               </li>
