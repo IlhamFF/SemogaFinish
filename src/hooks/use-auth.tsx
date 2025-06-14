@@ -20,27 +20,27 @@ const mockPasswords: Record<string, string> = {
 const initialUsers: User[] = [
   { 
     id: '1', email: 'admin@example.com', role: 'admin', isVerified: true, name: 'Admin Edu', fullName: 'Administrator EduCentral',
-    phone: '081234567890', address: 'Jl. Merdeka No. 1, Jakarta', birthDate: '1980-01-01', bio: 'Pengelola sistem EduCentral.', nip: 'P.ADM.001', joinDate: '2020-01-15'
+    phone: '081234567890', address: 'Jl. Merdeka No. 1, Jakarta', birthDate: '1980-01-01', bio: 'Pengelola sistem EduCentral.', nip: 'P.ADM.001', joinDate: '2020-01-15', avatarUrl: `https://placehold.co/100x100.png?text=AE`
   },
   { 
     id: '2', email: 'guru@example.com', role: 'guru', isVerified: true, name: 'Bu Guru Ani', fullName: 'Ani Suryani, S.Pd.',
-    phone: '081234567891', address: 'Jl. Pendidikan No. 10, Bandung', birthDate: '1985-05-10', bio: 'Guru Matematika berpengalaman.', nip: 'G.MTK.001', joinDate: '2018-07-20'
+    phone: '081234567891', address: 'Jl. Pendidikan No. 10, Bandung', birthDate: '1985-05-10', bio: 'Guru Matematika berpengalaman.', nip: 'G.MTK.001', joinDate: '2018-07-20', avatarUrl: `https://placehold.co/100x100.png?text=AS`
   },
   { 
     id: '3', email: 'siswa@example.com', role: 'siswa', isVerified: false, name: 'Siswa Budi', fullName: 'Budi Hartono',
-    phone: '081234567892', address: 'Jl. Pelajar No. 5, Surabaya', birthDate: '2005-08-17', bio: 'Siswa kelas X, minat pada sains.', nis: 'S.10.001', joinDate: '2023-07-10'
+    phone: '081234567892', address: 'Jl. Pelajar No. 5, Surabaya', birthDate: '2005-08-17', bio: 'Siswa kelas X, minat pada sains.', nis: 'S.10.001', joinDate: '2023-07-10', avatarUrl: `https://placehold.co/100x100.png?text=BH`
   },
   { 
     id: '4', email: 'pimpinan@example.com', role: 'pimpinan', isVerified: true, name: 'Pak Kepsek', fullName: 'Dr. H. Bambang Susetyo, M.Pd.',
-    phone: '081234567893', address: 'Jl. Kepemimpinan No. 1, Yogyakarta', birthDate: '1975-03-20', bio: 'Kepala Sekolah dengan visi memajukan pendidikan.', nip: 'P.KPS.001', joinDate: '2015-03-01'
+    phone: '081234567893', address: 'Jl. Kepemimpinan No. 1, Yogyakarta', birthDate: '1975-03-20', bio: 'Kepala Sekolah dengan visi memajukan pendidikan.', nip: 'P.KPS.001', joinDate: '2015-03-01', avatarUrl: `https://placehold.co/100x100.png?text=BS`
   },
   { 
     id: '5', email: 'super@example.com', role: 'superadmin', isVerified: true, name: 'Super Admin', fullName: 'Super Administrator Sistem',
-    phone: '081200000000', address: 'Pusat Data EduCentral', birthDate: '1970-01-01', bio: 'Pemegang kunci akses tertinggi.', nip: 'P.SUP.001', joinDate: '2010-01-01'
+    phone: '081200000000', address: 'Pusat Data EduCentral', birthDate: '1970-01-01', bio: 'Pemegang kunci akses tertinggi.', nip: 'P.SUP.001', joinDate: '2010-01-01', avatarUrl: `https://placehold.co/100x100.png?text=SA`
   },
    { 
     id: '6', email: 'verified.siswa@example.com', role: 'siswa', isVerified: true, name: 'Siti Terverifikasi', fullName: 'Siti Aminah',
-    phone: '081234567899', address: 'Jl. Cendekia No. 7, Medan', birthDate: '2006-02-14', bio: 'Siswa rajin dan aktif.', nis: 'S.11.002', joinDate: '2023-07-10'
+    phone: '081234567899', address: 'Jl. Cendekia No. 7, Medan', birthDate: '2006-02-14', bio: 'Siswa rajin dan aktif.', nis: 'S.11.002', joinDate: '2023-07-10', avatarUrl: `https://placehold.co/100x100.png?text=SA`
   },
 ];
 
@@ -97,11 +97,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    setUsersState(getStoredUsers()); // Load users into state
+    const loadedUsers = getStoredUsers();
+    // Ensure all initialUsers have default avatar if missing
+    const usersWithDefaults = loadedUsers.map(u => ({
+        ...u,
+        avatarUrl: u.avatarUrl || `https://placehold.co/100x100.png?text=${(u.fullName || u.name || u.email).substring(0,2).toUpperCase()}`
+    }));
+    setUsersState(usersWithDefaults); 
+    
     if (typeof window !== 'undefined') {
       const storedAuthUser = localStorage.getItem(AUTH_USER_STORAGE_KEY);
       if (storedAuthUser) {
-        persistAuthUser(JSON.parse(storedAuthUser));
+        const parsedUser = JSON.parse(storedAuthUser);
+        // Ensure loaded auth user also has default avatar if missing
+        parsedUser.avatarUrl = parsedUser.avatarUrl || `https://placehold.co/100x100.png?text=${(parsedUser.fullName || parsedUser.name || parsedUser.email).substring(0,2).toUpperCase()}`;
+        persistAuthUser(parsedUser);
       }
     }
     setIsLoading(false);
@@ -146,13 +156,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(false);
       return false;
     }
+    const defaultName = email.split('@')[0];
     const newUser: User = {
       id: String(Date.now()),
       email,
       role: 'siswa',
       isVerified: false,
-      name: email.split('@')[0],
-      fullName: email.split('@')[0], // Default full name
+      name: defaultName,
+      fullName: defaultName, 
+      joinDate: new Date().toISOString().split('T')[0], // Today's date
+      avatarUrl: `https://placehold.co/100x100.png?text=${defaultName.substring(0,2).toUpperCase()}`,
     };
     mockPasswords[email] = passwordAttempt;
     const updatedUsers = [...currentUsers, newUser];
@@ -204,21 +217,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       toast({ title: "Pembuatan Gagal", description: "Email sudah ada.", variant: "destructive" });
       return null;
     }
+    const defaultName = userData.name || userData.email.split('@')[0];
+    const defaultFullName = userData.fullName || defaultName;
+
     const newUser: User = {
       id: String(Date.now()),
       email: userData.email,
       role: userData.role,
       isVerified: true, 
-      name: userData.name || userData.email.split('@')[0],
-      fullName: userData.fullName || userData.name || userData.email.split('@')[0],
+      name: defaultName,
+      fullName: defaultFullName,
       phone: userData.phone,
       address: userData.address,
-      birthDate: userData.birthDate,
+      birthDate: userData.birthDate, // YYYY-MM-DD
       bio: userData.bio,
-      nis: userData.nis,
-      nip: userData.nip,
-      joinDate: userData.joinDate,
-      avatarUrl: userData.avatarUrl,
+      nis: userData.role === 'siswa' ? userData.nis : undefined,
+      nip: userData.role !== 'siswa' ? userData.nip : undefined,
+      joinDate: userData.joinDate || new Date().toISOString().split('T')[0],
+      avatarUrl: userData.avatarUrl || `https://placehold.co/100x100.png?text=${defaultFullName.substring(0,2).toUpperCase()}`,
     };
     mockPasswords[userData.email] = userData.password || 'password'; // Default password if not provided
     
@@ -286,9 +302,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const currentUsers = getStoredUsers();
     const existingUser = currentUsers.find(u => u.email === email);
     if (existingUser) {
-      // Simulasi pengiriman email reset
       toast({ title: "Permintaan Reset Terkirim", description: `Jika email ${email} terdaftar, instruksi reset akan dikirim (disimulasikan).` });
-      // Untuk mock, kita langsung redirect dengan token/email
       router.push(`${ROUTES.RESET_KATA_SANDI}?email=${encodeURIComponent(email)}`);
       setIsLoading(false);
       return true;
@@ -304,8 +318,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const userToReset = currentUsers.find(u => u.email === email);
 
     if (userToReset) {
-      mockPasswords[email] = newPassword; // Perbarui kata sandi di mock store
-      // Tidak perlu persistUsers karena mockPasswords terpisah
+      mockPasswords[email] = newPassword; 
       toast({ title: "Kata Sandi Direset", description: "Kata sandi Anda telah berhasil diubah. Silakan login." });
       router.push(ROUTES.LOGIN);
       setIsLoading(false);
@@ -319,7 +332,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <AuthContext.Provider value={{ 
       user, 
-      users: users, // Use the state variable 'usersState' here
+      users: users, 
       login, 
       register, 
       logout, 

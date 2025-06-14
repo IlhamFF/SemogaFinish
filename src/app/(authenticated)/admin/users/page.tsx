@@ -15,12 +15,21 @@ import { UserTableActions } from "@/components/admin/user-table-actions";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminUsersPage() {
-  const { user: currentUser, users: allUsers, createUser, verifyUserEmail, updateUserRole, deleteUser, isLoading: authLoading } = useAuth();
+  const { 
+    user: currentUser, 
+    users: allUsers, 
+    createUser, 
+    verifyUserEmail, 
+    updateUserRole, 
+    deleteUser, 
+    updateUserProfile, // Tambahkan ini
+    isLoading: authLoading 
+  } = useAuth();
   const { toast } = useToast();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [pageLoading, setPageLoading] = useState(false); // For actions like delete, verify
+  const [pageLoading, setPageLoading] = useState(false);
 
   const handleCreateUser = () => {
     setEditingUser(null);
@@ -34,21 +43,18 @@ export default function AdminUsersPage() {
 
   const handleDeleteUser = async (userId: string) => {
     setPageLoading(true);
-    // useAuth.deleteUser handles toasts and state updates
-    deleteUser(userId); 
+    await deleteUser(userId); 
     setPageLoading(false);
   };
   
   const handleVerifySiswa = (userId: string) => {
     setPageLoading(true);
-    // useAuth.verifyUserEmail handles toasts and state updates
     verifyUserEmail(userId);
     setPageLoading(false);
   };
 
   const handleChangeRole = (userToUpdate: User, newRole: Role) => {
     setPageLoading(true);
-    // useAuth.updateUserRole handles toasts and state updates
     updateUserRole(userToUpdate.id, newRole);
     setPageLoading(false);
   }
@@ -57,22 +63,19 @@ export default function AdminUsersPage() {
     setPageLoading(true);
     try {
       if (currentlyEditingUser) {
-        // For mock, we'll update all editable fields passed. Password update is illustrative.
-        // In a real backend, password would be handled separately and hashed.
-        const { email, role, password, ...profileData } = data;
-        const success = await createUser({ // This is effectively an update for mock
-            ...currentlyEditingUser, 
-            ...profileData, 
-            role: role // Role can be changed via form for editing if needed
-        });
+        const { email, password, ...profileData } = data; // Role diupdate terpisah, email tidak diubah
+        const success = await updateUserProfile(currentlyEditingUser.id, profileData);
         if (success) {
              toast({ title: "Pengguna Diperbarui", description: "Detail pengguna telah diperbarui." });
+             if (data.role && data.role !== currentlyEditingUser.role) {
+                updateUserRole(currentlyEditingUser.id, data.role); // Update peran jika berubah
+             }
              setIsFormOpen(false);
         } else {
             toast({ title: "Gagal Memperbarui", description: "Tidak dapat menyimpan perubahan pengguna.", variant: "destructive" });
         }
       } else {
-        // Creating a new user
+        // Membuat pengguna baru
         const newUser = createUser({ 
             email: data.email!, 
             password: data.password, 
@@ -90,8 +93,6 @@ export default function AdminUsersPage() {
          });
         if (newUser) {
           setIsFormOpen(false);
-        } else {
-             // createUser in useAuth handles toast for creation failure (e.g. email exists)
         }
       }
     } catch (error) {
@@ -101,7 +102,7 @@ export default function AdminUsersPage() {
     }
   };
   
-  if (authLoading && !allUsers.length) { // Show loader if auth is loading AND no users yet
+  if (authLoading && !allUsers.length) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
 

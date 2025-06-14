@@ -16,25 +16,19 @@ import { CalendarIcon, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { id as localeID } from 'date-fns/locale'; // Import locale Indonesia
 import Image from "next/image";
 import { ROLES } from "@/lib/constants";
 
-// Skema validasi disesuaikan untuk mock data
 const profileFormSchema = z.object({
   fullName: z.string().min(2, { message: "Nama lengkap minimal 2 karakter." }).optional(),
   phone: z.string().optional(),
   address: z.string().optional(),
-  birthDate: z.date().optional(), // Tetap sebagai date untuk Calendar
+  birthDate: z.date().optional(),
   bio: z.string().max(300, { message: "Bio maksimal 300 karakter." }).optional(),
   avatarUrl: z.string().url({ message: "URL Avatar tidak valid." }).optional().or(z.literal('')),
-  // Field read-only atau yang tidak diupdate melalui form ini:
-  // email: z.string().email(),
-  // role: z.string(),
-  // nis: z.string().optional(),
-  // nip: z.string().optional(),
-  // joinDate: z.string().optional(),
+  // NIS dan NIP tidak diedit pengguna di sini, hanya ditampilkan
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -45,23 +39,24 @@ export default function SettingsPage() {
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
-    defaultValues: {
-      fullName: user?.fullName || user?.name || "",
-      phone: user?.phone || "",
-      address: user?.address || "",
-      birthDate: user?.birthDate ? parseISO(user.birthDate) : undefined,
-      bio: user?.bio || "",
-      avatarUrl: user?.avatarUrl || "",
-    },
+    // Default values diisi di useEffect
   });
 
   React.useEffect(() => {
     if (user) {
+      let parsedBirthDate: Date | undefined = undefined;
+      if (user.birthDate) {
+        const dateCandidate = parseISO(user.birthDate);
+        if (isValid(dateCandidate)) {
+          parsedBirthDate = dateCandidate;
+        }
+      }
+      
       form.reset({
         fullName: user.fullName || user.name || "",
         phone: user.phone || "",
         address: user.address || "",
-        birthDate: user.birthDate ? parseISO(user.birthDate) : undefined,
+        birthDate: parsedBirthDate,
         bio: user.bio || "",
         avatarUrl: user.avatarUrl || "",
       });
@@ -77,23 +72,22 @@ export default function SettingsPage() {
       birthDate: data.birthDate ? format(data.birthDate, 'yyyy-MM-dd') : undefined,
     };
 
-    const success = await updateUserProfile(user.id, profileDataToUpdate);
-    if (success) {
-      // useAuth hook already shows a toast
-    } else {
-      // useAuth hook shows error toast
-    }
+    await updateUserProfile(user.id, profileDataToUpdate);
     setIsSubmitting(false);
   }
   
   const getInitials = (name?: string, email?: string) => {
     if (name) {
-      return name.split(' ').map(n => n[0]).join('').toUpperCase();
+      const parts = name.split(' ');
+      if (parts.length > 1) {
+        return `${parts[0][0]}${parts[parts.length-1][0]}`.toUpperCase();
+      }
+      return name.substring(0,2).toUpperCase();
     }
     if (email) {
-      return email[0].toUpperCase();
+      return email.substring(0,2).toUpperCase();
     }
-    return 'U';
+    return '??';
   }
 
   if (authLoading || !user) {
@@ -108,7 +102,7 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-headline font-semibold">Pengaturan Profil</h1>
       <p className="text-muted-foreground">
-        Kelola informasi profil Anda. Perubahan akan disimpan secara lokal untuk sesi ini.
+        Kelola informasi profil Anda.
       </p>
 
       <Card className="shadow-lg">
@@ -117,24 +111,30 @@ export default function SettingsPage() {
           <CardDescription>Detail akun Anda saat ini.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
             <Image 
               src={user.avatarUrl || `https://placehold.co/100x100.png?text=${getInitials(user.fullName || user.name, user.email)}`} 
               alt={user.fullName || user.name || "Avatar Pengguna"}
               width={100}
               height={100}
-              className="rounded-full object-cover"
+              className="rounded-full object-cover border-2 border-primary"
               data-ai-hint="user avatar"
             />
-            <div>
+            <div className="text-center sm:text-left">
               <h2 className="text-2xl font-semibold">{user.fullName || user.name || "Nama Tidak Ada"}</h2>
               <p className="text-muted-foreground">{user.email}</p>
-              <p className="text-sm text-primary">{ROLES[user.role]}</p>
+              <p className="text-sm text-primary font-medium">{ROLES[user.role]}</p>
             </div>
           </div>
-           {user.nis && <p><span className="font-semibold">NIS:</span> {user.nis}</p>}
-           {user.nip && <p><span className="font-semibold">NIP:</span> {user.nip}</p>}
-           {user.joinDate && <p><span className="font-semibold">Tanggal Bergabung:</span> {format(parseISO(user.joinDate), 'dd MMMM yyyy', { locale: localeID })}</p>}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 pt-4 text-sm">
+            {user.nis && user.role === 'siswa' && <p><span className="font-semibold">NIS:</span> {user.nis}</p>}
+            {user.nip && user.role !== 'siswa' && <p><span className="font-semibold">NIP:</span> {user.nip}</p>}
+            {user.joinDate && <p><span className="font-semibold">Tanggal Bergabung:</span> {format(parseISO(user.joinDate), 'dd MMMM yyyy', { locale: localeID })}</p>}
+            {user.phone && <p><span className="font-semibold">Telepon:</span> {user.phone}</p>}
+            {user.address && <p className="md:col-span-2"><span className="font-semibold">Alamat:</span> {user.address}</p>}
+            {user.birthDate && isValid(parseISO(user.birthDate)) && <p><span className="font-semibold">Tanggal Lahir:</span> {format(parseISO(user.birthDate), 'dd MMMM yyyy', { locale: localeID })}</p>}
+            {user.bio && <p className="md:col-span-2"><span className="font-semibold">Bio:</span> {user.bio}</p>}
+          </div>
         </CardContent>
       </Card>
 
@@ -201,7 +201,7 @@ export default function SettingsPage() {
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-[240px] pl-3 text-left font-normal",
+                              "w-full md:w-[240px] pl-3 text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -223,6 +223,9 @@ export default function SettingsPage() {
                             date > new Date() || date < new Date("1900-01-01")
                           }
                           initialFocus
+                          captionLayout="dropdown-buttons"
+                          fromYear={1900}
+                          toYear={new Date().getFullYear()}
                         />
                       </PopoverContent>
                     </Popover>
@@ -255,7 +258,7 @@ export default function SettingsPage() {
                     <FormControl>
                       <Input placeholder="https://contoh.com/avatar.png" {...field} />
                     </FormControl>
-                     <FormDescription>Tempelkan URL ke gambar profil Anda. Biarkan kosong untuk menggunakan default.</FormDescription>
+                     <FormDescription>Tempelkan URL ke gambar profil Anda. Biarkan kosong untuk menggunakan placeholder.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
