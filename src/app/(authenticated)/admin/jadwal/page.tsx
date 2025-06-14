@@ -29,7 +29,7 @@ export default function AdminJadwalPage() {
         </CardHeader>
         <CardContent>
           <div className="p-6 text-muted-foreground bg-muted/20 rounded-md border">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Fitur Utama Manajemen Jadwal (Dalam Pengembangan):</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">Fitur Utama Manajemen Jadwal:</h3>
             <ul className="space-y-4">
               <li className="flex items-start">
                 <Clock className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
@@ -54,7 +54,7 @@ export default function AdminJadwalPage() {
                 <div>
                   <h4 className="font-medium text-foreground">Deteksi Konflik Otomatis</h4>
                   <p className="text-sm">
-                    Sistem akan membantu mendeteksi potensi konflik jadwal, seperti guru mengajar di dua kelas berbeda pada waktu yang sama, atau penggunaan ruangan yang bentrok.
+                    Sistem membantu mendeteksi potensi konflik jadwal, seperti guru mengajar di dua kelas berbeda pada waktu yang sama, atau penggunaan ruangan yang bentrok.
                   </p>
                 </div>
               </li>
@@ -77,9 +77,6 @@ export default function AdminJadwalPage() {
                 </div>
               </li>
             </ul>
-            <p className="mt-8 text-sm text-center text-muted-foreground">
-              Fungsionalitas penuh untuk manajemen jadwal akan diimplementasikan secara bertahap.
-            </p>
           </div>
         </CardContent>
       </Card>

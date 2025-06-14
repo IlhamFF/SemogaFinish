@@ -86,22 +86,8 @@ export default function AdminMataPelajaranPage() {
                 </Button>
             </div>
           )}
-          
-          <div className="mt-8 p-6 text-muted-foreground bg-muted/20 rounded-md border">
-            <h3 className="text-lg font-semibold text-foreground mb-3">Fitur yang Akan Datang:</h3>
-            <ul className="list-disc list-inside space-y-2 text-sm">
-              <li>Formulir lengkap untuk menambah dan mengedit mata pelajaran (dengan validasi).</li>
-              <li>Integrasi dengan database untuk penyimpanan data mata pelajaran secara permanen.</li>
-              <li>Penanganan error yang lebih baik untuk operasi CRUD.</li>
-              <li>Fitur pencarian dan filter lanjutan untuk daftar mata pelajaran.</li>
-              <li>Pengelolaan kategori mata pelajaran secara dinamis (misalnya: Wajib, Peminatan IPA, Peminatan IPS, Muatan Lokal).</li>
-              <li>Kemampuan untuk menentukan jumlah jam pelajaran efektif per minggu/semester untuk setiap mata pelajaran.</li>
-              <li>Relasi dengan data guru untuk penugasan pengampu mata pelajaran.</li>
-            </ul>
-          </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-

@@ -31,7 +31,7 @@ export default function AdminKurikulumPage() {
         </CardHeader>
         <CardContent>
           <div className="p-6 text-muted-foreground bg-muted/20 rounded-md border">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Komponen Utama Manajemen Kurikulum (Dalam Pengembangan):</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">Komponen Utama Manajemen Kurikulum:</h3>
             <ul className="space-y-4">
               <li className="flex items-start">
                 <ClipboardList className="h-5 w-5 mr-3 mt-1 text-primary flex-shrink-0" />
@@ -47,7 +47,7 @@ export default function AdminKurikulumPage() {
                 <div>
                   <h4 className="font-medium text-foreground">Standar Kompetensi & Capaian Pembelajaran</h4>
                   <p className="text-sm">
-                    Definisikan Standar Kompetensi Lulusan (SKL) dan Capaian Pembelajaran (CP) untuk setiap jenjang pendidikan, program studi, dan mata pelajaran. SKL dan CP ini menjadi acuan utama dalam pengembangan silabus dan RPP, memastikan bahwa pembelajaran terarah, terukur, dan relevan dengan tujuan pendidikan.
+                    Kelola Standar Kompetensi Lulusan (SKL) dan Capaian Pembelajaran (CP) untuk setiap jenjang pendidikan, program studi, dan mata pelajaran. SKL dan CP ini menjadi acuan utama dalam pengembangan silabus dan RPP, memastikan bahwa pembelajaran terarah, terukur, dan relevan dengan tujuan pendidikan.
                   </p>
                 </div>
               </li>
@@ -56,7 +56,7 @@ export default function AdminKurikulumPage() {
                 <div>
                   <h4 className="font-medium text-foreground">Penyusunan Struktur Kurikulum, Silabus & RPP</h4>
                   <p className="text-sm">
-                    Buat dan kelola struktur kurikulum yang detail untuk setiap tingkatan kelas atau program studi. Kembangkan Silabus yang mencakup alokasi waktu, kompetensi dasar, materi pokok, kegiatan pembelajaran, indikator pencapaian, metode penilaian, dan sumber belajar. Susun Rencana Pelaksanaan Pembelajaran (RPP) yang operasional bagi guru, lengkap dengan langkah-langkah pembelajaran, asesmen formatif dan sumatif.
+                    Buat dan kelola struktur kurikulum yang detail untuk setiap tingkatan kelas atau program studi. Kembangkan Silabus yang mencakup alokasi waktu, kompetensi dasar, materi pokok, kegiatan pembelajaran, indikator pencapaian, metode penilaian, dan sumber belajar. Susun Rencana Pelaksanaan Pembelajaran (RPP) yang operasional bagi guru.
                   </p>
                 </div>
               </li>
@@ -70,9 +70,6 @@ export default function AdminKurikulumPage() {
                 </div>
               </li>
             </ul>
-            <p className="mt-8 text-sm text-center text-muted-foreground">
-              Fungsionalitas penuh untuk manajemen kurikulum, termasuk pembuatan dan pengelolaan detail setiap komponen, akan segera hadir.
-            </p>
           </div>
         </CardContent>
       </Card>
