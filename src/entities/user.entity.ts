@@ -6,6 +6,9 @@ import type { Role } from "@/types";
 import type { AccountEntity } from "./account.entity";
 import type { SessionEntity } from "./session.entity";
 import type { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
+import type { MateriAjarEntity } from "./materi-ajar.entity";
+import type { SilabusEntity } from "./silabus.entity";
+import type { RppEntity } from "./rpp.entity";
 
 @Entity({ name: "users" })
 export class UserEntity /* implements AdapterUser */ { // Removed implements
@@ -73,14 +76,23 @@ export class UserEntity /* implements AdapterUser */ { // Removed implements
   @Column({ type: "timestamp with time zone", nullable: true })
   resetPasswordExpires?: Date | null;
   
-  @OneToMany("AccountEntity", account => account.user)
+  @OneToMany(() => AccountEntity, account => account.user)
   accounts?: AccountEntity[];
 
-  @OneToMany("SessionEntity", session => session.user)
+  @OneToMany(() => SessionEntity, session => session.user)
   sessions?: SessionEntity[];
 
-  @OneToMany("StrukturKurikulumEntity", ske => ske.guruPengampu)
+  @OneToMany(() => StrukturKurikulumEntity, ske => ske.guruPengampu)
   strukturKurikulumDiajar?: StrukturKurikulumEntity[];
+
+  @OneToMany(() => MateriAjarEntity, materi => materi.uploader)
+  materiAjarUploaded?: MateriAjarEntity[];
+
+  @OneToMany(() => SilabusEntity, silabus => silabus.uploader)
+  silabusUploaded?: SilabusEntity[];
+
+  @OneToMany(() => RppEntity, rpp => rpp.uploader)
+  rppUploaded?: RppEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;

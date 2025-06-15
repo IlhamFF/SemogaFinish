@@ -4,6 +4,8 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { KATEGORI_MAPEL } from "@/lib/constants";
 import type { KategoriMapelType } from "@/entities/mata-pelajaran.entity"; // Self-reference for type
 import type { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
+import type { SilabusEntity } from "./silabus.entity";
+import type { RppEntity } from "./rpp.entity";
 
 // Menggunakan tipe string untuk kategori agar lebih fleksibel jika nilai berubah,
 // namun validasi bisa dilakukan di level aplikasi atau dengan check constraint di DB jika perlu.
@@ -33,6 +35,12 @@ export class MataPelajaranEntity {
 
   @OneToMany("StrukturKurikulumEntity", (ske) => ske.mapel)
   strukturKurikulumEntries?: StrukturKurikulumEntity[];
+
+  @OneToMany("SilabusEntity", (silabus) => silabus.mapel)
+  silabusList?: SilabusEntity[];
+
+  @OneToMany("RppEntity", (rpp) => rpp.mapel)
+  rppList?: RppEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;
