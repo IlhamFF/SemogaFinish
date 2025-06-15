@@ -41,7 +41,7 @@ const mataPelajaranSchema = z.object({
 type MataPelajaranFormValues = z.infer<typeof mataPelajaranSchema>;
 
 export default function AdminMataPelajaranPage() {
-  const { user, isLoading: authLoading } = useAuth(); 
+  const { user: currentUserAuth, isLoading: authLoading } = useAuth(); // useAuth from next-auth
   const { toast } = useToast();
   const [mataPelajaranList, setMataPelajaranList] = useState<MataPelajaran[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -69,7 +69,8 @@ export default function AdminMataPelajaranPage() {
     try {
       const response = await fetch('/api/mapel');
       if (!response.ok) {
-        throw new Error('Gagal mengambil data mata pelajaran');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Gagal mengambil data mata pelajaran');
       }
       const data = await response.json();
       setMataPelajaranList(data);
@@ -81,10 +82,10 @@ export default function AdminMataPelajaranPage() {
   };
 
   useEffect(() => {
-    if (user && (user.role === 'admin' || user.role === 'superadmin')) {
+    if (currentUserAuth && (currentUserAuth.role === 'admin' || currentUserAuth.role === 'superadmin')) {
         fetchMataPelajaran();
     }
-  }, [user]); // Removed toast from dependency array
+  }, [currentUserAuth]); 
 
 
   useEffect(() => {
@@ -104,7 +105,7 @@ export default function AdminMataPelajaranPage() {
   if (authLoading) { 
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
-  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+  if (!currentUserAuth || (currentUserAuth.role !== 'admin' && currentUserAuth.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi admin untuk melihat halaman ini.</p>;
   }
 
@@ -113,8 +114,6 @@ export default function AdminMataPelajaranPage() {
     const url = editingMapel ? `/api/mapel/${editingMapel.id}` : '/api/mapel';
     const method = editingMapel ? 'PUT' : 'POST';
     
-    // Untuk PUT, hanya kirim field yang diubah jika backend mendukung partial update.
-    // Untuk sekarang, kita kirim semua (kecuali kode untuk PUT).
     const payload = editingMapel ? { nama: values.nama, deskripsi: values.deskripsi, kategori: values.kategori } : values;
 
     try {
@@ -127,12 +126,11 @@ export default function AdminMataPelajaranPage() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Gagal menyimpan mata pelajaran');
       }
-      // const result = await response.json(); // Tidak selalu perlu result jika hanya konfirmasi
       toast({ title: "Berhasil!", description: `Mata pelajaran ${values.nama} telah ${editingMapel ? 'diperbarui' : 'ditambahkan'}.` });
       setIsFormOpen(false);
       setEditingMapel(null);
       form.reset();
-      fetchMataPelajaran(); // Muat ulang data
+      fetchMataPelajaran(); 
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Terjadi kesalahan.", variant: "destructive" });
     } finally {
@@ -159,7 +157,7 @@ export default function AdminMataPelajaranPage() {
           throw new Error(errorData.message || 'Gagal menghapus mata pelajaran');
         }
         toast({ title: "Dihapus!", description: `Mata pelajaran ${mapelToDelete.nama} telah dihapus.` });
-        fetchMataPelajaran(); // Muat ulang data
+        fetchMataPelajaran(); 
       } catch (error: any) {
         toast({ title: "Error", description: error.message || "Terjadi kesalahan.", variant: "destructive" });
       } finally {
@@ -252,10 +250,10 @@ export default function AdminMataPelajaranPage() {
                       <TableCell>{mapel.kategori}</TableCell>
                       <TableCell className="max-w-xs truncate" title={mapel.deskripsi || ""}>{mapel.deskripsi || "-"}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => handleEditMataPelajaran(mapel)} className="mr-2 text-blue-600 hover:text-blue-800">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditMataPelajaran(mapel)} className="mr-2 text-primary hover:text-primary/80">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(mapel)} className="text-red-600 hover:text-red-800">
+                        <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(mapel)} className="text-destructive hover:text-destructive/80">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -290,7 +288,7 @@ export default function AdminMataPelajaranPage() {
               <FormField control={form.control} name="kode" render={({ field }) => (<FormItem><FormLabel>Kode Mata Pelajaran</FormLabel><FormControl><Input placeholder="Contoh: MTK-X, FIS-XI-IPA" {...field} disabled={!!editingMapel} /></FormControl>{editingMapel && <FormDescription>Kode tidak dapat diubah.</FormDescription>}<FormMessage /></FormItem>)} />
               <FormField control={form.control} name="nama" render={({ field }) => (<FormItem><FormLabel>Nama Mata Pelajaran</FormLabel><FormControl><Input placeholder="Contoh: Matematika Kelas X" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="kategori" render={({ field }) => (<FormItem><FormLabel>Kategori</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kategori mata pelajaran" /></SelectTrigger></FormControl><SelectContent>{KATEGORI_MAPEL.map(kat => (<SelectItem key={kat} value={kat}>{kat}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea placeholder="Deskripsi singkat mata pelajaran..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea placeholder="Deskripsi singkat mata pelajaran..." {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>)} />
               <DialogFooter><Button type="button" variant="outline" onClick={() => { setIsFormOpen(false); setEditingMapel(null); }} disabled={isSubmitting}>Batal</Button><Button type="submit" disabled={isSubmitting || isLoadingData}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingMapel ? "Simpan Perubahan" : "Simpan Mata Pelajaran"}</Button></DialogFooter>
             </form>
           </Form>
@@ -299,12 +297,13 @@ export default function AdminMataPelajaranPage() {
 
       <AlertDialog open={!!mapelToDelete} onOpenChange={(open) => { if(!open) setMapelToDelete(null) }}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle><AlertDialogDescription>Apakah Anda yakin ingin menghapus mata pelajaran "{mapelToDelete?.nama}"? Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle><AlertDialogDescription>Apakah Anda yakin ingin menghapus mata pelajaran "{mapelToDelete?.nama}"? Tindakan ini akan menghapus semua data terkait (struktur kurikulum, silabus, RPP) yang menggunakan mata pelajaran ini.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter><AlertDialogCancel onClick={() => setMapelToDelete(null)} disabled={isSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Ya, Hapus</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
   );
 }
+    
 
     
