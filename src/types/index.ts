@@ -50,8 +50,8 @@ export interface CapaianPembelajaran {
   id: string;
   kode: string;
   deskripsi: string;
-  fase: FaseCpType; 
-  elemen: string; 
+  fase: FaseCpType;
+  elemen: string;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
@@ -66,17 +66,17 @@ export interface Ruangan {
 
 export interface SlotWaktu {
   id: string;
-  namaSlot: string; 
-  waktuMulai: string; 
-  waktuSelesai: string; 
+  namaSlot: string;
+  waktuMulai: string;
+  waktuSelesai: string;
 }
 
 export interface StrukturKurikulumItem {
   id: string;
-  idMapel: string; 
+  idMapel: string;
   namaMapel: string;
   alokasiJam: number;
-  guruPengampu?: string; 
+  guruPengampu?: string;
 }
 
 export interface Silabus {
@@ -84,9 +84,9 @@ export interface Silabus {
   judul: string;
   idMapel: string;
   namaMapel: string;
-  kelas: string; 
+  kelas: string;
   deskripsiSingkat?: string;
-  namaFile?: string; 
+  namaFile?: string;
 }
 
 export interface RPP {
@@ -99,7 +99,7 @@ export interface RPP {
   materiPokok?: string;
   kegiatanPembelajaran?: string;
   penilaian?: string;
-  namaFile?: string; 
+  namaFile?: string;
 }
 
 export interface MateriKategori {
@@ -115,6 +115,24 @@ export interface MataPelajaran {
   nama: string;
   deskripsi?: string | null;
   kategori: "Wajib Umum" | "Wajib Peminatan IPA" | "Wajib Peminatan IPS" | "Pilihan Lintas Minat" | "Muatan Lokal";
-  createdAt?: Date | string; 
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+export const JENIS_MATERI_AJAR = ["File", "Link"] as const;
+export type JenisMateriAjarType = typeof JENIS_MATERI_AJAR[number];
+
+export interface MateriAjar {
+  id: string;
+  judul: string;
+  deskripsi?: string | null;
+  mapelNama: string; // Nama mata pelajaran
+  jenisMateri: JenisMateriAjarType;
+  namaFileOriginal?: string | null; // Nama file asli saat diunggah
+  fileUrl?: string | null; // URL ke file yang disimpan atau link eksternal
+  tanggalUpload: string; // YYYY-MM-DD
+  uploaderId: string; // ID pengguna yang mengunggah
+  uploader?: User; // Detail pengguna (opsional, untuk join)
+  createdAt?: Date | string;
   updatedAt?: Date | string;
 }

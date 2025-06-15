@@ -9,6 +9,7 @@ import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import { SklEntity } from "@/entities/skl.entity";
 import { CpEntity } from "@/entities/cp.entity";
 import { MateriKategoriEntity } from "@/entities/materi-kategori.entity";
+import { MateriAjarEntity } from "@/entities/materi-ajar.entity";
 
 
 // Import other application-specific entities here as they are created
@@ -32,6 +33,7 @@ export const dataSourceOptions: DataSourceOptions = {
     SklEntity,
     CpEntity,
     MateriKategoriEntity,
+    MateriAjarEntity,
     // Add other entities here:
     // KelasEntity,
   ],
@@ -39,7 +41,6 @@ export const dataSourceOptions: DataSourceOptions = {
   subscribers: [],
 };
 
-// export const AppDataSource = new DataSource(dataSourceOptions);
 let AppDataSource: DataSource;
 
 
@@ -52,7 +53,6 @@ export async function getInitializedDataSource(): Promise<DataSource> {
       console.log("DataSource has been initialized successfully.");
     } catch (err) {
       console.error("Error during DataSource initialization:", err);
-      // Attempt to use existing AppDataSource if initialization fails but it was already initialized
       if (AppDataSource && AppDataSource.isInitialized) {
         console.warn("Using previously initialized AppDataSource despite new initialization attempt error.");
         return AppDataSource;
