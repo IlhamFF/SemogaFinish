@@ -7,23 +7,23 @@ import { useEffect } from "react";
 import { ROUTES } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
 
-// Hapus AuthProvider dari sini
 export default function RegisterPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!isLoading && user) {
+      // If user is already logged in, redirect them away from register page
       if (user.role === 'siswa' && !user.isVerified) {
-        router.push(ROUTES.VERIFY_EMAIL);
+        router.replace(ROUTES.VERIFY_EMAIL);
       } else {
         switch (user.role) {
-            case 'admin': router.push(ROUTES.ADMIN_DASHBOARD); break;
-            case 'guru': router.push(ROUTES.GURU_DASHBOARD); break;
-            case 'siswa': router.push(ROUTES.SISWA_DASHBOARD); break;
-            case 'pimpinan': router.push(ROUTES.PIMPINAN_DASHBOARD); break;
-            case 'superadmin': router.push(ROUTES.ADMIN_DASHBOARD); break;
-            default: router.push(ROUTES.HOME);
+            case 'admin': router.replace(ROUTES.ADMIN_DASHBOARD); break;
+            case 'guru': router.replace(ROUTES.GURU_DASHBOARD); break;
+            case 'siswa': router.replace(ROUTES.SISWA_DASHBOARD); break;
+            case 'pimpinan': router.replace(ROUTES.PIMPINAN_DASHBOARD); break;
+            case 'superadmin': router.replace(ROUTES.ADMIN_DASHBOARD); break;
+            default: router.replace(ROUTES.HOME);
         }
       }
     }

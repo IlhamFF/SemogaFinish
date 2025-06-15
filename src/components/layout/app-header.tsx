@@ -12,23 +12,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { useAuth } from "@/hooks/use-auth";
-import { APP_NAME, USER_NAV_ITEMS, ROLES } from "@/lib/constants";
-import { ChevronDown, LogOut, UserCircle } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth"; // useAuth now wraps useSession
+import { APP_NAME, USER_NAV_ITEMS, ROLES, ROUTES } from "@/lib/constants";
+import { ChevronDown, LogOut, UserCircle, Settings } from "lucide-react";
 import Link from "next/link";
 
 export function AppHeader() {
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuth(); // user from useSession, logout calls signOut
   const { isMobile } = useSidebar();
 
-  const getInitials = (name?: string, email?: string) => {
+  const getInitials = (name?: string | null, email?: string | null) => {
     if (name) {
-      return name.split(' ').map(n => n[0]).join('').toUpperCase();
+      const parts = name.split(' ');
+      if (parts.length > 1) {
+        return `${parts[0][0]}${parts[parts.length-1][0]}`.toUpperCase();
+      }
+      return name.substring(0,2).toUpperCase();
     }
     if (email) {
-      return email[0].toUpperCase();
+      return email.substring(0,2).toUpperCase();
     }
-    return 'U';
+    return '??';
   }
 
   return (
@@ -44,13 +48,13 @@ export function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative flex items-center gap-2 p-2 h-auto rounded-full focus-visible:ring-primary">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.avatarUrl || `https://placehold.co/40x40.png?text=${getInitials(user.name, user.email)}`} alt={user.name || user.email} data-ai-hint="user avatar" />
-                  <AvatarFallback>{getInitials(user.name, user.email)}</AvatarFallback>
+                  <AvatarImage src={user.avatarUrl || `https://placehold.co/40x40.png?text=${getInitials(user.fullName || user.name, user.email)}`} alt={user.fullName || user.name || user.email || "User"} data-ai-hint="user avatar" />
+                  <AvatarFallback>{getInitials(user.fullName || user.name, user.email)}</AvatarFallback>
                 </Avatar>
                 {!isMobile && (
                   <>
                     <div className="text-left">
-                      <p className="text-sm font-medium">{user.name || user.email}</p>
+                      <p className="text-sm font-medium">{user.fullName || user.name || user.email}</p>
                       <p className="text-xs text-muted-foreground">{ROLES[user.role]}</p>
                     </div>
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -61,28 +65,25 @@ export function AppHeader() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user.name || user.email}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
+                  <p className="text-sm font-medium leading-none">{user.fullName || user.name || user.email}</p>
+                  {user.email && <p className="text-xs leading-none text-muted-foreground">
                     {user.email}
-                  </p>
+                  </p>}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {USER_NAV_ITEMS.map((item) => (
-                <DropdownMenuItem key={item.label} asChild className="cursor-pointer">
-                  {item.action === 'logout' ? (
-                    <button onClick={logout} className="flex w-full items-center">
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {item.label}
-                    </button>
-                  ) : (
-                    <Link href={item.href} className="flex items-center">
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {item.label}
-                    </Link>
-                  )}
-                </DropdownMenuItem>
-              ))}
+              {/* USER_NAV_ITEMS could be filtered by role here if needed */}
+              <DropdownMenuItem asChild className="cursor-pointer">
+                  <Link href={ROUTES.SETTINGS} className="flex items-center w-full">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Pengaturan Profil
+                  </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
+                <LogOut className="mr-2 h-4 w-4" />
+                Keluar
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}

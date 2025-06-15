@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useAuth } from "@/hooks/use-auth"; // Tidak perlu AuthProvider
+import { useAuth } from "@/hooks/use-auth"; 
 import { ROUTES, APP_NAME } from "@/lib/constants";
 import { Loader2, ShieldCheck } from "lucide-react";
 
@@ -18,28 +18,32 @@ const resetPasswordSchema = z.object({
   confirmPassword: z.string().min(6, { message: "Konfirmasi kata sandi minimal 6 karakter." }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Kata sandi dan konfirmasi kata sandi tidak cocok.",
-  path: ["confirmPassword"], // Menunjukkan field mana yang error
+  path: ["confirmPassword"], 
 });
 
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 export default function ResetPasswordPage() {
-  const { resetPassword, isLoading } = useAuth();
+  const { resetPassword, isLoading } = useAuth(); // isLoading from useAuth (derived from useSession)
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const router = useRouter(); // Keep router for potential future use, though useAuth handles redirect
   const [formError, setFormError] = React.useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null); // Placeholder for token if backend used one
 
   useEffect(() => {
     const emailFromQuery = searchParams.get('email');
+    const tokenFromQuery = searchParams.get('token'); // For future if token is used
+    
     if (emailFromQuery) {
       setEmail(decodeURIComponent(emailFromQuery));
     } else {
-      // Jika tidak ada email atau token, mungkin arahkan ke login atau tampilkan error
-      setFormError("Tautan reset tidak valid atau telah kedaluwarsa.");
-      // router.push(ROUTES.LOGIN); // Atau halaman error
+      setFormError("Tautan reset tidak valid atau telah kedaluwarsa (email tidak ditemukan).");
     }
-  }, [searchParams, router]);
+    // For simulation, token is not strictly checked here but can be passed if your backend generates it
+    if (tokenFromQuery) setToken(tokenFromQuery);
+
+  }, [searchParams]);
 
 
   const form = useForm<ResetPasswordFormValues>({
@@ -48,24 +52,25 @@ export default function ResetPasswordPage() {
   });
 
   async function onSubmit(values: ResetPasswordFormValues) {
-    if (!email) {
-        setFormError("Email tidak ditemukan untuk reset kata sandi.");
+    if (!email) { // Token check would also go here in a real app
+        setFormError("Email tidak ditemukan atau token tidak valid untuk reset kata sandi.");
         return;
     }
     setFormError(null);
-    const success = await resetPassword(email, values.password);
+    // resetPassword is now a placeholder, will show toast and simulate redirection
+    const success = await resetPassword(email, values.password); 
     if (!success) {
+      // This path might not be hit if resetPassword always returns true for simulation
       setFormError("Gagal mereset kata sandi. Silakan coba lagi.");
-      // Toast sudah ditangani di useAuth
     }
-    // Redirect ke login ditangani di useAuth
   }
 
-  if (!email && !formError) {
+  // Show loader if email is being validated or if form is submitting
+  if (isLoading || (!email && !formError)) {
       return (
         <div className="flex min-h-screen items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="ml-4">Memvalidasi tautan...</p>
+            {!email && !formError && <p className="ml-4">Memvalidasi tautan...</p>}
         </div>
     );
   }
@@ -131,4 +136,3 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
-

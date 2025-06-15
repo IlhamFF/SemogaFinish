@@ -6,43 +6,34 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
-  // SidebarMenuButton, // No longer directly using SidebarMenuButton here
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/use-auth"; // useAuth now wraps useSession
 import { NAV_LINKS_CONFIG, APP_NAME } from "@/lib/constants";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpenText, LogOut } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
-import { sidebarMenuButtonVariants } from "@/components/ui/sidebar"; // Import variants
+import { sidebarMenuButtonVariants } from "@/components/ui/sidebar"; 
 
 
 export function AppSidebarContent() {
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuth(); // user from useSession, logout calls signOut
   const pathname = usePathname();
 
-  if (!user) return null;
+  if (!user) return null; // Or some loading state if preferred, though AppLayout handles major loading
 
   const accessibleLinks = NAV_LINKS_CONFIG.filter(link => 
     link.roles.includes(user.role) || user.role === 'superadmin'
   );
 
-  const uniqueLinks = accessibleLinks.reduce((acc, current) => {
-    const x = acc.find(item => item.label === current.label && item.roles.some(r => current.roles.includes(r)));
-    if (!x) {
-      return acc.concat([current]);
-    } else {
-      return acc;
-    }
-  }, [] as typeof NAV_LINKS_CONFIG);
+  // Deduplicate links based on href for display, roles are for access control
+  const uniqueLinksByHref = [...new Map(accessibleLinks.map(item => [item.href, item])).values()];
   
-  const finalLinks = user.role === 'superadmin' 
-    ? NAV_LINKS_CONFIG.filter(link => link.roles.includes('superadmin') || link.roles.includes('admin')) 
-    : uniqueLinks;
-  
-  const displayLinks = [...new Map(finalLinks.map(item => [item.href, item])).values()];
+  const displayLinks = user.role === 'superadmin' 
+    ? [...new Map(NAV_LINKS_CONFIG.filter(link => link.roles.includes('superadmin') || link.roles.includes('admin')).map(item => [item.href, item])).values()]
+    : uniqueLinksByHref;
 
   return (
     <>
@@ -60,14 +51,13 @@ export function AppSidebarContent() {
             <SidebarMenuItem key={link.href} tooltipContent={link.label}>
               <Link
                 href={link.href}
-                legacyBehavior={false} // Important for Next.js 13+ App Router and styling
+                // legacyBehavior={false} // Not needed as we are applying classes directly
                 className={cn(
-                  sidebarMenuButtonVariants({ variant: "default", size: "default", className: "justify-start" }),
-                  (pathname === link.href || pathname.startsWith(`${link.href}/`)) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  sidebarMenuButtonVariants({ variant: "default", size: "default" }),
+                  "justify-start", // Ensure text aligns left when expanded
+                  (pathname === link.href || (link.href !== "/" && pathname.startsWith(`${link.href}/`))) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                 )}
-                data-sidebar="menu-button" 
-                data-size="default"
-                data-active={pathname === link.href || pathname.startsWith(`${link.href}/`)}
+                data-active={(pathname === link.href || (link.href !== "/" && pathname.startsWith(`${link.href}/`)))}
               >
                 <link.icon className="h-5 w-5" />
                 <span className="group-data-[collapsible=icon]:hidden">{link.label}</span>

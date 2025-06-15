@@ -3,7 +3,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth'; // Tidak perlu AuthProvider lagi
+import { useAuth } from '@/hooks/use-auth'; 
 import { ROUTES } from '@/lib/constants';
 import { Loader2 } from 'lucide-react';
 
@@ -23,15 +23,17 @@ export default function HomePage() {
             case 'siswa': router.replace(ROUTES.SISWA_DASHBOARD); break;
             case 'pimpinan': router.replace(ROUTES.PIMPINAN_DASHBOARD); break;
             case 'superadmin': router.replace(ROUTES.ADMIN_DASHBOARD); break;
-            default: router.replace(ROUTES.LOGIN);
+            default: router.replace(ROUTES.LOGIN); // Fallback, should ideally not happen if role is set
           }
         }
       } else {
+        // No user, redirect to login
         router.replace(ROUTES.LOGIN);
       }
     }
   }, [user, isLoading, router]);
 
+  // Show loader while determining auth state and redirecting
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-background">
       <Loader2 className="h-16 w-16 animate-spin text-primary" />

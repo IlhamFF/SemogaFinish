@@ -1,19 +1,21 @@
 
-import { default as middleware } from "@auth/nextjs/middleware";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // kita mungkin butuh ini untuk config matcher lanjutan
+import NextAuth from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-// Kita bisa export middleware langsung jika tidak ada kustomisasi config di sini
-// export { default as middleware } from "@auth/nextjs/middleware";
+// export default NextAuth(authOptions).auth;
+// The above line can cause issues if authOptions has providers like Credentials that are not edge-compatible.
+// For a simpler middleware just handling session protection, we can use a more direct approach
+// or ensure authOptions are edge-compatible.
 
-// Atau, jika kita butuh authOptions untuk config matcher lanjutan:
-// export const middleware = NextAuth(authOptions).auth;
+// A more direct way to get the middleware if only session checking is needed,
+// or ensure your authOptions are fully edge-compatible if using the above.
+// For now, to ensure it works without deep diving into edge compatibility of TypeORM adapter:
+// We will use the recommended way to export the auth property from NextAuth instance.
+// If this still causes edge runtime issues, `authOptions` might need an edge-compatible version.
 
+const { auth } = NextAuth(authOptions);
+export default auth;
 
-// Untuk sekarang, kita gunakan cara paling simpel:
-export default middleware;
-
-// export const config = { matcher: ["/admin/:path*", "/guru/:path*", "/siswa/:path*", "/pimpinan/:path*"] };
-// More granular matching might be needed depending on public pages within authenticated sections.
 
 // Apply middleware to all routes except /api, /_next/static, /_next/image, /favicon.ico, /login, /register
 // and any other public static assets or pages.
@@ -34,16 +36,5 @@ export const config = {
      * - / (root page, which redirects or is public)
      */
     '/((?!api|_next/static|_next/image|favicon.ico|logo.png|login|register|forgot-password|reset-password|verify-email|^/$).*)',
-    // Add specific authenticated routes if the above general pattern is too broad or misses some.
-    // For example, if you have /public/some-page that should also be excluded:
-    // '/((?!api|_next/static|_next/image|favicon.ico|logo.png|public/.*|login|register|forgot-password|reset-password|verify-email|^/$).*)',
-
-    // Or, more explicitly:
-    // "/admin/:path*",
-    // "/guru/:path*",
-    // "/siswa/:path*",
-    // "/pimpinan/:path*",
-    // "/settings/:path*",
-    // "/data-visualization/:path*",
   ],
 };

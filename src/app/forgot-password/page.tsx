@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useAuth } from "@/hooks/use-auth"; // Tidak perlu AuthProvider
+import { useAuth } from "@/hooks/use-auth"; 
 import Link from "next/link";
 import { ROUTES, APP_NAME } from "@/lib/constants";
 import { Loader2, KeyRound } from "lucide-react";
@@ -20,8 +20,8 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
-  const { requestPasswordReset, isLoading } = useAuth();
-  const [formError, setFormError] = React.useState<string | null>(null);
+  const { requestPasswordReset, isLoading } = useAuth(); // isLoading from useAuth (derived from useSession)
+  const [formError, setFormError] = React.useState<string | null>(null); // For client-side specific errors
 
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -30,12 +30,12 @@ export default function ForgotPasswordPage() {
 
   async function onSubmit(values: ForgotPasswordFormValues) {
     setFormError(null);
-    const success = await requestPasswordReset(values.email);
+    // requestPasswordReset is now a placeholder, will show toast and simulate redirection
+    const success = await requestPasswordReset(values.email); 
     if (!success) {
+      // This path might not be hit if requestPasswordReset always returns true for simulation
       setFormError("Jika email terdaftar, instruksi akan dikirim. Jika tidak, email mungkin tidak ditemukan.");
-      // Toast sudah ditangani di useAuth
     }
-    // Redirect atau pesan sukses ditangani di useAuth
   }
 
   return (

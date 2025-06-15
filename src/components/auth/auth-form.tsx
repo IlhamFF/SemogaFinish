@@ -26,7 +26,7 @@ type AuthFormProps = {
 
 export function AuthForm({ mode }: AuthFormProps) {
   const { login, register, isLoading } = useAuth();
-  const [formError, setFormError] = React.useState<string | null>(null);
+  const [formError, setFormError] = React.useState<string | null>(null); // Kept for additional client-side error display if needed
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -41,13 +41,18 @@ export function AuthForm({ mode }: AuthFormProps) {
     let success = false;
     if (mode === "login") {
       success = await login(values.email, values.password);
+      // Error handling is now more reliant on toasts from useAuth/signIn
     } else {
       success = await register(values.email, values.password);
+      // Error handling for registration is now more reliant on toasts from useAuth/fetch
     }
+    // No need to setFormError here if toasts cover it, but can be kept for specific non-toast errors
     if (!success && mode === "login") {
-      setFormError("Kredensial tidak valid atau pengguna belum diverifikasi.");
+      // This might be redundant if signIn error handling is sufficient
+      // setFormError("Kredensial tidak valid atau pengguna belum diverifikasi.");
     } else if (!success && mode === "register") {
-      setFormError("Pendaftaran gagal. Email mungkin sudah digunakan.");
+      // This might be redundant
+      // setFormError("Pendaftaran gagal. Email mungkin sudah digunakan.");
     }
   }
 
@@ -89,7 +94,8 @@ export function AuthForm({ mode }: AuthFormProps) {
                   </FormItem>
                 )}
               />
-              {formError && <p className="text-sm font-medium text-destructive">{formError}</p>}
+              {/* formError state can be used for errors not covered by toasts if needed */}
+              {/* {formError && <p className="text-sm font-medium text-destructive">{formError}</p>} */}
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {mode === "login" ? "Masuk" : "Buat Akun"}
@@ -102,6 +108,10 @@ export function AuthForm({ mode }: AuthFormProps) {
                 Belum punya akun?{" "}
                 <Link href={ROUTES.REGISTER} className="font-medium text-primary hover:underline">
                   Daftar
+                </Link>
+                 <span className="mx-1">|</span>
+                <Link href={ROUTES.FORGOT_PASSWORD} className="font-medium text-primary hover:underline">
+                  Lupa Kata Sandi?
                 </Link>
               </>
             ) : (

@@ -13,6 +13,8 @@ declare module "next-auth" {
       id: string;
       role: Role;
       isVerified: boolean;
+      fullName?: string | null;
+      // name and email are already part of NextAuthUser
     } & NextAuthUser; 
   }
 
@@ -20,7 +22,7 @@ declare module "next-auth" {
     role: Role;
     isVerified: boolean;
     fullName?: string | null;
-    passwordHash?: string | null; // Added for internal use during authorize if needed, but not sent to client
+    passwordHash?: string | null; 
   }
 }
 
@@ -29,7 +31,8 @@ declare module "next-auth/jwt" {
     id: string;
     role: Role;
     isVerified: boolean;
-    picture?: string | null;
+    picture?: string | null; // Corresponds to image in User
+    name?: string | null;
     fullName?: string | null;
   }
 }
@@ -61,8 +64,8 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (!user.passwordHash) {
-          console.log("Authorize: User found but has no passwordHash (possibly OAuth user or error):", user.email);
-          return null; // Or handle differently if you allow users without passwords
+          console.log("Authorize: User found but has no passwordHash:", user.email);
+          return null; 
         }
         
         console.log("Authorize: User found, comparing password for:", user.email);
@@ -78,8 +81,8 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           email: user.email,
-          name: user.name, // NextAuth expects name
-          image: user.image, // NextAuth expects image
+          name: user.name, 
+          image: user.image,
           role: user.role,
           isVerified: user.isVerified,
           fullName: user.fullName,
@@ -91,29 +94,32 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
-      if (trigger === "update" && session?.user) {
-        token.name = session.user.name;
-        token.picture = session.user.image;
-        token.fullName = session.user.fullName as string | null | undefined; // Type assertion if needed
-      }
+    async jwt({ token, user, trigger, session: newSessionData }) { // Renamed session to newSessionData to avoid conflict
+      // On initial sign in
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.isVerified = user.isVerified;
-        token.picture = user.image; 
+        token.name = user.name;
+        token.picture = user.image;
         token.fullName = user.fullName;
-        token.name = user.name; // Ensure name is in token
+      }
+      // If session is updated (e.g., profile update)
+      if (trigger === "update" && newSessionData?.user) {
+        token.name = newSessionData.user.name;
+        token.picture = newSessionData.user.image;
+        // Potentially update other fields if they can be changed and you want them in the token
+        if (newSessionData.user.fullName) token.fullName = newSessionData.user.fullName;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user && token?.id) { // Ensure token.id exists
+      if (token) {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.isVerified = token.isVerified;
+        session.user.name = token.name;
         session.user.image = token.picture;
-        session.user.name = token.name; 
         session.user.fullName = token.fullName;
       }
       return session;
@@ -121,6 +127,10 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
+    // signOut: '/auth/signout',
+    // error: '/auth/error', // Error code passed in query string as ?error=
+    // verifyRequest: '/auth/verify-request', // (UNUSED) Used for email/passwordless login
+    // newUser: '/auth/new-user' // New users will be directed here on first sign in (leave an empty string to disable)
   },
   secret: process.env.NEXTAUTH_SECRET,
   // debug: process.env.NODE_ENV === "development",

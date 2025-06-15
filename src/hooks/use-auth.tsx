@@ -2,287 +2,178 @@
 "use client";
 
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import type { User, Role } from '@/types';
+import { useRouter }
+from 'next/navigation';
+import { useSession, signIn, signOut } from "next-auth/react";
+import type { User, Role } from '@/types'; // Your application's User type
 import { useToast } from '@/hooks/use-toast';
 import { 
-    DEFAULT_USERS_STORAGE_KEY, 
-    AUTH_USER_STORAGE_KEY, 
+    DEFAULT_USERS_STORAGE_KEY, // Keep for mock admin user management for now
     ROUTES, 
-    ROLES, 
-    APP_NAME,
-    SCHOOL_MAJORS,
-    SCHOOL_GRADE_LEVELS,
-    SCHOOL_CLASSES_PER_MAJOR_GRADE
+    ROLES
 } from '@/lib/constants';
 
-// Kata sandi mock (dalam aplikasi nyata, ini akan ditangani oleh backend)
-const mockPasswords: Record<string, string> = {
-  'admin@sma-azbail.sch.id': 'password',
-  'pimpinan@sma-azbail.sch.id': 'password',
-  'super@sma-azbail.sch.id': 'password',
-  // Guru passwords
-  'guru.matematika@sma-azbail.sch.id': 'password',
-  'guru.fisika@sma-azbail.sch.id': 'password',
-  'guru.kimia@sma-azbail.sch.id': 'password',
-  'guru.biologi@sma-azbail.sch.id': 'password',
-  'guru.bing@sma-azbail.sch.id': 'password',
-  'guru.bindo@sma-azbail.sch.id': 'password',
-  'guru.eko@sma-azbail.sch.id': 'password',
-  'guru.geo@sma-azbail.sch.id': 'password',
-  'guru.sosio@sma-azbail.sch.id': 'password',
-  'guru.sejindo@sma-azbail.sch.id': 'password',
-  // Siswa passwords will be generated
+// This initialUsers and mockPasswords are now only for the *temporary* mock admin user management.
+// Real user data and passwords will be handled by NextAuth and your database.
+const initialMockUsers: User[] = [
+  { id: '1', email: 'admin@example.com', role: 'admin', isVerified: true, name: 'Admin User', fullName: 'Admin Utama', joinDate: '2023-01-01', avatarUrl: 'https://placehold.co/100x100.png?text=AU' },
+  { id: '2', email: 'guru@example.com', role: 'guru', isVerified: true, name: 'Guru Contoh', fullName: 'Guru Teladan', joinDate: '2023-01-01', avatarUrl: 'https://placehold.co/100x100.png?text=GC' },
+  { id: '3', email: 'siswa@example.com', role: 'siswa', isVerified: false, name: 'Siswa Baru', fullName: 'Siswa Belajar', joinDate: '2023-01-01', avatarUrl: 'https://placehold.co/100x100.png?text=SB' },
+  { id: '4', email: 'pimpinan@example.com', role: 'pimpinan', isVerified: true, name: 'Pimpinan Sekolah', fullName: 'Kepala Institusi', joinDate: '2023-01-01', avatarUrl: 'https://placehold.co/100x100.png?text=PS' },
+  { id: '5', email: 'super@example.com', role: 'superadmin', isVerified: true, name: 'Super Admin', fullName: 'Super Administrator', joinDate: '2023-01-01', avatarUrl: 'https://placehold.co/100x100.png?text=SA' },
+];
+const mockAdminPasswords: Record<string, string> = { // Only for mock admin functions
+  'admin@example.com': 'password',
+  'guru@example.com': 'password',
+  'siswa@example.com': 'password',
+  'pimpinan@example.com': 'password',
+  'super@example.com': 'password',
 };
-
-const generateInitialUsers = (): User[] => {
-    const users: User[] = [
-        { 
-            id: 'admin-001', email: 'admin@sma-azbail.sch.id', role: 'admin', isVerified: true, name: 'Admin Sekolah', fullName: 'Administrator EduCentral SMA Az-Bail',
-            phone: '08123450000', address: 'Jl. Administrasi No. 1, Kota Az-Bail', birthDate: '1980-01-01', bio: 'Pengelola sistem EduCentral SMA Az-Bail.', nip: 'P.ADM.001', joinDate: '2020-01-15', avatarUrl: `https://placehold.co/100x100.png?text=AD`
-        },
-        { 
-            id: 'pimpinan-001', email: 'pimpinan@sma-azbail.sch.id', role: 'pimpinan', isVerified: true, name: 'Kepala Sekolah', fullName: 'Dr. H. Abdullah Said, M.Pd.',
-            phone: '08123450001', address: 'Jl. Kepemimpinan No. 1, Kota Az-Bail', birthDate: '1975-03-20', bio: 'Kepala Sekolah SMA Az-Bail.', nip: 'P.KPS.001', joinDate: '2015-03-01', avatarUrl: `https://placehold.co/100x100.png?text=AS`
-        },
-        { 
-            id: 'superadmin-001', email: 'super@sma-azbail.sch.id', role: 'superadmin', isVerified: true, name: 'Super Admin', fullName: 'Super Administrator Sistem',
-            phone: '081200000000', address: 'Pusat Data EduCentral', birthDate: '1970-01-01', bio: 'Pemegang kunci akses tertinggi.', nip: 'P.SUP.001', joinDate: '2010-01-01', avatarUrl: `https://placehold.co/100x100.png?text=SA`
-        },
-    ];
-
-    const guruData = [
-        { idPrefix: 'guru-mtk', emailPrefix: 'guru.matematika', name: 'Bu Ratna', fullName: 'Ratna Dewi, S.Pd.', mataPelajaran: 'Matematika Wajib', birthDate: '1985-05-10', nipSuffix: 'MTK' },
-        { idPrefix: 'guru-fsk', emailPrefix: 'guru.fisika', name: 'Pak Dimas', fullName: 'Dimas Prasetyo, M.Sc.', mataPelajaran: 'Fisika', birthDate: '1982-11-15', nipSuffix: 'FSK' },
-        { idPrefix: 'guru-kim', emailPrefix: 'guru.kimia', name: 'Bu Indah', fullName: 'Indah Permatasari, S.Si.', mataPelajaran: 'Kimia', birthDate: '1988-02-20', nipSuffix: 'KIM' },
-        { idPrefix: 'guru-bio', emailPrefix: 'guru.biologi', name: 'Pak Agus', fullName: 'Agus Setiawan, S.Pd.', mataPelajaran: 'Biologi', birthDate: '1986-07-12', nipSuffix: 'BIO' },
-        { idPrefix: 'guru-big', emailPrefix: 'guru.bing', name: 'Ms. Sarah', fullName: 'Sarah Johnson, B.A.', mataPelajaran: 'Bahasa Inggris', birthDate: '1990-01-30', nipSuffix: 'BIG' },
-        { idPrefix: 'guru-bin', emailPrefix: 'guru.bindo', name: 'Pak Budi', fullName: 'Budi Santoso, S.S.', mataPelajaran: 'Bahasa Indonesia', birthDate: '1983-09-05', nipSuffix: 'BIN' },
-        { idPrefix: 'guru-eko', emailPrefix: 'guru.eko', name: 'Bu Lia', fullName: 'Lia Amalia, S.E.', mataPelajaran: 'Ekonomi', birthDate: '1989-04-18', nipSuffix: 'EKO' },
-        { idPrefix: 'guru-geo', emailPrefix: 'guru.geo', name: 'Pak Rudi', fullName: 'Rudi Hartono, S.Geo.', mataPelajaran: 'Geografi', birthDate: '1987-12-01', nipSuffix: 'GEO' },
-        { idPrefix: 'guru-sos', emailPrefix: 'guru.sosio', name: 'Bu Siti', fullName: 'Siti Khadijah, S.Sos.', mataPelajaran: 'Sosiologi', birthDate: '1991-06-25', nipSuffix: 'SOS' },
-        { idPrefix: 'guru-sej', emailPrefix: 'guru.sejindo', name: 'Pak Hendra', fullName: 'Hendra Gunawan, M.Hum.', mataPelajaran: 'Sejarah Indonesia', birthDate: '1980-10-08', nipSuffix: 'SEJ' },
-    ];
-
-    guruData.forEach((g, index) => {
-        const email = `${g.emailPrefix}@sma-azbail.sch.id`;
-        users.push({
-            id: `${g.idPrefix}-${String(index+1).padStart(3,'0')}`, email, role: 'guru', isVerified: true, name: g.name, fullName: g.fullName,
-            phone: `0812345${String(index+1).padStart(5,'0')}`, address: `Jl. Guru No. ${index+1}`, birthDate: g.birthDate, bio: `Guru ${g.mataPelajaran} di SMA Az-Bail.`,
-            nip: `G.${g.nipSuffix}.${String(index+1).padStart(3,'0')}`, joinDate: `201${Math.floor(Math.random() * 4) + 5}-07-15`, // Joined between 2015-2018
-            avatarUrl: `https://placehold.co/100x100.png?text=${g.name.substring(0,1)}${g.fullName.split(" ")[1]?.[0] || ''}`, mataPelajaran: g.mataPelajaran
-        });
-        mockPasswords[email] = 'password';
-    });
-
-    const firstNames = ["Ahmad", "Budi", "Citra", "Dewi", "Eko", "Fajar", "Gita", "Hasan", "Indra", "Joko", "Kartika", "Lina", "Mega", "Nina", "Omar"];
-    const lastNames = ["Subagyo", "Wijaya", "Lestari", "Permata", "Prasetyo", "Nugroho", "Wati", "Ali", "Kusuma", "Susanto", "Dewi", " Sari", "Putri", "Rahayu", "Maulana"];
-    let studentIdCounter = 1;
-
-    SCHOOL_GRADE_LEVELS.forEach(grade => {
-        SCHOOL_MAJORS.forEach(major => {
-            for (let classNum = 1; classNum <= SCHOOL_CLASSES_PER_MAJOR_GRADE; classNum++) {
-                const className = `${grade} ${major} ${classNum}`;
-                // Add 2 students per class for brevity in mock data
-                for (let i = 0; i < 2; i++) {
-                    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-                    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-                    const fullName = `${firstName} ${lastName}`;
-                    const name = firstName;
-                    const email = `${name.toLowerCase().replace(/\s/g, '.')}.${grade.toLowerCase()}${major.toLowerCase()}${classNum}${i+1}@sma-azbail.sch.id`;
-                    const birthYear = 2008 - SCHOOL_GRADE_LEVELS.indexOf(grade); // Approx age
-                    
-                    users.push({
-                        id: `siswa-${String(studentIdCounter++).padStart(3,'0')}`, email, role: 'siswa', 
-                        isVerified: Math.random() > 0.2, // Some unverified
-                        name, fullName,
-                        phone: `0812346${String(studentIdCounter).padStart(5,'0')}`, address: `Jl. Siswa No. ${studentIdCounter}`, 
-                        birthDate: `${birthYear}-${String(Math.floor(Math.random()*12)+1).padStart(2,'0')}-${String(Math.floor(Math.random()*28)+1).padStart(2,'0')}`,
-                        bio: `Siswa ${className} di SMA Az-Bail.`, 
-                        nis: `S.${grade}.${major.substring(0,1)}.${String(studentIdCounter).padStart(3,'0')}`, 
-                        joinDate: `${2023 - SCHOOL_GRADE_LEVELS.indexOf(grade)}-07-10`, // Joined in July of their starting year
-                        avatarUrl: `https://placehold.co/100x100.png?text=${name.substring(0,1)}${lastName.substring(0,1)}`, kelas: className
-                    });
-                    mockPasswords[email] = 'password';
-                }
-            }
-        });
-    });
-    return users;
-};
-
-const initialUsers: User[] = generateInitialUsers();
 
 
 interface AuthContextType {
-  user: User | null;
-  users: User[];
+  user: User | null; // This will be derived from useSession
+  users: User[]; // TEMPORARY: For mock admin user management
   login: (email: string, passwordAttempt: string) => Promise<boolean>;
   register: (email: string, passwordAttempt: string) => Promise<boolean>;
-  logout: () => void;
-  verifyUserEmail: (userIdToVerify?: string) => void;
-  createUser: (userData: Omit<User, 'id' | 'isVerified'> & { password?: string }) => User | null;
-  updateUserRole: (userId: string, newRole: Role) => void;
-  deleteUser: (userId: string) => void;
-  updateUserProfile: (userId: string, profileData: Partial<User>) => Promise<boolean>;
-  requestPasswordReset: (email: string) => Promise<boolean>;
-  resetPassword: (email: string, newPassword: string) => Promise<boolean>;
-  changePassword: (userId: string, currentPasswordAttempt: string, newPassword: string) => Promise<boolean>;
-  isLoading: boolean;
+  logout: () => Promise<void>;
+  verifyUserEmail: (userIdToVerify?: string) => void; // TEMPORARY MOCK
+  createUser: (userData: Omit<User, 'id' | 'isVerified'> & { password?: string }) => User | null; // TEMPORARY MOCK
+  updateUserRole: (userId: string, newRole: Role) => void; // TEMPORARY MOCK
+  deleteUser: (userId: string) => void; // TEMPORARY MOCK
+  updateUserProfile: (userId: string, profileData: Partial<User>) => Promise<boolean>; // TEMPORARY MOCK
+  requestPasswordReset: (email: string) => Promise<boolean>; // To be implemented with backend
+  resetPassword: (email: string, newPassword: string) => Promise<boolean>; // To be implemented with backend
+  changePassword: (userId: string, currentPasswordAttempt: string, newPassword: string) => Promise<boolean>; // To be implemented with backend
+  isLoading: boolean; // This will be session.status === 'loading'
+  updateSession: () => Promise<void>; // For manually refreshing session
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [users, setUsersState] = useState<User[]>([]); 
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const { toast } = useToast();
 
-  const getStoredUsers = useCallback((): User[] => {
-    if (typeof window !== 'undefined') {
-      const storedUsers = localStorage.getItem(DEFAULT_USERS_STORAGE_KEY);
-      return storedUsers ? JSON.parse(storedUsers) : initialUsers;
-    }
-    return initialUsers;
-  }, []);
-
-  const persistUsers = useCallback((updatedUsers: User[]) => {
-    setUsersState(updatedUsers); 
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(DEFAULT_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
-    }
-  }, []);
-
-  const persistAuthUser = useCallback((authUser: User | null) => {
-    setUser(authUser);
-    if (typeof window !== 'undefined') {
-      if (authUser) {
-        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(authUser));
-      } else {
-        localStorage.removeItem(AUTH_USER_STORAGE_KEY);
-      }
-    }
-  }, []);
-
+  // TEMPORARY: For mock admin user management
+  const [mockManagedUsers, setMockManagedUsers] = useState<User[]>([]);
   useEffect(() => {
-    const loadedUsers = getStoredUsers();
-    const usersWithDefaults = loadedUsers.map(u => ({
-        ...u,
-        avatarUrl: u.avatarUrl || `https://placehold.co/100x100.png?text=${(u.fullName || u.name || u.email).substring(0,2).toUpperCase()}`
-    }));
-    setUsersState(usersWithDefaults); 
-    
-    if (typeof window !== 'undefined') {
-      const storedAuthUser = localStorage.getItem(AUTH_USER_STORAGE_KEY);
-      if (storedAuthUser) {
-        const parsedUser = JSON.parse(storedAuthUser);
-        parsedUser.avatarUrl = parsedUser.avatarUrl || `https://placehold.co/100x100.png?text=${(parsedUser.fullName || parsedUser.name || parsedUser.email).substring(0,2).toUpperCase()}`;
-        persistAuthUser(parsedUser);
-      }
+    const storedUsers = localStorage.getItem(DEFAULT_USERS_STORAGE_KEY);
+    if (storedUsers) {
+      setMockManagedUsers(JSON.parse(storedUsers));
+    } else {
+      setMockManagedUsers(initialMockUsers);
+      localStorage.setItem(DEFAULT_USERS_STORAGE_KEY, JSON.stringify(initialMockUsers));
     }
-    setIsLoading(false);
-  }, [persistAuthUser, getStoredUsers]);
+  }, []);
+  const persistMockManagedUsers = useCallback((updatedUsers: User[]) => {
+    setMockManagedUsers(updatedUsers);
+    localStorage.setItem(DEFAULT_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+  }, []);
+  // END TEMPORARY
+
+  const appUser = session?.user ? {
+    id: session.user.id,
+    email: session.user.email!, // email is guaranteed by NextAuth User type
+    name: session.user.name,
+    role: session.user.role,
+    isVerified: session.user.isVerified,
+    avatarUrl: session.user.image, // map image to avatarUrl
+    fullName: session.user.fullName,
+    // Other fields from your User type might not be in session by default unless added in callbacks
+  } as User : null;
+
+  const isLoading = status === 'loading';
 
   const login = async (email: string, passwordAttempt: string): Promise<boolean> => {
-    setIsLoading(true);
-    const currentUsers = getStoredUsers();
-    const existingUser = currentUsers.find(u => u.email === email);
+    const result = await signIn('credentials', {
+      redirect: false,
+      email,
+      password: passwordAttempt,
+    });
 
-    if (existingUser && mockPasswords[email] === passwordAttempt) {
-      if (!existingUser.isVerified && existingUser.role === 'siswa') {
-        persistAuthUser(existingUser);
-        router.push(ROUTES.VERIFY_EMAIL);
-        toast({ title: "Verifikasi Diperlukan", description: "Silakan verifikasi email Anda untuk melanjutkan." });
-        setIsLoading(false);
-        return true;
+    if (result?.error) {
+      console.error("Login error:", result.error);
+      // Check if the error is due to unverified user (NextAuth doesn't directly give this, depends on authorize logic)
+      const userAttemptingLogin = mockManagedUsers.find(u => u.email === email); // Check mock, ideally backend tells us
+      if (userAttemptingLogin && !userAttemptingLogin.isVerified && userAttemptingLogin.role === 'siswa') {
+         toast({ title: "Login Gagal", description: "Akun belum diverifikasi. Silakan cek email Anda atau hubungi admin.", variant: "destructive" });
+         router.push(ROUTES.VERIFY_EMAIL); // Redirect to allow simulated verification
+      } else {
+        toast({ title: "Login Gagal", description: "Email atau kata sandi salah.", variant: "destructive" });
       }
-      persistAuthUser(existingUser);
-      toast({ title: "Login Berhasil", description: `Selamat datang kembali, ${existingUser.fullName || existingUser.name || existingUser.email}!` });
-      switch (existingUser.role) {
-        case 'admin': router.push(ROUTES.ADMIN_DASHBOARD); break;
-        case 'guru': router.push(ROUTES.GURU_DASHBOARD); break;
-        case 'siswa': router.push(ROUTES.SISWA_DASHBOARD); break;
-        case 'pimpinan': router.push(ROUTES.PIMPINAN_DASHBOARD); break;
-        case 'superadmin': router.push(ROUTES.ADMIN_DASHBOARD); break;
-        default: router.push(ROUTES.HOME);
-      }
-      setIsLoading(false);
+      return false;
+    }
+    
+    if (result?.ok && !result.error) {
+      // The session will update automatically due to useSession, triggering redirects in pages
+      toast({ title: "Login Berhasil", description: "Selamat datang!" });
+      // Redirection is now handled by useEffect in login/home pages based on session status
       return true;
     }
-    toast({ title: "Login Gagal", description: "Email atau kata sandi salah.", variant: "destructive" });
-    setIsLoading(false);
     return false;
   };
 
   const register = async (email: string, passwordAttempt: string): Promise<boolean> => {
-    setIsLoading(true);
-    const currentUsers = getStoredUsers();
-    if (currentUsers.some(u => u.email === email)) {
-      toast({ title: "Pendaftaran Gagal", description: "Email sudah ada.", variant: "destructive" });
-      setIsLoading(false);
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: passwordAttempt }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast({ title: "Pendaftaran Gagal", description: data.message || "Terjadi kesalahan.", variant: "destructive" });
+        return false;
+      }
+      
+      toast({ title: "Pendaftaran Berhasil", description: "Silakan login dengan akun baru Anda. Verifikasi email mungkin diperlukan." });
+      // After successful registration, NextAuth doesn't automatically sign in.
+      // We direct them to login. If their email isn't verified, login flow will handle it.
+      router.push(ROUTES.LOGIN); 
+      return true;
+
+    } catch (error) {
+      console.error("Registration fetch error:", error);
+      toast({ title: "Pendaftaran Gagal", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
       return false;
     }
-    const defaultName = email.split('@')[0];
-    const newUser: User = {
-      id: String(Date.now()),
-      email,
-      role: 'siswa',
-      isVerified: false,
-      name: defaultName,
-      fullName: defaultName, 
-      joinDate: new Date().toISOString().split('T')[0],
-      avatarUrl: `https://placehold.co/100x100.png?text=${defaultName.substring(0,2).toUpperCase()}`,
-    };
-    mockPasswords[email] = passwordAttempt;
-    const updatedUsers = [...currentUsers, newUser];
-    persistUsers(updatedUsers);
-    persistAuthUser(newUser);
-    toast({ title: "Pendaftaran Berhasil", description: "Silakan verifikasi email Anda." });
-    router.push(ROUTES.VERIFY_EMAIL);
-    setIsLoading(false);
-    return true;
   };
 
-  const logout = () => {
-    persistAuthUser(null);
-    router.push(ROUTES.LOGIN);
+  const logout = async () => {
+    await signOut({ redirect: true, callbackUrl: ROUTES.LOGIN });
     toast({ title: "Berhasil Keluar", description: "Anda telah berhasil keluar." });
   };
+  
+  const updateSession = async () => {
+    await update(); // Manually trigger a session update
+  };
 
-  const verifyUserEmail = (userIdToVerify?: string) => {
-    const currentUsers = getStoredUsers();
-    const targetUserId = userIdToVerify || user?.id;
+  // --- TEMPORARY MOCK FUNCTIONS for Admin User Management ---
+  const verifyUserEmail = (userIdToVerify?: string) => { // Mock
+    const targetUserId = userIdToVerify || appUser?.id;
     if (!targetUserId) return;
 
-    const updatedUsers = currentUsers.map(u => 
+    const updatedUsers = mockManagedUsers.map(u => 
       u.id === targetUserId ? { ...u, isVerified: true } : u
     );
-    persistUsers(updatedUsers);
+    persistMockManagedUsers(updatedUsers);
 
-    const currentUser = user;
-    if (currentUser && currentUser.id === targetUserId) {
-      const updatedCurrentUser = { ...currentUser, isVerified: true };
-      persistAuthUser(updatedCurrentUser);
+    if (appUser && appUser.id === targetUserId) {
+      // Manually update session for current user
+      update({ ...session, user: { ...session?.user, isVerified: true }});
       toast({ title: "Email Terverifikasi", description: "Email Anda telah diverifikasi." });
-      switch (updatedCurrentUser.role) {
-        case 'admin': router.push(ROUTES.ADMIN_DASHBOARD); break;
-        case 'guru': router.push(ROUTES.GURU_DASHBOARD); break;
-        case 'siswa': router.push(ROUTES.SISWA_DASHBOARD); break;
-        case 'pimpinan': router.push(ROUTES.PIMPINAN_DASHBOARD); break;
-        case 'superadmin': router.push(ROUTES.ADMIN_DASHBOARD); break;
-        default: router.push(ROUTES.LOGIN);
-      }
+      // Redirect in page after verification
     } else if (userIdToVerify) {
-        toast({ title: "Pengguna Diverifikasi", description: `Email pengguna telah diverifikasi.` });
+        toast({ title: "Pengguna Diverifikasi", description: `Email pengguna telah diverifikasi (mock).` });
     }
   };
   
-  const createUser = (userData: Omit<User, 'id' | 'isVerified'> & { password?: string }): User | null => {
-    const currentUsers = getStoredUsers();
-    if (currentUsers.some(u => u.email === userData.email)) {
-      toast({ title: "Pembuatan Gagal", description: "Email sudah ada.", variant: "destructive" });
+  const createUser = (userData: Omit<User, 'id' | 'isVerified'> & { password?: string }): User | null => { // Mock
+    if (mockManagedUsers.some(u => u.email === userData.email)) {
+      toast({ title: "Pembuatan Gagal", description: "Email sudah ada (mock).", variant: "destructive" });
       return null;
     }
     const defaultName = userData.name || userData.email.split('@')[0];
@@ -306,150 +197,100 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       kelas: userData.role === 'siswa' ? userData.kelas : undefined,
       mataPelajaran: userData.role === 'guru' ? userData.mataPelajaran : undefined,
     };
-    mockPasswords[userData.email] = userData.password || 'password';
+    mockAdminPasswords[userData.email] = userData.password || 'password'; // For mock login if needed
     
-    const updatedUsers = [...currentUsers, newUser];
-    persistUsers(updatedUsers);
-    toast({ title: "Pengguna Dibuat", description: `${ROLES[newUser.role]} ${newUser.email} telah dibuat.` });
+    const updatedUsers = [...mockManagedUsers, newUser];
+    persistMockManagedUsers(updatedUsers);
+    toast({ title: "Pengguna Dibuat", description: `${ROLES[newUser.role]} ${newUser.email} telah dibuat (mock).` });
     return newUser;
   };
 
-  const updateUserRole = (userId: string, newRole: Role) => {
-    const currentUsers = getStoredUsers();
-    const updatedUsers = currentUsers.map(u =>
+  const updateUserRole = (userId: string, newRole: Role) => { // Mock
+    const updatedUsers = mockManagedUsers.map(u =>
       u.id === userId ? { ...u, role: newRole } : u
     );
-    persistUsers(updatedUsers);
-    const currentUser = user;
-    if (currentUser && currentUser.id === userId) {
-      persistAuthUser({ ...currentUser, role: newRole });
+    persistMockManagedUsers(updatedUsers);
+    if (appUser && appUser.id === userId) {
+        update({ ...session, user: { ...session?.user, role: newRole }});
     }
-    toast({ title: "Peran Diperbarui", description: `Peran pengguna telah diperbarui menjadi ${ROLES[newRole]}.` });
+    toast({ title: "Peran Diperbarui", description: `Peran pengguna diperbarui menjadi ${ROLES[newRole]} (mock).` });
   };
 
-  const deleteUser = (userId: string) => {
-    const currentUser = user;
-    if (currentUser && currentUser.id === userId) {
-        toast({ title: "Tindakan Ditolak", description: "Tidak dapat menghapus pengguna yang sedang login.", variant: "destructive" });
+  const deleteUser = (userId: string) => { // Mock
+    if (appUser && appUser.id === userId) {
+        toast({ title: "Tindakan Ditolak", description: "Tidak dapat menghapus pengguna yang sedang login (mock).", variant: "destructive" });
         return;
     }
-    const currentUsers = getStoredUsers();
-    const updatedUsers = currentUsers.filter(u => u.id !== userId);
-    persistUsers(updatedUsers);
-    toast({ title: "Pengguna Dihapus", description: "Pengguna telah berhasil dihapus." });
+    const updatedUsers = mockManagedUsers.filter(u => u.id !== userId);
+    persistMockManagedUsers(updatedUsers);
+    toast({ title: "Pengguna Dihapus", description: "Pengguna telah berhasil dihapus (mock)." });
   };
 
-  const updateUserProfile = async (userId: string, profileData: Partial<User>): Promise<boolean> => {
-    setIsLoading(true);
-    const currentUsers = getStoredUsers();
+  const updateUserProfile = async (userId: string, profileData: Partial<User>): Promise<boolean> => { // Mock
     let userUpdated = false;
-    const updatedUsers = currentUsers.map(u => {
+    const updatedMockUsers = mockManagedUsers.map(u => {
       if (u.id === userId) {
         userUpdated = true;
-        // Ensure kelas and mataPelajaran are only set if the role matches
-        const roleSpecificData = {
-          kelas: profileData.role === 'siswa' || (u.role === 'siswa' && profileData.role === undefined) ? profileData.kelas ?? u.kelas : undefined,
-          mataPelajaran: profileData.role === 'guru' || (u.role === 'guru' && profileData.role === undefined) ? profileData.mataPelajaran ?? u.mataPelajaran : undefined,
-        };
-        return { ...u, ...profileData, ...roleSpecificData };
+        return { ...u, ...profileData };
       }
       return u;
     });
 
     if (userUpdated) {
-      persistUsers(updatedUsers);
-      const currentUser = user;
-      if (currentUser && currentUser.id === userId) {
-        const updatedCurrentUser = updatedUsers.find(u => u.id === userId);
-        if (updatedCurrentUser) persistAuthUser(updatedCurrentUser);
+      persistMockManagedUsers(updatedMockUsers);
+      if (appUser && appUser.id === userId) {
+        // Trigger session update. NextAuth will refetch and include new data if callbacks are set right.
+        await update(); 
       }
-      toast({ title: "Profil Diperbarui", description: "Informasi profil Anda telah berhasil disimpan." });
-      setIsLoading(false);
+      toast({ title: "Profil Diperbarui", description: "Informasi profil berhasil disimpan (mock)." });
       return true;
     }
-    
-    toast({ title: "Pembaruan Gagal", description: "Pengguna tidak ditemukan.", variant: "destructive" });
-    setIsLoading(false);
+    toast({ title: "Pembaruan Gagal", description: "Pengguna tidak ditemukan (mock).", variant: "destructive" });
     return false;
   };
 
-  const requestPasswordReset = async (email: string): Promise<boolean> => {
-    setIsLoading(true);
-    const currentUsers = getStoredUsers();
-    const existingUser = currentUsers.find(u => u.email === email);
-    if (existingUser) {
-      toast({ title: "Permintaan Reset Terkirim", description: `Jika email ${email} terdaftar, instruksi reset akan dikirim (disimulasikan).` });
-      router.push(`${ROUTES.RESET_PASSWORD}?email=${encodeURIComponent(email)}`);
-      setIsLoading(false);
-      return true;
-    }
-    toast({ title: "Permintaan Gagal", description: "Email tidak terdaftar.", variant: "destructive" });
-    setIsLoading(false);
-    return false;
-  };
+  // --- END TEMPORARY MOCK FUNCTIONS ---
 
-  const resetPassword = async (email: string, newPassword: string): Promise<boolean> => {
-    setIsLoading(true);
-    const currentUsers = getStoredUsers();
-    const userToReset = currentUsers.find(u => u.email === email);
-
-    if (userToReset) {
-      mockPasswords[email] = newPassword; 
-      toast({ title: "Kata Sandi Direset", description: "Kata sandi Anda telah berhasil diubah. Silakan login." });
-      router.push(ROUTES.LOGIN);
-      setIsLoading(false);
-      return true;
-    }
-    toast({ title: "Reset Gagal", description: "Gagal mereset kata sandi. Token mungkin tidak valid atau email tidak ditemukan.", variant: "destructive" });
-    setIsLoading(false);
-    return false;
-  };
-
-  const changePassword = async (userId: string, currentPasswordAttempt: string, newPassword: string): Promise<boolean> => {
-    setIsLoading(true);
-    const usersList = getStoredUsers();
-    const userToChange = usersList.find(u => u.id === userId);
-
-    if (!userToChange) {
-      toast({ title: "Gagal Mengubah Kata Sandi", description: "Pengguna tidak ditemukan.", variant: "destructive" });
-      setIsLoading(false);
-      return false;
-    }
-
-    if (mockPasswords[userToChange.email] !== currentPasswordAttempt) {
-      toast({ title: "Gagal Mengubah Kata Sandi", description: "Kata sandi saat ini salah.", variant: "destructive" });
-      setIsLoading(false);
-      return false;
-    }
-
-    if (currentPasswordAttempt === newPassword) {
-      toast({ title: "Gagal Mengubah Kata Sandi", description: "Kata sandi baru tidak boleh sama dengan kata sandi saat ini.", variant: "destructive" });
-      setIsLoading(false);
-      return false;
-    }
-
-    mockPasswords[userToChange.email] = newPassword;
-    toast({ title: "Kata Sandi Diubah", description: "Kata sandi Anda telah berhasil diperbarui." });
-    setIsLoading(false);
+  // --- PLACEHOLDER FUNCTIONS for features not yet connected to backend ---
+  const requestPasswordReset = async (email: string): Promise<boolean> => { // Placeholder
+    toast({ title: "Simulasi Reset Password", description: `Instruksi reset (simulasi) akan dikirim ke ${email} jika terdaftar.` });
+    router.push(`${ROUTES.RESET_PASSWORD}?email=${encodeURIComponent(email)}`); // Simulate flow
     return true;
   };
 
+  const resetPassword = async (email: string, newPassword: string): Promise<boolean> => { // Placeholder
+    toast({ title: "Simulasi Reset Berhasil", description: `Kata sandi untuk ${email} telah direset (simulasi). Silakan login.` });
+    router.push(ROUTES.LOGIN);
+    return true;
+  };
+
+  const changePassword = async (userId: string, currentPasswordAttempt: string, newPassword: string): Promise<boolean> => { // Placeholder
+     if (currentPasswordAttempt === "oldpassword") { // Mock current password check
+        toast({ title: "Kata Sandi Diubah", description: "Kata sandi berhasil diperbarui (simulasi)." });
+        return true;
+     }
+     toast({ title: "Gagal Mengubah Kata Sandi", description: "Kata sandi saat ini salah (simulasi).", variant: "destructive" });
+     return false;
+  };
+  // --- END PLACEHOLDER FUNCTIONS ---
+
   return (
     <AuthContext.Provider value={{ 
-      user, 
-      users: users, 
+      user: appUser, 
+      users: mockManagedUsers, // TEMPORARY
       login, 
       register, 
       logout, 
-      verifyUserEmail, 
-      createUser, 
-      updateUserRole, 
-      deleteUser, 
-      updateUserProfile,
-      requestPasswordReset,
-      resetPassword,
-      changePassword,
-      isLoading 
+      verifyUserEmail, // TEMPORARY MOCK
+      createUser,      // TEMPORARY MOCK
+      updateUserRole,  // TEMPORARY MOCK
+      deleteUser,      // TEMPORARY MOCK
+      updateUserProfile, // TEMPORARY MOCK
+      requestPasswordReset, // Placeholder
+      resetPassword,        // Placeholder
+      changePassword,       // Placeholder
+      isLoading,
+      updateSession,
     }}>
       {children}
     </AuthContext.Provider>
@@ -463,4 +304,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
