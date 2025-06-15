@@ -20,10 +20,10 @@ interface AuthContextType {
   updateUserProfile: (userId: string, profileData: Partial<User>) => Promise<boolean>; 
   requestPasswordReset: (email: string) => Promise<string | null>; 
   resetPassword: (email: string, token: string, newPassword: string) => Promise<boolean>; 
-  changePassword: (currentPasswordAttempt: string, newPassword: string) => Promise<boolean>; 
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>; 
   isLoading: boolean; 
   updateSession: () => Promise<void>; 
-  users: User[]; 
+  users: User[]; // Kept for potential use by components that haven't been fully refactored yet, but should ideally be removed later.
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -48,8 +48,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     nis: session.user.nis,
     nip: session.user.nip,
     joinDate: session.user.joinDate,
-    kelas: session.user.kelasId, 
-    mataPelajaran: session.user.mataPelajaran?.[0], 
+    // Convert kelasId from session to 'kelas' if needed by frontend components:
+    kelas: session.user.kelasId || undefined, 
+    // Convert mataPelajaran array from session to single string if needed, or adjust frontend:
+    mataPelajaran: session.user.mataPelajaran?.[0] || undefined,
   } as User : null;
 
   const isLoading = status === 'loading';
@@ -69,6 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     if (result?.ok && !result.error) {
       toast({ title: "Login Berhasil", description: "Selamat datang!" });
+      // Redirection will be handled by the page itself using useEffect and useAuth's user state
       return true;
     }
     return false;
@@ -112,31 +115,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const targetUserId = userIdToVerify || appUser?.id;
     if (!targetUserId) return;
 
+    // This is a mock/simulation. In a real app, this might trigger a backend call
+    // or rely on a token from an email link that a backend service would validate.
+    // For now, we just update the session if it's the current user.
     if (appUser && appUser.id === targetUserId && !appUser.isVerified) {
         console.log("Simulating email verification for current user via session update.");
+        // This simulates that the backend has verified the user and the session needs to be updated.
+        // In a real NextAuth.js setup, after backend verification, you might redirect
+        // or the user might log in again, at which point the session would reflect the new `isVerified` status.
+        // For immediate effect in this demo, we force an update.
         await update({ ...session, user: { ...session?.user, isVerified: true } });
         toast({ title: "Email Terverifikasi", description: "Email Anda telah diverifikasi." });
+        // Redirection to dashboard will be handled by useEffect in VerifyEmailPage or AppLayout
     }
+    // If an admin is verifying another user, that would be an API call to update the user's record,
+    // and this function in useAuth would not directly handle it.
   };
   
   const updateUserProfile = async (userId: string, profileData: Partial<User>): Promise<boolean> => { 
+    // Placeholder: In a real app, this would be an API call to PUT /api/users/[id]/profile or similar
     if (appUser && appUser.id === userId) {
         console.log("Simulating profile update for current user:", profileData);
+        // Construct the payload for the session update
+        // It's important that the fields here match what the session.user object expects
         const newSessionUser = {
-            ...session?.user,
+            ...session?.user, // Spread existing session user data
             name: profileData.name ?? session?.user?.name,
             fullName: profileData.fullName ?? session?.user?.fullName,
-            image: profileData.avatarUrl ?? session?.user?.image,
-            phone: profileData.phone,
-            address: profileData.address,
-            birthDate: profileData.birthDate, 
-            bio: profileData.bio,
+            image: profileData.avatarUrl ?? session?.user?.image, // map avatarUrl to image
+            phone: profileData.phone ?? session?.user?.phone,
+            address: profileData.address ?? session?.user?.address,
+            birthDate: profileData.birthDate ?? session?.user?.birthDate, 
+            bio: profileData.bio ?? session?.user?.bio,
+            // Other fields like nis, nip, kelasId, mataPelajaran might also be updatable
+            // but ensure they are part of the session.user structure defined in [...nextauth]/route.ts
         };
-        await update(newSessionUser); 
-        toast({ title: "Profil Diperbarui", description: "Informasi profil Anda berhasil disimpan (simulasi)." });
+        await update(newSessionUser); // Update the session
+        toast({ title: "Profil Diperbarui", description: "Informasi profil Anda berhasil disimpan." });
         return true;
     }
-    toast({ title: "Pembaruan Gagal", description: "Tidak dapat memperbarui profil pengguna lain (simulasi).", variant: "destructive" });
+    toast({ title: "Pembaruan Gagal", description: "Tidak dapat memperbarui profil pengguna ini.", variant: "destructive" });
     return false;
   };
 
@@ -155,7 +173,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       toast({ title: "Permintaan Terkirim", description: data.message });
-      // For DEMO, return the token so frontend can construct the link
       return data.demoResetToken || null; 
     } catch (error) {
       console.error("Request password reset fetch error:", error);
@@ -188,22 +205,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const changePassword = async (currentPasswordAttempt: string, newPassword: string): Promise<boolean> => { 
-     // TODO: Implement backend for change password: POST /api/auth/change-password
-     // For now, simulate
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<boolean> => { 
      if (!appUser) {
         toast({ title: "Aksi Gagal", description: "Anda harus login untuk mengubah kata sandi.", variant: "destructive" });
         return false;
      }
-     console.log("Simulating change password for user:", appUser.email, {currentPasswordAttempt: "******", newPassword: "******"});
-     // Assume currentPasswordAttempt is validated against user's actual current password on backend
-     // For demo, we'll just mock a success if current password is 'oldpasswordmock'
-     if (currentPasswordAttempt === "oldpasswordmock") { // Replace with actual check
-        toast({ title: "Kata Sandi Diubah", description: "Kata sandi berhasil diperbarui (simulasi)." });
+     try {
+        const response = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentPassword, newPassword }),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            toast({ title: "Gagal Mengubah Kata Sandi", description: data.message || "Terjadi kesalahan.", variant: "destructive" });
+            return false;
+        }
+        
+        toast({ title: "Kata Sandi Diubah", description: data.message });
         return true;
+     } catch (error) {
+        console.error("Change password fetch error:", error);
+        toast({ title: "Gagal Mengubah Kata Sandi", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
+        return false;
      }
-     toast({ title: "Gagal Mengubah Kata Sandi", description: "Kata sandi saat ini salah (simulasi).", variant: "destructive" });
-     return false;
   };
 
   return (
@@ -219,7 +245,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       changePassword,
       isLoading,
       updateSession,
-      users: [], 
+      users: [], // Placeholder, admin user management is now via API
     }}>
       {children}
     </AuthContext.Provider>
@@ -233,3 +259,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
