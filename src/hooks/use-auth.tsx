@@ -17,7 +17,7 @@ interface AuthContextType {
   register: (email: string, passwordAttempt: string) => Promise<boolean>;
   logout: () => Promise<void>;
   verifyUserEmail: (userIdToVerify?: string) => void; 
-  updateUserProfile: (userId: string, profileData: Partial<User>) => Promise<boolean>; 
+  updateUserProfile: (profileData: Partial<User>) => Promise<boolean>; 
   requestPasswordReset: (email: string) => Promise<string | null>; 
   resetPassword: (email: string, token: string, newPassword: string) => Promise<boolean>; 
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>; 
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Convert kelasId from session to 'kelas' if needed by frontend components:
     kelas: session.user.kelasId || undefined, 
     // Convert mataPelajaran array from session to single string if needed, or adjust frontend:
-    mataPelajaran: session.user.mataPelajaran?.[0] || undefined,
+    mataPelajaran: Array.isArray(session.user.mataPelajaran) ? session.user.mataPelajaran.join(', ') : session.user.mataPelajaran || undefined,
   } as User : null;
 
   const isLoading = status === 'loading';
@@ -115,47 +115,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const targetUserId = userIdToVerify || appUser?.id;
     if (!targetUserId) return;
 
-    // This is a mock/simulation. In a real app, this might trigger a backend call
-    // or rely on a token from an email link that a backend service would validate.
-    // For now, we just update the session if it's the current user.
+    // This is a mock/simulation for client-side perception. 
+    // Real verification happens via backend (e.g., token link).
+    // If an admin verifies a user, it's through the PUT /api/users/[id] endpoint.
+    // This function is mainly for the /verify-email page simulation.
     if (appUser && appUser.id === targetUserId && !appUser.isVerified) {
         console.log("Simulating email verification for current user via session update.");
-        // This simulates that the backend has verified the user and the session needs to be updated.
-        // In a real NextAuth.js setup, after backend verification, you might redirect
-        // or the user might log in again, at which point the session would reflect the new `isVerified` status.
-        // For immediate effect in this demo, we force an update.
+        // We update the session to reflect the change immediately for demo purposes.
+        // In a real app, the backend would confirm verification, and a new session fetch/login would show it.
         await update({ ...session, user: { ...session?.user, isVerified: true } });
         toast({ title: "Email Terverifikasi", description: "Email Anda telah diverifikasi." });
-        // Redirection to dashboard will be handled by useEffect in VerifyEmailPage or AppLayout
     }
-    // If an admin is verifying another user, that would be an API call to update the user's record,
-    // and this function in useAuth would not directly handle it.
   };
   
-  const updateUserProfile = async (userId: string, profileData: Partial<User>): Promise<boolean> => { 
-    // Placeholder: In a real app, this would be an API call to PUT /api/users/[id]/profile or similar
-    if (appUser && appUser.id === userId) {
-        console.log("Simulating profile update for current user:", profileData);
-        // Construct the payload for the session update
-        // It's important that the fields here match what the session.user object expects
-        const newSessionUser = {
-            ...session?.user, // Spread existing session user data
-            name: profileData.name ?? session?.user?.name,
-            fullName: profileData.fullName ?? session?.user?.fullName,
-            image: profileData.avatarUrl ?? session?.user?.image, // map avatarUrl to image
-            phone: profileData.phone ?? session?.user?.phone,
-            address: profileData.address ?? session?.user?.address,
-            birthDate: profileData.birthDate ?? session?.user?.birthDate, 
-            bio: profileData.bio ?? session?.user?.bio,
-            // Other fields like nis, nip, kelasId, mataPelajaran might also be updatable
-            // but ensure they are part of the session.user structure defined in [...nextauth]/route.ts
-        };
-        await update(newSessionUser); // Update the session
+  const updateUserProfile = async (profileData: Partial<User>): Promise<boolean> => { 
+     if (!appUser) {
+        toast({ title: "Aksi Gagal", description: "Anda harus login untuk memperbarui profil.", variant: "destructive" });
+        return false;
+     }
+     try {
+        const response = await fetch('/api/users/me/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(profileData),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            toast({ title: "Gagal Memperbarui Profil", description: data.message || "Terjadi kesalahan.", variant: "destructive" });
+            return false;
+        }
+        
         toast({ title: "Profil Diperbarui", description: "Informasi profil Anda berhasil disimpan." });
+        await update(); // This fetches the latest session data from the server
         return true;
-    }
-    toast({ title: "Pembaruan Gagal", description: "Tidak dapat memperbarui profil pengguna ini.", variant: "destructive" });
-    return false;
+     } catch (error) {
+        console.error("Update profile fetch error:", error);
+        toast({ title: "Gagal Memperbarui Profil", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
+        return false;
+     }
   };
 
   const requestPasswordReset = async (email: string): Promise<string | null> => { 
