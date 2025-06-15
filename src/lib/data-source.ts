@@ -13,6 +13,8 @@ import { MateriAjarEntity } from "@/entities/materi-ajar.entity";
 import { StrukturKurikulumEntity } from "@/entities/struktur-kurikulum.entity";
 import { SilabusEntity } from "@/entities/silabus.entity";
 import { RppEntity } from "@/entities/rpp.entity";
+import { RuanganEntity } from "@/entities/ruangan.entity";
+import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 
 
 // Import other application-specific entities here as they are created
@@ -40,6 +42,8 @@ export const dataSourceOptions: DataSourceOptions = {
     StrukturKurikulumEntity,
     SilabusEntity,
     RppEntity,
+    RuanganEntity,
+    SlotWaktuEntity,
     // Add other entities here:
     // KelasEntity,
   ],

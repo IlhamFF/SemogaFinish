@@ -19,8 +19,8 @@ export interface User {
   nis?: string; // Nomor Induk Siswa
   nip?: string; // Nomor Induk Pegawai/Pengajar
   joinDate?: string; // Tanggal bergabung, simpan sebagai string "YYYY-MM-DD"
-  kelas?: string; // Untuk siswa
-  mataPelajaran?: string; // Untuk guru
+  kelas?: string; // Untuk siswa, ID kelas atau nama kelas
+  mataPelajaran?: string; // Untuk guru, bisa string nama mapel atau array jika > 1
 }
 
 export interface NavItem {
@@ -61,14 +61,19 @@ export interface Ruangan {
   nama: string;
   kode: string;
   kapasitas: number;
-  fasilitas?: string;
+  fasilitas?: string | null;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 export interface SlotWaktu {
   id: string;
   namaSlot: string;
-  waktuMulai: string;
-  waktuSelesai: string;
+  waktuMulai: string; // HH:MM
+  waktuSelesai: string; // HH:MM
+  urutan?: number | null;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 // Interface yang digunakan di frontend, mungkin perlu penyesuaian setelah API dibuat
