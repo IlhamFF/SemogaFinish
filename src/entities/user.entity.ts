@@ -1,9 +1,9 @@
 
 import type { AdapterUser } from "@auth/core/adapters";
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToMany, JoinTable } from "typeorm";
-import type { Role } from "@/types"; // Assuming Role type is defined elsewhere
-import { AccountEntity } from "./account.entity"; // Import AccountEntity
-// Import other related entities if needed, e.g., KelasEntity, MataPelajaranEntity
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
+import type { Role } from "@/types";
+import { AccountEntity } from "./account.entity";
+import { SessionEntity } from "./session.entity"; // Added for completeness if needed for user relations
 
 @Entity({ name: "users" })
 export class UserEntity implements AdapterUser {
@@ -11,7 +11,7 @@ export class UserEntity implements AdapterUser {
   id!: string;
 
   @Column({ type: "varchar", nullable: true })
-  name?: string | null; // Nickname or short name
+  name?: string | null; 
 
   @Column({ type: "varchar", unique: true })
   email!: string;
@@ -20,9 +20,11 @@ export class UserEntity implements AdapterUser {
   emailVerified?: Date | null;
 
   @Column({ type: "varchar", nullable: true })
-  image?: string | null; // Corresponds to avatarUrl
+  image?: string | null; 
 
-  // Application-specific fields
+  @Column({ type: "varchar", nullable: true }) // For storing hashed password
+  passwordHash?: string | null;
+
   @Column({
     type: "enum",
     enum: ['admin', 'guru', 'siswa', 'pimpinan', 'superadmin'],
@@ -31,7 +33,7 @@ export class UserEntity implements AdapterUser {
   role!: Role;
 
   @Column({ type: "boolean", default: false })
-  isVerified!: boolean; // Application specific verification status
+  isVerified!: boolean; 
 
   @Column({ type: "varchar", nullable: true })
   fullName?: string | null;
@@ -43,28 +45,25 @@ export class UserEntity implements AdapterUser {
   address?: string | null;
 
   @Column({ type: "date", nullable: true })
-  birthDate?: string | null; // Store as YYYY-MM-DD string or Date
+  birthDate?: string | null; 
 
   @Column({ type: "text", nullable: true })
   bio?: string | null;
 
   @Column({ type: "varchar", nullable: true })
-  nis?: string | null; // For 'siswa'
+  nis?: string | null; 
 
   @Column({ type: "varchar", nullable: true })
-  nip?: string | null; // For 'guru', 'admin', 'pimpinan'
+  nip?: string | null; 
 
   @Column({ type: "date", nullable: true })
-  joinDate?: string | null; // Store as YYYY-MM-DD string or Date
+  joinDate?: string | null; 
 
   @Column({ type: "varchar", nullable: true })
-  kelasId?: string | null; // FK to KelasEntity, for 'siswa'
+  kelasId?: string | null; 
 
-  // If a guru can teach multiple subjects.
-  // This would typically be a ManyToMany relationship if subjects are their own entity.
-  // For simplicity, if it's just a list of names/codes:
   @Column("simple-array", { nullable: true })
-  mataPelajaran?: string[] | null; // For 'guru'
+  mataPelajaran?: string[] | null; 
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;
@@ -72,15 +71,9 @@ export class UserEntity implements AdapterUser {
   @UpdateDateColumn({ type: "timestamp with time zone" })
   updatedAt!: Date;
 
-  // Relationship for NextAuth.js adapter (inverse side)
   @OneToMany(() => AccountEntity, (account) => account.user)
   accounts?: AccountEntity[];
 
-  // Add other relationships as needed for your application
-  // e.g., @ManyToOne(() => KelasEntity, (kelas) => kelas.students, { nullable: true })
-  // kelas?: KelasEntity;
-
-  // e.g., @ManyToMany(() => MataPelajaranEntity, (mapel) => mapel.gurus)
-  // @JoinTable()
-  // mataPelajaranDiajar?: MataPelajaranEntity[];
+  @OneToMany(() => SessionEntity, (session) => session.user)
+  sessions?: SessionEntity[];
 }

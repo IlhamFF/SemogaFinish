@@ -1,7 +1,7 @@
 
 import NextAuth, { type NextAuthOptions, type User as NextAuthUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { TypeORMAdapter } from "@next-auth/typeorm-adapter";
+import { TypeORMAdapter } from "@auth/typeorm-adapter";
 import { AppDataSource, getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import bcrypt from "bcryptjs";
@@ -13,14 +13,14 @@ declare module "next-auth" {
       id: string;
       role: Role;
       isVerified: boolean;
-    } & NextAuthUser; // Keep other default user fields like name, email, image
+    } & NextAuthUser; 
   }
 
-  interface User extends NextAuthUser { // Extend NextAuthUser
+  interface User extends NextAuthUser {
     role: Role;
     isVerified: boolean;
-    // Add any other custom fields from your UserEntity that you want on the User object
     fullName?: string | null;
+    passwordHash?: string | null; // Added for internal use during authorize if needed, but not sent to client
   }
 }
 
@@ -29,13 +29,13 @@ declare module "next-auth/jwt" {
     id: string;
     role: Role;
     isVerified: boolean;
-    picture?: string | null; // for avatarUrl
+    picture?: string | null;
     fullName?: string | null;
   }
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: TypeORMAdapter(AppDataSource), // AppDataSource should be an initialized DataSource
+  adapter: TypeORMAdapter(AppDataSource),
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -45,52 +45,45 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials, req) {
         if (!credentials?.email || !credentials.password) {
+          console.log("Authorize: Missing credentials");
           return null;
         }
+        
         const dataSource = await getInitializedDataSource();
         const userRepo = dataSource.getRepository(UserEntity);
         
+        console.log("Authorize: Attempting to find user by email:", credentials.email);
         const user = await userRepo.findOne({ where: { email: credentials.email } });
 
         if (!user) {
-          console.log("No user found with email:", credentials.email);
+          console.log("Authorize: No user found with email:", credentials.email);
+          return null;
+        }
+
+        if (!user.passwordHash) {
+          console.log("Authorize: User found but has no passwordHash (possibly OAuth user or error):", user.email);
+          return null; // Or handle differently if you allow users without passwords
+        }
+        
+        console.log("Authorize: User found, comparing password for:", user.email);
+        const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
+
+        if (!isValidPassword) {
+          console.log("Authorize: Invalid password for user:", user.email);
           return null;
         }
         
-        // Assuming you store hashed passwords. In a real app, you'd compare hashed passwords.
-        // For mock, we'll just use the mockPasswords object.
-        // This needs to be replaced with actual password hashing and comparison.
-        // const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash); // If you had passwordHash field
-        
-        // Placeholder for actual password check logic which would be against a hashed password
-        // This is a MAJOR security flaw for a real app if not handled correctly.
-        // For now, this will be handled by your mockPasswords in useAuth for the prototype.
-        // When a real backend is implemented, this needs to be secure.
-        // The TypeORM adapter does NOT handle password hashing/checking itself.
-
-        // For the purpose of this setup with TypeORM, let's assume a password check
-        // This is conceptual. The actual check during registration/login API calls will use bcrypt.
-        // Here, we are authorizing based on NextAuth flow.
-        // Let's simulate that if a user is found, the password check has passed.
-        // This part will need proper implementation in a real scenario.
-        // For now, if user exists, we'll proceed.
-        // In a real app, you'd compare `credentials.password` with the user's hashed password.
-        // For this prototype stage, if a user is found, we'll consider it authorized
-        // and rely on the registration/login logic to handle actual password hashing.
-        // For the prototype, we'll assume the password check is implicitly handled by the login function in useAuth.
-        // For now, we return the user if found.
-
-        // The user object returned here must conform to NextAuth's User type.
-        // We extended it to include 'role' and 'isVerified'.
+        console.log("Authorize: Credentials valid for user:", user.email);
+        // Return the user object that NextAuth expects, including custom fields
         return {
           id: user.id,
           email: user.email,
-          name: user.name,
-          image: user.image,
+          name: user.name, // NextAuth expects name
+          image: user.image, // NextAuth expects image
           role: user.role,
           isVerified: user.isVerified,
           fullName: user.fullName,
-        } as any; // Cast to any because NextAuth internal types can be tricky
+        };
       },
     }),
   ],
@@ -100,30 +93,27 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user, trigger, session }) {
       if (trigger === "update" && session?.user) {
-        // If session is updated (e.g., profile update), update the token
         token.name = session.user.name;
         token.picture = session.user.image;
-        token.fullName = session.user.fullName;
-        // Potentially other fields if they change and need to be in JWT
+        token.fullName = session.user.fullName as string | null | undefined; // Type assertion if needed
       }
       if (user) {
-        // On sign-in, persist the user's id, role, and verification status to the token
         token.id = user.id;
         token.role = user.role;
         token.isVerified = user.isVerified;
-        token.picture = user.image; // Corresponds to avatarUrl
+        token.picture = user.image; 
         token.fullName = user.fullName;
+        token.name = user.name; // Ensure name is in token
       }
       return token;
     },
     async session({ session, token }) {
-      // Send properties to the client, like id, role, and verification status.
-      if (session.user && token) {
+      if (session.user && token?.id) { // Ensure token.id exists
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.isVerified = token.isVerified;
-        session.user.image = token.picture; // Pass avatarUrl as image
-        session.user.name = token.name; // Ensure name is passed
+        session.user.image = token.picture;
+        session.user.name = token.name; 
         session.user.fullName = token.fullName;
       }
       return session;
@@ -131,8 +121,6 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
-    // error: '/auth/error', // Custom error page (optional)
-    // verifyRequest: '/auth/verify-request', // (used for email provider)
   },
   secret: process.env.NEXTAUTH_SECRET,
   // debug: process.env.NODE_ENV === "development",
