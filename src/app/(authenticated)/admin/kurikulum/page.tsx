@@ -15,7 +15,7 @@ import * as z from "zod";
 import { useAuth } from "@/hooks/use-auth";
 import { BookOpenCheck, Target, BookCopy, BookUp, Layers, FileText, FolderKanban, PlusCircle, Edit, Search, Loader2, UploadCloud, Link2Icon, Trash2, ArrowRightLeft, BarChartHorizontalBig, Book, Library, List } from "lucide-react";
 import Link from "next/link";
-import { ROUTES, MOCK_SUBJECTS, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, KATEGORI_MAPEL, JENIS_MATERI_AJAR } from "@/lib/constants";
+import { ROUTES, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, KATEGORI_MAPEL as KATEGORI_MAPEL_CONST, JENIS_MATERI_AJAR, KATEGORI_SKL as KATEGORI_SKL_CONST, FASE_CP as FASE_CP_CONST } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import type { SKL, CapaianPembelajaran, MateriKategori, StrukturKurikulumItem, Silabus, RPP, KategoriSklType, FaseCpType, MateriAjar, JenisMateriAjarType, MataPelajaran, User } from "@/types";
 import {
@@ -31,7 +31,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableHead, TableHeader, TableRow, TableCell, TableBody } from "@/components/ui/table";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 
 const materiAjarClientSchema = z.object({
@@ -54,14 +54,14 @@ type MateriAjarClientFormValues = z.infer<typeof materiAjarClientSchema>;
 const sklSchema = z.object({
   kode: z.string().min(2, { message: "Kode SKL minimal 2 karakter." }).max(50),
   deskripsi: z.string().min(10, { message: "Deskripsi SKL minimal 10 karakter." }),
-  kategori: z.enum(["Sikap", "Pengetahuan", "Keterampilan"], { required_error: "Kategori SKL wajib dipilih." }),
+  kategori: z.enum(KATEGORI_SKL_CONST as [string, ...string[]], { required_error: "Kategori SKL wajib dipilih." }),
 });
 type SKLFormValues = z.infer<typeof sklSchema>;
 
 const cpSchema = z.object({
   kode: z.string().min(2, { message: "Kode CP minimal 2 karakter." }).max(100),
   deskripsi: z.string().min(10, { message: "Deskripsi CP minimal 10 karakter." }),
-  fase: z.enum(["A", "B", "C", "D", "E", "F", "Lainnya"], { required_error: "Fase wajib dipilih."}),
+  fase: z.enum(FASE_CP_CONST as [string, ...string[]], { required_error: "Fase wajib dipilih."}),
   elemen: z.string().min(3, {message: "Elemen minimal 3 karakter."}).max(255),
 });
 type CPFormValues = z.infer<typeof cpSchema>;
@@ -71,9 +71,8 @@ const kategoriMateriSchema = z.object({
 });
 type KategoriMateriFormValues = z.infer<typeof kategoriMateriSchema>;
 
-// Updated schema for frontend form, aligning with API expectations
 const strukturKurikulumClientSchema = z.object({
-  mapelId: z.string({ required_error: "Mata pelajaran wajib dipilih."}),
+  mapelId: z.string({ required_error: "Mata pelajaran wajib dipilih."}).uuid({ message: "ID Mata Pelajaran tidak valid."}),
   alokasiJam: z.coerce.number().min(1, { message: "Alokasi jam minimal 1."}),
   guruPengampuId: z.string().uuid({ message: "ID Guru tidak valid."}).optional().nullable(),
 });
@@ -82,7 +81,7 @@ type StrukturKurikulumClientFormValues = z.infer<typeof strukturKurikulumClientS
 
 const silabusSchema = z.object({
   judul: z.string().min(5, { message: "Judul silabus minimal 5 karakter." }),
-  idMapel: z.string({ required_error: "Mata pelajaran wajib dipilih."}),
+  mapelId: z.string({ required_error: "Mata pelajaran wajib dipilih."}).uuid({ message: "Mata pelajaran tidak valid."}),
   kelas: z.string().min(2, {message: "Kelas minimal 2 karakter."}),
   deskripsiSingkat: z.string().optional(),
   file: z.any().optional(),
@@ -91,7 +90,7 @@ type SilabusFormValues = z.infer<typeof silabusSchema>;
 
 const rppSchema = z.object({
   judul: z.string().min(5, { message: "Judul RPP minimal 5 karakter." }),
-  idMapel: z.string({ required_error: "Mata pelajaran wajib dipilih."}),
+  mapelId: z.string({ required_error: "Mata pelajaran wajib dipilih."}).uuid({ message: "Mata pelajaran tidak valid."}),
   kelas: z.string().min(2, {message: "Kelas minimal 2 karakter."}),
   pertemuanKe: z.coerce.number().min(1, { message: "Pertemuan minimal 1."}),
   materiPokok: z.string().optional(),
@@ -102,21 +101,10 @@ const rppSchema = z.object({
 type RPPFormValues = z.infer<typeof rppSchema>;
 
 
-const initialSilabus: Silabus[] = [
-    {id: "SIL001", judul: "Silabus Matematika Kelas X Semester 1", idMapel: MOCK_SUBJECTS[0], namaMapel: MOCK_SUBJECTS[0], kelas: "X IPA 1", deskripsiSingkat: "Mencakup bab Aljabar dan Geometri dasar.", namaFile: "silabus_mtk_x_1.pdf"},
-];
-const initialRPP: RPP[] = [
-    {id: "RPP001", judul: "RPP Pertemuan 1 - Fungsi Kuadrat", idMapel: MOCK_SUBJECTS[0], namaMapel: MOCK_SUBJECTS[0], kelas: "X IPA 1", pertemuanKe: 1, materiPokok: "Definisi dan grafik fungsi kuadrat."},
-];
-
-let editingSilabus: Silabus | null = null;
-let editingRPP: RPP | null = null;
-
 export default function AdminKurikulumPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  // Materi Ajar State & Form
   const [isMateriFormOpen, setIsMateriFormOpen] = useState(false);
   const [currentEditingMateri, setCurrentEditingMateri] = useState<MateriAjar | null>(null);
   const [materiList, setMateriList] = useState<MateriAjar[]>([]);
@@ -128,7 +116,6 @@ export default function AdminKurikulumPage() {
     defaultValues: { judul: "", deskripsi: "", mapelNama: undefined, jenisMateri: undefined, fileInput: undefined, externalUrl: "" } 
   });
 
-  // SKL State & Form
   const [isSKLDialogOpen, setIsSKLDialogOpen] = useState(false);
   const [isSKLFormOpen, setIsSKLFormOpen] = useState(false);
   const [editingSKL, setEditingSKL] = useState<SKL | null>(null);
@@ -138,7 +125,6 @@ export default function AdminKurikulumPage() {
   const [isSKLSubmitting, setIsSKLSubmitting] = useState(false);
   const sklForm = useForm<SKLFormValues>({ resolver: zodResolver(sklSchema), defaultValues: { kode: "", deskripsi: "", kategori: undefined } });
   
-  // CP State & Form
   const [isCPDialogOpen, setIsCPDialogOpen] = useState(false);
   const [isCPFormOpen, setIsCPFormOpen] = useState(false);
   const [editingCP, setEditingCP] = useState<CapaianPembelajaran | null>(null);
@@ -148,10 +134,8 @@ export default function AdminKurikulumPage() {
   const [isCPSubmitting, setIsCPSubmitting] = useState(false);
   const cpForm = useForm<CPFormValues>({ resolver: zodResolver(cpSchema), defaultValues: { kode: "", deskripsi: "", fase: undefined, elemen: "" } });
 
-  // Pemetaan SKL-CP State
   const [isPemetaanDialogOpen, setIsPemetaanDialogOpen] = useState(false);
 
-  // Kategori Materi State & Form
   const [isKategoriMateriDialogOpen, setIsKategoriMateriDialogOpen] = useState(false);
   const [kategoriMateriList, setKategoriMateriList] = useState<MateriKategori[]>([]);
   const [isLoadingKategoriMateri, setIsLoadingKategoriMateri] = useState(true);
@@ -159,7 +143,6 @@ export default function AdminKurikulumPage() {
   const [kategoriMateriToDelete, setKategoriMateriToDelete] = useState<MateriKategori | null>(null);
   const kategoriMateriForm = useForm<KategoriMateriFormValues>({ resolver: zodResolver(kategoriMateriSchema), defaultValues: { nama: "" }});
 
-  // Struktur Kurikulum State & Form
   const [isStrukturKurikulumDialogOpen, setIsStrukturKurikulumDialogOpen] = useState(false);
   const [isStrukturKurikulumFormOpen, setIsStrukturKurikulumFormOpen] = useState(false);
   const [strukturKurikulumData, setStrukturKurikulumData] = useState<Record<string, StrukturKurikulumItem[]>>({});
@@ -172,189 +155,84 @@ export default function AdminKurikulumPage() {
   const [guruOptions, setGuruOptions] = useState<User[]>([]);
   const strukturKurikulumForm = useForm<StrukturKurikulumClientFormValues>({resolver: zodResolver(strukturKurikulumClientSchema), defaultValues: {mapelId: undefined, alokasiJam: 0, guruPengampuId: undefined}});
 
-
-  // Silabus State & Form (Masih Mock)
   const [isSilabusDialogOpen, setIsSilabusDialogOpen] = useState(false);
   const [isSilabusFormOpen, setIsSilabusFormOpen] = useState(false);
   const [currentEditingSilabus, setCurrentEditingSilabus] = useState<Silabus | null>(null);
   const [silabusToDelete, setSilabusToDelete] = useState<Silabus | null>(null);
-  const [silabusList, setSilabusList] = useState<Silabus[]>(initialSilabus);
+  const [silabusList, setSilabusList] = useState<Silabus[]>([]);
+  const [isLoadingSilabus, setIsLoadingSilabus] = useState(true);
   const [isSilabusSubmitting, setIsSilabusSubmitting] = useState(false);
-  const silabusForm = useForm<SilabusFormValues>({ resolver: zodResolver(silabusSchema), defaultValues: { judul: "", idMapel: undefined, kelas: "", deskripsiSingkat: "", file: undefined }});
+  const silabusForm = useForm<SilabusFormValues>({ resolver: zodResolver(silabusSchema), defaultValues: { judul: "", mapelId: undefined, kelas: "", deskripsiSingkat: "", file: undefined }});
 
-  // RPP State & Form (Masih Mock)
   const [isRPPDialogOpen, setIsRPPDialogOpen] = useState(false);
   const [isRPPFormOpen, setIsRPPFormOpen] = useState(false);
   const [currentEditingRPP, setCurrentEditingRPP] = useState<RPP | null>(null);
   const [rppToDelete, setRppToDelete] = useState<RPP | null>(null);
-  const [rppList, setRppList] = useState<RPP[]>(initialRPP);
+  const [rppList, setRppList] = useState<RPP[]>([]);
+  const [isLoadingRpp, setIsLoadingRpp] = useState(true);
   const [isRPPSubmitting, setIsRPPSubmitting] = useState(false);
-  const rppForm = useForm<RPPFormValues>({ resolver: zodResolver(rppSchema), defaultValues: { judul: "", idMapel: undefined, kelas: "", pertemuanKe: 1, materiPokok: "", kegiatanPembelajaran: "", penilaian: "", file: undefined }});
+  const rppForm = useForm<RPPFormValues>({ resolver: zodResolver(rppSchema), defaultValues: { judul: "", mapelId: undefined, kelas: "", pertemuanKe: 1, materiPokok: "", kegiatanPembelajaran: "", penilaian: "", file: undefined }});
 
-  // Data Fetching
   const fetchSklData = async () => { setIsLoadingSkl(true); try { const response = await fetch('/api/kurikulum/skl'); if (!response.ok) throw new Error('Gagal mengambil data SKL'); const data = await response.json(); setSklList(data); } catch (error: any) { toast({ title: "Error SKL", description: error.message || "Tidak dapat memuat SKL.", variant: "destructive" }); } finally { setIsLoadingSkl(false); } };
   const fetchCpData = async () => { setIsLoadingCp(true); try { const response = await fetch('/api/kurikulum/cp'); if (!response.ok) throw new Error('Gagal mengambil data CP'); const data = await response.json(); setCpList(data); } catch (error: any) { toast({ title: "Error CP", description: error.message || "Tidak dapat memuat CP.", variant: "destructive" }); } finally { setIsLoadingCp(false); } };
   const fetchKategoriMateriData = async () => { setIsLoadingKategoriMateri(true); try { const response = await fetch('/api/kurikulum/materi-kategori'); if (!response.ok) throw new Error('Gagal mengambil data kategori materi'); const data = await response.json(); setKategoriMateriList(data); } catch (error: any) { toast({ title: "Error Kategori Materi", description: error.message || "Tidak dapat memuat kategori materi.", variant: "destructive" }); } finally { setIsLoadingKategoriMateri(false); } };
   const fetchMateriAjarData = async () => { setIsLoadingMateriList(true); try { const response = await fetch('/api/kurikulum/materi-ajar'); if (!response.ok) throw new Error('Gagal mengambil data materi ajar'); const data: MateriAjar[] = await response.json(); setMateriList(data); } catch (error: any) { toast({ title: "Error Materi Ajar", description: error.message || "Tidak dapat memuat materi ajar.", variant: "destructive" }); } finally { setIsLoadingMateriList(false); } };
   const fetchMataPelajaranOptions = async () => { try { const response = await fetch('/api/mapel'); if (!response.ok) throw new Error('Gagal mengambil data mata pelajaran'); const data = await response.json(); setMataPelajaranOptions(data); } catch (error: any) { toast({ title: "Error Mapel", description: error.message || "Tidak dapat memuat mata pelajaran.", variant: "destructive" }); }};
   const fetchGuruOptions = async () => { try { const response = await fetch('/api/users?role=guru'); if (!response.ok) throw new Error('Gagal mengambil data guru'); const data = await response.json(); setGuruOptions(data); } catch (error: any) { toast({ title: "Error Guru", description: error.message || "Tidak dapat memuat data guru.", variant: "destructive" }); }};
-  const fetchStrukturKurikulumData = async (tingkat: string, jurusan: string) => {
-    setIsLoadingStruktur(true);
-    try {
-      const response = await fetch(`/api/kurikulum/struktur?tingkat=${encodeURIComponent(tingkat)}&jurusan=${encodeURIComponent(jurusan)}`);
-      if (!response.ok) throw new Error(`Gagal mengambil struktur kurikulum untuk ${tingkat} ${jurusan}`);
-      const data: StrukturKurikulumItem[] = await response.json();
-      setStrukturKurikulumData(prev => ({ ...prev, [`${tingkat}-${jurusan}`]: data }));
-    } catch (error: any) {
-      toast({ title: "Error Struktur Kurikulum", description: error.message, variant: "destructive" });
-      setStrukturKurikulumData(prev => ({ ...prev, [`${tingkat}-${jurusan}`]: [] })); // Set to empty on error
-    } finally {
-      setIsLoadingStruktur(false);
-    }
-  };
-
+  const fetchStrukturKurikulumData = async (tingkat: string, jurusan: string) => { setIsLoadingStruktur(true); try { const response = await fetch(`/api/kurikulum/struktur?tingkat=${encodeURIComponent(tingkat)}&jurusan=${encodeURIComponent(jurusan)}`); if (!response.ok) throw new Error(`Gagal mengambil struktur kurikulum untuk ${tingkat} ${jurusan}`); const data: StrukturKurikulumItem[] = await response.json(); setStrukturKurikulumData(prev => ({ ...prev, [`${tingkat}-${jurusan}`]: data })); } catch (error: any) { toast({ title: "Error Struktur Kurikulum", description: error.message, variant: "destructive" }); setStrukturKurikulumData(prev => ({ ...prev, [`${tingkat}-${jurusan}`]: [] })); } finally { setIsLoadingStruktur(false); } };
+  const fetchSilabusData = async () => { setIsLoadingSilabus(true); try { const response = await fetch('/api/kurikulum/silabus'); if (!response.ok) throw new Error('Gagal mengambil data silabus'); const data = await response.json(); setSilabusList(data); } catch (error: any) { toast({ title: "Error Silabus", description: error.message || "Tidak dapat memuat silabus.", variant: "destructive" }); } finally { setIsLoadingSilabus(false); } };
+  const fetchRppData = async () => { setIsLoadingRpp(true); try { const response = await fetch('/api/kurikulum/rpp'); if (!response.ok) throw new Error('Gagal mengambil data RPP'); const data = await response.json(); setRppList(data); } catch (error: any) { toast({ title: "Error RPP", description: error.message || "Tidak dapat memuat RPP.", variant: "destructive" }); } finally { setIsLoadingRpp(false); } };
 
   useEffect(() => {
     if (user && (user.role === 'admin' || user.role === 'superadmin')) {
-      fetchSklData();
-      fetchCpData();
-      fetchKategoriMateriData();
-      fetchMateriAjarData();
-      fetchMataPelajaranOptions();
-      fetchGuruOptions();
+      fetchSklData(); fetchCpData(); fetchKategoriMateriData(); fetchMateriAjarData();
+      fetchMataPelajaranOptions(); fetchGuruOptions(); fetchSilabusData(); fetchRppData();
     }
   }, [user]);
 
-  useEffect(() => {
-    if (selectedTingkat && selectedJurusan && (user?.role === 'admin' || user?.role === 'superadmin')) {
-        // Hanya fetch jika data untuk kombinasi ini belum ada atau ingin di-refresh
-        if (!strukturKurikulumData[`${selectedTingkat}-${selectedJurusan}`]) {
-            fetchStrukturKurikulumData(selectedTingkat, selectedJurusan);
-        }
-    }
-  }, [selectedTingkat, selectedJurusan, user, strukturKurikulumData]); // strukturKurikulumData added to dependencies
-
+  useEffect(() => { if (selectedTingkat && selectedJurusan && (user?.role === 'admin' || user?.role === 'superadmin')) { if (!strukturKurikulumData[`${selectedTingkat}-${selectedJurusan}`]) { fetchStrukturKurikulumData(selectedTingkat, selectedJurusan); } } }, [selectedTingkat, selectedJurusan, user, strukturKurikulumData]);
   useEffect(() => { if (editingSKL) sklForm.reset(editingSKL); else sklForm.reset({ kode: "", deskripsi: "", kategori: undefined }); }, [editingSKL, sklForm, isSKLFormOpen]);
   useEffect(() => { if (editingCP) cpForm.reset(editingCP); else cpForm.reset({ kode: "", deskripsi: "", fase: undefined, elemen: "" }); }, [editingCP, cpForm, isCPFormOpen]);
-  useEffect(() => {
-    if (currentEditingMateri) materiAjarForm.reset({ judul: currentEditingMateri.judul, deskripsi: currentEditingMateri.deskripsi || "", mapelNama: currentEditingMateri.mapelNama, jenisMateri: currentEditingMateri.jenisMateri, externalUrl: currentEditingMateri.jenisMateri === "Link" ? currentEditingMateri.fileUrl || "" : "", fileInput: undefined });
-    else materiAjarForm.reset({ judul: "", deskripsi: "", mapelNama: undefined, jenisMateri: undefined, fileInput: undefined, externalUrl: "" });
-  }, [currentEditingMateri, materiAjarForm, isMateriFormOpen]);
-  useEffect(() => { editingSilabus = currentEditingSilabus; if (currentEditingSilabus) silabusForm.reset({ judul: currentEditingSilabus.judul, idMapel: currentEditingSilabus.idMapel, kelas: currentEditingSilabus.kelas, deskripsiSingkat: currentEditingSilabus.deskripsiSingkat, file: undefined }); else silabusForm.reset({ judul: "", idMapel: undefined, kelas: "", deskripsiSingkat: "", file: undefined }); }, [currentEditingSilabus, silabusForm, isSilabusFormOpen]);
-  useEffect(() => { editingRPP = currentEditingRPP; if (currentEditingRPP) rppForm.reset({ judul: currentEditingRPP.judul, idMapel: currentEditingRPP.idMapel, kelas: currentEditingRPP.kelas, pertemuanKe: currentEditingRPP.pertemuanKe, materiPokok: currentEditingRPP.materiPokok, kegiatanPembelajaran: currentEditingRPP.kegiatanPembelajaran, penilaian: currentEditingRPP.penilaian, file: undefined }); else rppForm.reset({ judul: "", idMapel: undefined, kelas: "", pertemuanKe: 1, materiPokok: "", kegiatanPembelajaran: "", penilaian: "", file: undefined }); }, [currentEditingRPP, rppForm, isRPPFormOpen]);
+  useEffect(() => { if (currentEditingMateri) materiAjarForm.reset({ judul: currentEditingMateri.judul, deskripsi: currentEditingMateri.deskripsi || "", mapelNama: currentEditingMateri.mapelNama, jenisMateri: currentEditingMateri.jenisMateri, externalUrl: currentEditingMateri.jenisMateri === "Link" ? currentEditingMateri.fileUrl || "" : "", fileInput: undefined }); else materiAjarForm.reset({ judul: "", deskripsi: "", mapelNama: undefined, jenisMateri: undefined, fileInput: undefined, externalUrl: "" }); }, [currentEditingMateri, materiAjarForm, isMateriFormOpen]);
+  useEffect(() => { if (currentEditingSilabus) silabusForm.reset({ judul: currentEditingSilabus.judul, mapelId: currentEditingSilabus.mapelId, kelas: currentEditingSilabus.kelas, deskripsiSingkat: currentEditingSilabus.deskripsiSingkat || "", file: undefined }); else silabusForm.reset({ judul: "", mapelId: undefined, kelas: "", deskripsiSingkat: "", file: undefined }); }, [currentEditingSilabus, silabusForm, isSilabusFormOpen]);
+  useEffect(() => { if (currentEditingRPP) rppForm.reset({ judul: currentEditingRPP.judul, mapelId: currentEditingRPP.mapelId, kelas: currentEditingRPP.kelas, pertemuanKe: currentEditingRPP.pertemuanKe, materiPokok: currentEditingRPP.materiPokok || "", kegiatanPembelajaran: currentEditingRPP.kegiatanPembelajaran || "", penilaian: currentEditingRPP.penilaian || "", file: undefined }); else rppForm.reset({ judul: "", mapelId: undefined, kelas: "", pertemuanKe: 1, materiPokok: "", kegiatanPembelajaran: "", penilaian: "", file: undefined }); }, [currentEditingRPP, rppForm, isRPPFormOpen]);
+
 
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) { return <p>Akses Ditolak. Anda harus menjadi admin untuk melihat halaman ini.</p>; }
   const handlePlaceholderAction = (action: string) => { toast({ title: "Fitur Dalam Pengembangan", description: `Fungsi "${action}" belum diimplementasikan sepenuhnya.`}); };
   
   const openMateriForm = (materi?: MateriAjar) => { setCurrentEditingMateri(materi || null); setIsMateriFormOpen(true); }
-  const handleMateriSubmit = async (values: MateriAjarClientFormValues) => {
-    setIsMateriSubmitting(true);
-    const payload: Partial<MateriAjar> = {
-      judul: values.judul,
-      deskripsi: values.deskripsi,
-      mapelNama: values.mapelNama,
-      jenisMateri: values.jenisMateri as JenisMateriAjarType,
-    };
-
-    if (values.jenisMateri === "File") {
-      if (values.fileInput && values.fileInput.name) {
-        payload.namaFileOriginal = values.fileInput.name;
-      }
-    } else if (values.jenisMateri === "Link") {
-      payload.fileUrl = values.externalUrl;
-      payload.namaFileOriginal = null; 
-    }
-    
-    const url = currentEditingMateri ? `/api/kurikulum/materi-ajar/${currentEditingMateri.id}` : '/api/kurikulum/materi-ajar';
-    const method = currentEditingMateri ? 'PUT' : 'POST';
-
-    try {
-      const response = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menyimpan materi ajar'); }
-      toast({ title: "Berhasil!", description: `Materi "${values.judul}" ${currentEditingMateri ? 'diperbarui' : 'ditambahkan'}.` });
-      setIsMateriFormOpen(false); setCurrentEditingMateri(null);
-      fetchMateriAjarData();
-    } catch (error: any) { toast({ title: "Error Materi Ajar", description: error.message, variant: "destructive" });
-    } finally { setIsMateriSubmitting(false); }
-  };
+  const handleMateriSubmit = async (values: MateriAjarClientFormValues) => { setIsMateriSubmitting(true); const payload: Partial<MateriAjar> = { judul: values.judul, deskripsi: values.deskripsi, mapelNama: values.mapelNama, jenisMateri: values.jenisMateri as JenisMateriAjarType, }; if (values.jenisMateri === "File") { if (values.fileInput && values.fileInput.name) { payload.namaFileOriginal = values.fileInput.name; } } else if (values.jenisMateri === "Link") { payload.fileUrl = values.externalUrl; payload.namaFileOriginal = null; } const url = currentEditingMateri ? `/api/kurikulum/materi-ajar/${currentEditingMateri.id}` : '/api/kurikulum/materi-ajar'; const method = currentEditingMateri ? 'PUT' : 'POST'; try { const response = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menyimpan materi ajar'); } toast({ title: "Berhasil!", description: `Materi "${values.judul}" ${currentEditingMateri ? 'diperbarui' : 'ditambahkan'}.` }); setIsMateriFormOpen(false); setCurrentEditingMateri(null); fetchMateriAjarData(); } catch (error: any) { toast({ title: "Error Materi Ajar", description: error.message, variant: "destructive" }); } finally { setIsMateriSubmitting(false); } };
   const openDeleteMateriDialog = (materi: MateriAjar) => setMateriToDelete(materi);
-  const handleDeleteMateriConfirm = async () => {
-    if (materiToDelete) {
-      setIsMateriSubmitting(true);
-      try {
-        const response = await fetch(`/api/kurikulum/materi-ajar/${materiToDelete.id}`, { method: 'DELETE' });
-        if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus materi ajar');}
-        toast({ title: "Dihapus!", description: `Materi "${materiToDelete.judul}" telah dihapus.` });
-        fetchMateriAjarData();
-      } catch (error: any) { toast({ title: "Error Materi Ajar", description: error.message, variant: "destructive" });
-      } finally { setIsMateriSubmitting(false); setMateriToDelete(null); }
-    }
-  };
+  const handleDeleteMateriConfirm = async () => { if (materiToDelete) { setIsMateriSubmitting(true); try { const response = await fetch(`/api/kurikulum/materi-ajar/${materiToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus materi ajar');} toast({ title: "Dihapus!", description: `Materi "${materiToDelete.judul}" telah dihapus.` }); fetchMateriAjarData(); } catch (error: any) { toast({ title: "Error Materi Ajar", description: error.message, variant: "destructive" }); } finally { setIsMateriSubmitting(false); setMateriToDelete(null); } } };
   
   const openSKLForm = (skl?: SKL) => { setEditingSKL(skl || null); setIsSKLFormOpen(true); };
   const handleSKLFormSubmit = async (values: SKLFormValues) => { setIsSKLSubmitting(true); const url = editingSKL ? `/api/kurikulum/skl/${editingSKL.id}` : '/api/kurikulum/skl'; const method = editingSKL ? 'PUT' : 'POST'; const payload = editingSKL ? { deskripsi: values.deskripsi, kategori: values.kategori } : values; try { const response = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menyimpan SKL'); } toast({ title: "Berhasil!", description: `SKL ${values.kode || editingSKL?.kode} telah ${editingSKL ? 'diperbarui' : 'ditambahkan'}.` }); setIsSKLFormOpen(false); setEditingSKL(null); fetchSklData(); } catch (error: any) { toast({ title: "Error SKL", description: error.message, variant: "destructive" }); } finally { setIsSKLSubmitting(false); } };
   const openDeleteSKLDialog = (skl: SKL) => setSklToDelete(skl);
   const handleDeleteSKLConfirm = async () => { if (sklToDelete) { setIsSKLSubmitting(true); try { const response = await fetch(`/api/kurikulum/skl/${sklToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus SKL'); } toast({ title: "Dihapus!", description: `SKL ${sklToDelete.kode} telah dihapus.` }); fetchSklData(); } catch (error: any) { toast({ title: "Error SKL", description: error.message, variant: "destructive" }); } finally { setIsSKLSubmitting(false); setSklToDelete(null); } } };
+  
   const openCPForm = (cp?: CapaianPembelajaran) => { setEditingCP(cp || null); setIsCPFormOpen(true); };
   const handleCPFormSubmit = async (values: CPFormValues) => { setIsCPSubmitting(true); const url = editingCP ? `/api/kurikulum/cp/${editingCP.id}` : '/api/kurikulum/cp'; const method = editingCP ? 'PUT' : 'POST'; const payload = editingCP ? { deskripsi: values.deskripsi, fase: values.fase, elemen: values.elemen } : values; try { const response = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menyimpan CP'); } toast({ title: "Berhasil!", description: `CP ${values.kode || editingCP?.kode} telah ${editingCP ? 'diperbarui' : 'ditambahkan'}.` }); setIsCPFormOpen(false); setEditingCP(null); fetchCpData(); } catch (error: any) { toast({ title: "Error CP", description: error.message, variant: "destructive" }); } finally { setIsCPSubmitting(false); } };
   const openDeleteCPDialog = (cp: CapaianPembelajaran) => setCpToDelete(cp);
   const handleDeleteCPConfirm = async () => { if (cpToDelete) { setIsCPSubmitting(true); try { const response = await fetch(`/api/kurikulum/cp/${cpToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus CP'); } toast({ title: "Dihapus!", description: `CP ${cpToDelete.kode} telah dihapus.` }); fetchCpData(); } catch (error: any) { toast({ title: "Error CP", description: error.message, variant: "destructive" }); } finally { setIsCPSubmitting(false); setCpToDelete(null); } } };
+  
   const handleKategoriMateriSubmit = async (values: KategoriMateriFormValues) => { setIsKategoriMateriSubmitting(true); try { const response = await fetch('/api/kurikulum/materi-kategori', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menyimpan kategori materi'); } toast({ title: "Berhasil!", description: `Kategori "${values.nama}" ditambahkan.` }); kategoriMateriForm.reset(); fetchKategoriMateriData(); } catch (error: any) { toast({ title: "Error Kategori Materi", description: error.message, variant: "destructive" }); } finally { setIsKategoriMateriSubmitting(false); } };
   const openDeleteKategoriMateriDialog = (kategori: MateriKategori) => setKategoriMateriToDelete(kategori);
   const handleDeleteKategoriMateriConfirm = async () => { if (kategoriMateriToDelete) { setIsKategoriMateriSubmitting(true); try { const response = await fetch(`/api/kurikulum/materi-kategori/${kategoriMateriToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus kategori materi'); } toast({ title: "Dihapus!", description: `Kategori "${kategoriMateriToDelete.nama}" telah dihapus.` }); fetchKategoriMateriData(); } catch (error: any) { toast({ title: "Error Kategori Materi", description: error.message, variant: "destructive" }); } finally { setIsKategoriMateriSubmitting(false); setKategoriMateriToDelete(null); } } };
   
-  const handleStrukturKurikulumSubmit = async (values: StrukturKurikulumClientFormValues) => {
-    setIsStrukturSubmitting(true);
-    try {
-      const payload = { ...values, tingkat: selectedTingkat, jurusan: selectedJurusan };
-      const response = await fetch('/api/kurikulum/struktur', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Gagal menambahkan mata pelajaran ke struktur.');
-      }
-      toast({ title: "Berhasil!", description: `Mata pelajaran ditambahkan ke struktur ${selectedTingkat} ${selectedJurusan}.` });
-      fetchStrukturKurikulumData(selectedTingkat, selectedJurusan); // Refresh data
-      setIsStrukturKurikulumFormOpen(false);
-      strukturKurikulumForm.reset({mapelId: undefined, alokasiJam: 0, guruPengampuId: undefined});
-    } catch (error: any) {
-      toast({ title: "Error Struktur Kurikulum", description: error.message, variant: "destructive" });
-    } finally {
-      setIsStrukturSubmitting(false);
-    }
-  };
+  const handleStrukturKurikulumSubmit = async (values: StrukturKurikulumClientFormValues) => { setIsStrukturSubmitting(true); try { const payload = { ...values, tingkat: selectedTingkat, jurusan: selectedJurusan }; const response = await fetch('/api/kurikulum/struktur', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menambahkan mata pelajaran ke struktur.'); } toast({ title: "Berhasil!", description: `Mata pelajaran ditambahkan ke struktur ${selectedTingkat} ${selectedJurusan}.` }); fetchStrukturKurikulumData(selectedTingkat, selectedJurusan); setIsStrukturKurikulumFormOpen(false); strukturKurikulumForm.reset({mapelId: undefined, alokasiJam: 0, guruPengampuId: undefined}); } catch (error: any) { toast({ title: "Error Struktur Kurikulum", description: error.message, variant: "destructive" }); } finally { setIsStrukturSubmitting(false); } };
   const openDeleteStrukturItemDialog = (item: StrukturKurikulumItem) => setStrukturItemToDelete(item);
-  const handleDeleteStrukturItemConfirm = async () => {
-    if (strukturItemToDelete) {
-      setIsStrukturSubmitting(true);
-      try {
-        const response = await fetch(`/api/kurikulum/struktur/${strukturItemToDelete.id}`, { method: 'DELETE' });
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Gagal menghapus item dari struktur.');
-        }
-        toast({ title: "Dihapus!", description: `Item "${strukturItemToDelete.namaMapel}" telah dihapus dari struktur.` });
-        fetchStrukturKurikulumData(selectedTingkat, selectedJurusan); // Refresh data
-      } catch (error: any) {
-        toast({ title: "Error Hapus Struktur", description: error.message, variant: "destructive" });
-      } finally {
-        setIsStrukturSubmitting(false);
-        setStrukturItemToDelete(null);
-      }
-    }
-  };
+  const handleDeleteStrukturItemConfirm = async () => { if (strukturItemToDelete) { setIsStrukturSubmitting(true); try { const response = await fetch(`/api/kurikulum/struktur/${strukturItemToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus item dari struktur.'); } toast({ title: "Dihapus!", description: `Item "${strukturItemToDelete.namaMapel}" telah dihapus dari struktur.` }); fetchStrukturKurikulumData(selectedTingkat, selectedJurusan); } catch (error: any) { toast({ title: "Error Hapus Struktur", description: error.message, variant: "destructive" }); } finally { setIsStrukturSubmitting(false); setStrukturItemToDelete(null); } } };
 
   const openSilabusForm = (silabus?: Silabus) => { setCurrentEditingSilabus(silabus || null); setIsSilabusFormOpen(true); };
-  const handleSilabusSubmit = async (values: SilabusFormValues) => { setIsSilabusSubmitting(true); await new Promise(resolve => setTimeout(resolve, 1000)); const namaMapel = MOCK_SUBJECTS.find(s => s === values.idMapel) || "N/A"; if (currentEditingSilabus) { setSilabusList(silabusList.map(s => s.id === currentEditingSilabus.id ? {...currentEditingSilabus, ...values, namaMapel, namaFile: values.file ? (values.file as File).name : currentEditingSilabus.namaFile} : s)); toast({title: "Berhasil!", description: `Silabus "${values.judul}" diperbarui.`}); } else { const newSilabus: Silabus = {id: `SIL${Date.now()}`, ...values, namaMapel, namaFile: values.file ? (values.file as File).name : "contoh_silabus.pdf"}; setSilabusList(prev => [...prev, newSilabus]); toast({title: "Berhasil!", description: `Silabus "${values.judul}" ditambahkan.`}); } setIsSilabusSubmitting(false); setIsSilabusFormOpen(false); setCurrentEditingSilabus(null); silabusForm.reset(); };
+  const handleSilabusSubmit = async (values: SilabusFormValues) => { setIsSilabusSubmitting(true); const payload: Partial<Silabus> = { ...values, namaFileOriginal: values.file ? (values.file as File).name : undefined }; const url = currentEditingSilabus ? `/api/kurikulum/silabus/${currentEditingSilabus.id}` : '/api/kurikulum/silabus'; const method = currentEditingSilabus ? 'PUT' : 'POST'; try { const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menyimpan silabus'); } toast({title: "Berhasil!", description: `Silabus "${values.judul}" ${currentEditingSilabus ? 'diperbarui' : 'ditambahkan'}.`}); setIsSilabusFormOpen(false); setCurrentEditingSilabus(null); silabusForm.reset(); fetchSilabusData(); } catch (error: any) { toast({ title: "Error Silabus", description: error.message, variant: "destructive" }); } finally { setIsSilabusSubmitting(false); } };
   const openDeleteSilabusDialog = (silabus: Silabus) => setSilabusToDelete(silabus);
-  const handleDeleteSilabusConfirm = async () => { if (silabusToDelete) { setIsSilabusSubmitting(true); await new Promise(resolve => setTimeout(resolve, 1000)); setSilabusList(silabusList.filter(s => s.id !== silabusToDelete.id)); toast({ title: "Dihapus!", description: `Silabus ${silabusToDelete.judul} dihapus.` }); setIsSilabusSubmitting(false); setSilabusToDelete(null); } };
+  const handleDeleteSilabusConfirm = async () => { if (silabusToDelete) { setIsSilabusSubmitting(true); try { const response = await fetch(`/api/kurikulum/silabus/${silabusToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus silabus'); } toast({ title: "Dihapus!", description: `Silabus "${silabusToDelete.judul}" dihapus.` }); fetchSilabusData(); } catch (error: any) { toast({ title: "Error Silabus", description: error.message, variant: "destructive" }); } finally { setIsSilabusSubmitting(false); setSilabusToDelete(null); } } };
+  
   const openRPPForm = (rpp?: RPP) => { setCurrentEditingRPP(rpp || null); setIsRPPFormOpen(true); };
-  const handleRPPSubmit = async (values: RPPFormValues) => { setIsRPPSubmitting(true); await new Promise(resolve => setTimeout(resolve, 1000)); const namaMapel = MOCK_SUBJECTS.find(s => s === values.idMapel) || "N/A"; if (currentEditingRPP) { setRppList(rppList.map(r => r.id === currentEditingRPP.id ? {...currentEditingRPP, ...values, namaMapel, namaFile: values.file ? (values.file as File).name : currentEditingRPP.namaFile} : r)); toast({title: "Berhasil!", description: `RPP "${values.judul}" diperbarui.`}); } else { const newRPP: RPP = {id: `RPP${Date.now()}`, ...values, namaMapel, namaFile: values.file ? (values.file as File).name : "contoh_rpp.pdf"}; setRppList(prev => [...prev, newRPP]); toast({title: "Berhasil!", description: `RPP "${values.judul}" ditambahkan.`}); } setIsRPPSubmitting(false); setIsRPPFormOpen(false); setCurrentEditingRPP(null); rppForm.reset(); };
+  const handleRPPSubmit = async (values: RPPFormValues) => { setIsRPPSubmitting(true); const payload: Partial<RPP> = { ...values, namaFileOriginal: values.file ? (values.file as File).name : undefined }; const url = currentEditingRPP ? `/api/kurikulum/rpp/${currentEditingRPP.id}` : '/api/kurikulum/rpp'; const method = currentEditingRPP ? 'PUT' : 'POST'; try { const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menyimpan RPP'); } toast({title: "Berhasil!", description: `RPP "${values.judul}" ${currentEditingRPP ? 'diperbarui' : 'ditambahkan'}.`}); setIsRPPFormOpen(false); setCurrentEditingRPP(null); rppForm.reset(); fetchRppData(); } catch (error: any) { toast({ title: "Error RPP", description: error.message, variant: "destructive" }); } finally { setIsRPPSubmitting(false); } };
   const openDeleteRPPDialog = (rpp: RPP) => setRppToDelete(rpp);
-  const handleDeleteRPPConfirm = async () => { if (rppToDelete) { setIsRPPSubmitting(true); await new Promise(resolve => setTimeout(resolve, 1000)); setRppList(rppList.filter(r => r.id !== rppToDelete.id)); toast({ title: "Dihapus!", description: `RPP ${rppToDelete.judul} dihapus.` }); setIsRPPSubmitting(false); setRppToDelete(null); } };
+  const handleDeleteRPPConfirm = async () => { if (rppToDelete) { setIsRPPSubmitting(true); try { const response = await fetch(`/api/kurikulum/rpp/${rppToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus RPP'); } toast({ title: "Dihapus!", description: `RPP "${rppToDelete.judul}" dihapus.` }); fetchRppData(); } catch (error: any) { toast({ title: "Error RPP", description: error.message, variant: "destructive" }); } finally { setIsRPPSubmitting(false); setRppToDelete(null); } } };
 
   const currentStrukturList = strukturKurikulumData[`${selectedTingkat}-${selectedJurusan}`] || [];
 
@@ -411,7 +289,7 @@ export default function AdminKurikulumPage() {
                             <TableCell className="font-medium max-w-xs truncate" title={m.judul}>{m.judul}</TableCell>
                             <TableCell>{m.mapelNama}</TableCell>
                             <TableCell>{m.jenisMateri}</TableCell>
-                            <TableCell>{format(new Date(m.tanggalUpload), "dd/MM/yyyy")}</TableCell>
+                            <TableCell>{m.tanggalUpload ? format(parseISO(m.tanggalUpload), "dd/MM/yyyy") : "-"}</TableCell>
                             <TableCell className="text-xs truncate" title={m.uploader?.email}>{m.uploader?.fullName || m.uploader?.name || m.uploader?.email || "-"}</TableCell>
                             <TableCell className="text-right">
                               <Button variant="ghost" size="sm" onClick={() => openMateriForm(m)} className="mr-1"><Edit className="h-4 w-4" /></Button>
@@ -429,7 +307,6 @@ export default function AdminKurikulumPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog Form Tambah/Edit Materi Ajar */}
       <Dialog open={isMateriFormOpen} onOpenChange={(open) => { setIsMateriFormOpen(open); if (!open) setCurrentEditingMateri(null); }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle>{currentEditingMateri ? "Edit Materi" : "Tambah Materi Baru"}</DialogTitle></DialogHeader>
@@ -437,7 +314,7 @@ export default function AdminKurikulumPage() {
             <form onSubmit={materiAjarForm.handleSubmit(handleMateriSubmit)} className="space-y-4 py-4">
               <FormField control={materiAjarForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Materi</FormLabel><FormControl><Input placeholder="Modul Bab 1 Termodinamika" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={materiAjarForm.control} name="mapelNama" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih mata pelajaran" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.map(subject => (<SelectItem key={subject.id} value={subject.nama}>{subject.nama}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-              <FormField control={materiAjarForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea placeholder="Deskripsi singkat materi..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={materiAjarForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea placeholder="Deskripsi singkat materi..." {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={materiAjarForm.control} name="jenisMateri" render={({ field }) => (<FormItem><FormLabel>Jenis Materi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis materi" /></SelectTrigger></FormControl><SelectContent>{JENIS_MATERI_AJAR.map(jenis => <SelectItem key={jenis} value={jenis}>{jenis === "File" ? <><UploadCloud className="inline-block mr-2 h-4 w-4" />Unggah File</> : <><Link2Icon className="inline-block mr-2 h-4 w-4" />Tautan Eksternal</>}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
               {materiAjarForm.watch("jenisMateri") === "File" && (<FormField control={materiAjarForm.control} name="fileInput" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>Unggah File {currentEditingMateri?.namaFileOriginal ? `(Kosongkan jika tidak ingin mengubah: ${currentEditingMateri.namaFileOriginal})` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>PDF, DOCX, PPTX, dll. Maks 10MB (Simulasi).</FormDescription><FormMessage /></FormItem>)} />)}
               {materiAjarForm.watch("jenisMateri") === "Link" && (<FormField control={materiAjarForm.control} name="externalUrl" render={({ field }) => (<FormItem><FormLabel>URL Materi</FormLabel><FormControl><Input placeholder="https://contoh.com/materi" {...field} /></FormControl><FormDescription>URL lengkap sumber materi.</FormDescription><FormMessage /></FormItem>)} />)}
@@ -448,29 +325,21 @@ export default function AdminKurikulumPage() {
       </Dialog>
       <AlertDialog open={!!materiToDelete} onOpenChange={(open) => !open && setMateriToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Konfirmasi Hapus Materi</AlertDialogTitle><AlertDialogDescription>Yakin ingin hapus materi "{materiToDelete?.judul}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setMateriToDelete(null)} disabled={isMateriSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteMateriConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isMateriSubmitting}>{isMateriSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
 
-
-      {/* Dialog Manajemen SKL */}
-      <Dialog open={isSKLDialogOpen} onOpenChange={setIsSKLDialogOpen}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>Manajemen SKL</DialogTitle><DialogDescription>Kelola Standar Kompetensi Lulusan.</DialogDescription></DialogHeader><div className="py-4 space-y-4"><Button onClick={() => openSKLForm()}><PlusCircle className="mr-2 h-4 w-4" /> Tambah SKL</Button>{isLoadingSkl ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : sklList.length > 0 ? (<ScrollArea className="max-h-96 border rounded-md"><Table><TableHeader className="bg-muted/50 sticky top-0"><tr><TableHead>Kode</TableHead><TableHead>Deskripsi</TableHead><TableHead>Kategori</TableHead><TableHead className="text-right">Tindakan</TableHead></tr></TableHeader><TableBody>{sklList.map(skl => (<TableRow key={skl.id}><TableCell className="font-medium">{skl.kode}</TableCell><TableCell className="max-w-md whitespace-pre-wrap">{skl.deskripsi}</TableCell><TableCell>{skl.kategori}</TableCell><TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => openSKLForm(skl)} className="mr-1"><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={() => openDeleteSKLDialog(skl)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody></Table></ScrollArea>) : (<p className="text-muted-foreground text-center">Belum ada SKL.</p>)}</div><DialogFooter><Button variant="outline" onClick={() => setIsSKLDialogOpen(false)}>Tutup</Button></DialogFooter></DialogContent></Dialog>
-      <Dialog open={isSKLFormOpen} onOpenChange={(open) => { setIsSKLFormOpen(open); if (!open) setEditingSKL(null); }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{editingSKL ? "Edit SKL" : "Tambah SKL Baru"}</DialogTitle></DialogHeader><Form {...sklForm}><form onSubmit={sklForm.handleSubmit(handleSKLFormSubmit)} className="space-y-4 py-2"><FormField control={sklForm.control} name="kode" render={({ field }) => (<FormItem><FormLabel>Kode SKL</FormLabel><FormControl><Input placeholder="S-01" {...field} disabled={!!editingSKL} /></FormControl>{editingSKL && <FormDescription>Kode tidak dapat diubah.</FormDescription>}<FormMessage /></FormItem>)} /><FormField control={sklForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi SKL</FormLabel><FormControl><Textarea placeholder="Deskripsi standar..." {...field} rows={4} /></FormControl><FormMessage /></FormItem>)} /><FormField control={sklForm.control} name="kategori" render={({ field }) => (<FormItem><FormLabel>Kategori SKL</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger></FormControl><SelectContent>{(KATEGORI_SKL as unknown as KategoriSklType[]).map(kat => <SelectItem key={kat} value={kat}>{kat}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /><DialogFooter className="pt-2"><Button type="button" variant="outline" onClick={() => {setIsSKLFormOpen(false); setEditingSKL(null);}} disabled={isSKLSubmitting}>Batal</Button><Button type="submit" disabled={isSKLSubmitting}>{isSKLSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingSKL ? "Simpan" : "Tambah"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
+      <Dialog open={isSKLDialogOpen} onOpenChange={setIsSKLDialogOpen}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>Manajemen SKL</DialogTitle><DialogDescription>Kelola Standar Kompetensi Lulusan.</DialogDescription></DialogHeader><div className="py-4 space-y-4"><Button onClick={() => openSKLForm()}><PlusCircle className="mr-2 h-4 w-4" /> Tambah SKL</Button>{isLoadingSkl ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : sklList.length > 0 ? (<ScrollArea className="max-h-96 border rounded-md"><Table><TableHeader className="bg-muted/50 sticky top-0"><TableRow><TableHead>Kode</TableHead><TableHead>Deskripsi</TableHead><TableHead>Kategori</TableHead><TableHead className="text-right">Tindakan</TableHead></TableRow></TableHeader><TableBody>{sklList.map(skl => (<TableRow key={skl.id}><TableCell className="font-medium">{skl.kode}</TableCell><TableCell className="max-w-md whitespace-pre-wrap">{skl.deskripsi}</TableCell><TableCell>{skl.kategori}</TableCell><TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => openSKLForm(skl)} className="mr-1"><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={() => openDeleteSKLDialog(skl)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody></Table></ScrollArea>) : (<p className="text-muted-foreground text-center">Belum ada SKL.</p>)}</div><DialogFooter><Button variant="outline" onClick={() => setIsSKLDialogOpen(false)}>Tutup</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={isSKLFormOpen} onOpenChange={(open) => { setIsSKLFormOpen(open); if (!open) setEditingSKL(null); }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{editingSKL ? "Edit SKL" : "Tambah SKL Baru"}</DialogTitle></DialogHeader><Form {...sklForm}><form onSubmit={sklForm.handleSubmit(handleSKLFormSubmit)} className="space-y-4 py-2"><FormField control={sklForm.control} name="kode" render={({ field }) => (<FormItem><FormLabel>Kode SKL</FormLabel><FormControl><Input placeholder="S-01" {...field} disabled={!!editingSKL} /></FormControl>{editingSKL && <FormDescription>Kode tidak dapat diubah.</FormDescription>}<FormMessage /></FormItem>)} /><FormField control={sklForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi SKL</FormLabel><FormControl><Textarea placeholder="Deskripsi standar..." {...field} rows={4} /></FormControl><FormMessage /></FormItem>)} /><FormField control={sklForm.control} name="kategori" render={({ field }) => (<FormItem><FormLabel>Kategori SKL</FormLabel><Select onValueChange={field.onChange} value={field.value as KategoriSklType}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger></FormControl><SelectContent>{(KATEGORI_SKL_CONST).map(kat => <SelectItem key={kat} value={kat}>{kat}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /><DialogFooter className="pt-2"><Button type="button" variant="outline" onClick={() => {setIsSKLFormOpen(false); setEditingSKL(null);}} disabled={isSKLSubmitting}>Batal</Button><Button type="submit" disabled={isSKLSubmitting}>{isSKLSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingSKL ? "Simpan" : "Tambah"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
       <AlertDialog open={!!sklToDelete} onOpenChange={(open) => !open && setSklToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Konfirmasi Hapus SKL</AlertDialogTitle><AlertDialogDescription>Yakin ingin hapus SKL "{sklToDelete?.kode}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setSklToDelete(null)} disabled={isSKLSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSKLConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isSKLSubmitting}>{isSKLSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       
-      {/* Dialog Manajemen CP */}
-      <Dialog open={isCPDialogOpen} onOpenChange={setIsCPDialogOpen}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>Manajemen CP</DialogTitle><DialogDescription>Kelola Capaian Pembelajaran.</DialogDescription></DialogHeader><div className="py-4 space-y-4"><Button onClick={() => openCPForm()}><PlusCircle className="mr-2 h-4 w-4" /> Tambah CP</Button>{isLoadingCp ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : cpList.length > 0 ? (<ScrollArea className="max-h-96 border rounded-md"><Table><TableHeader className="bg-muted/50 sticky top-0"><tr><TableHead>Kode</TableHead><TableHead>Deskripsi</TableHead><TableHead>Fase</TableHead><TableHead>Elemen</TableHead><TableHead className="text-right">Tindakan</TableHead></tr></TableHeader><TableBody>{cpList.map(cp => (<TableRow key={cp.id}><TableCell className="font-medium">{cp.kode}</TableCell><TableCell className="max-w-md whitespace-pre-wrap">{cp.deskripsi}</TableCell><TableCell>{cp.fase}</TableCell><TableCell>{cp.elemen}</TableCell><TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => openCPForm(cp)} className="mr-1"><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={() => openDeleteCPDialog(cp)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody></Table></ScrollArea>) : (<p className="text-muted-foreground text-center">Belum ada CP.</p>)}</div><DialogFooter><Button variant="outline" onClick={() => setIsCPDialogOpen(false)}>Tutup</Button></DialogFooter></DialogContent></Dialog>
-      <Dialog open={isCPFormOpen} onOpenChange={(open) => { setIsCPFormOpen(open); if (!open) setEditingCP(null); }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{editingCP ? "Edit CP" : "Tambah CP Baru"}</DialogTitle></DialogHeader><Form {...cpForm}><form onSubmit={cpForm.handleSubmit(handleCPFormSubmit)} className="space-y-4 py-2"><FormField control={cpForm.control} name="kode" render={({ field }) => (<FormItem><FormLabel>Kode CP</FormLabel><FormControl><Input placeholder="MTK.F.ALG.1" {...field} disabled={!!editingCP} /></FormControl>{editingCP && <FormDescription>Kode tidak dapat diubah.</FormDescription>}<FormMessage /></FormItem>)} /><FormField control={cpForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi CP</FormLabel><FormControl><Textarea placeholder="Deskripsi capaian..." {...field} rows={4} /></FormControl><FormMessage /></FormItem>)} /><FormField control={cpForm.control} name="fase" render={({ field }) => (<FormItem><FormLabel>Fase</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih fase" /></SelectTrigger></FormControl><SelectContent>{(FASE_CP as unknown as FaseCpType[]).map(f => <SelectItem key={f} value={f}>Fase {f}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={cpForm.control} name="elemen" render={({ field }) => (<FormItem><FormLabel>Elemen/Domain</FormLabel><FormControl><Input placeholder="Bilangan" {...field} /></FormControl><FormMessage /></FormItem>)} /><DialogFooter className="pt-2"><Button type="button" variant="outline" onClick={() => {setIsCPFormOpen(false); setEditingCP(null);}} disabled={isCPSubmitting}>Batal</Button><Button type="submit" disabled={isCPSubmitting}>{isCPSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingCP ? "Simpan" : "Tambah"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
+      <Dialog open={isCPDialogOpen} onOpenChange={setIsCPDialogOpen}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>Manajemen CP</DialogTitle><DialogDescription>Kelola Capaian Pembelajaran.</DialogDescription></DialogHeader><div className="py-4 space-y-4"><Button onClick={() => openCPForm()}><PlusCircle className="mr-2 h-4 w-4" /> Tambah CP</Button>{isLoadingCp ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : cpList.length > 0 ? (<ScrollArea className="max-h-96 border rounded-md"><Table><TableHeader className="bg-muted/50 sticky top-0"><TableRow><TableHead>Kode</TableHead><TableHead>Deskripsi</TableHead><TableHead>Fase</TableHead><TableHead>Elemen</TableHead><TableHead className="text-right">Tindakan</TableHead></TableRow></TableHeader><TableBody>{cpList.map(cp => (<TableRow key={cp.id}><TableCell className="font-medium">{cp.kode}</TableCell><TableCell className="max-w-md whitespace-pre-wrap">{cp.deskripsi}</TableCell><TableCell>{cp.fase}</TableCell><TableCell>{cp.elemen}</TableCell><TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => openCPForm(cp)} className="mr-1"><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={() => openDeleteCPDialog(cp)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody></Table></ScrollArea>) : (<p className="text-muted-foreground text-center">Belum ada CP.</p>)}</div><DialogFooter><Button variant="outline" onClick={() => setIsCPDialogOpen(false)}>Tutup</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={isCPFormOpen} onOpenChange={(open) => { setIsCPFormOpen(open); if (!open) setEditingCP(null); }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{editingCP ? "Edit CP" : "Tambah CP Baru"}</DialogTitle></DialogHeader><Form {...cpForm}><form onSubmit={cpForm.handleSubmit(handleCPFormSubmit)} className="space-y-4 py-2"><FormField control={cpForm.control} name="kode" render={({ field }) => (<FormItem><FormLabel>Kode CP</FormLabel><FormControl><Input placeholder="MTK.F.ALG.1" {...field} disabled={!!editingCP} /></FormControl>{editingCP && <FormDescription>Kode tidak dapat diubah.</FormDescription>}<FormMessage /></FormItem>)} /><FormField control={cpForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi CP</FormLabel><FormControl><Textarea placeholder="Deskripsi capaian..." {...field} rows={4} /></FormControl><FormMessage /></FormItem>)} /><FormField control={cpForm.control} name="fase" render={({ field }) => (<FormItem><FormLabel>Fase</FormLabel><Select onValueChange={field.onChange} value={field.value as FaseCpType}><FormControl><SelectTrigger><SelectValue placeholder="Pilih fase" /></SelectTrigger></FormControl><SelectContent>{(FASE_CP_CONST).map(f => <SelectItem key={f} value={f}>Fase {f}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={cpForm.control} name="elemen" render={({ field }) => (<FormItem><FormLabel>Elemen/Domain</FormLabel><FormControl><Input placeholder="Bilangan" {...field} /></FormControl><FormMessage /></FormItem>)} /><DialogFooter className="pt-2"><Button type="button" variant="outline" onClick={() => {setIsCPFormOpen(false); setEditingCP(null);}} disabled={isCPSubmitting}>Batal</Button><Button type="submit" disabled={isCPSubmitting}>{isCPSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingCP ? "Simpan" : "Tambah"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
       <AlertDialog open={!!cpToDelete} onOpenChange={(open) => !open && setCpToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Konfirmasi Hapus CP</AlertDialogTitle><AlertDialogDescription>Yakin ingin hapus CP "{cpToDelete?.kode}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setCpToDelete(null)} disabled={isCPSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteCPConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isCPSubmitting}>{isCPSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
 
-      {/* Dialog Pemetaan SKL-CP */}
       <Dialog open={isPemetaanDialogOpen} onOpenChange={setIsPemetaanDialogOpen}><DialogContent className="sm:max-w-3xl"><DialogHeader><DialogTitle>Pemetaan SKL dan CP</DialogTitle><DialogDescription>Analisis keselarasan antara Standar Kompetensi Lulusan dan Capaian Pembelajaran (Simulasi).</DialogDescription></DialogHeader><div className="py-4 grid grid-cols-2 gap-6 max-h-[60vh]"><ScrollArea className="h-[50vh]"><Card><CardHeader><CardTitle className="text-base">Daftar SKL</CardTitle></CardHeader><CardContent className="space-y-2">{isLoadingSkl ? <Loader2 className="mx-auto my-4 h-6 w-6 animate-spin"/> : sklList.map(skl => (<div key={skl.id} className="p-2 border rounded text-xs"><p className="font-semibold">{skl.kode}: {skl.kategori}</p><p className="text-muted-foreground truncate" title={skl.deskripsi}>{skl.deskripsi}</p></div>))}</CardContent></Card></ScrollArea><ScrollArea className="h-[50vh]"><Card><CardHeader><CardTitle className="text-base">Daftar CP</CardTitle></CardHeader><CardContent className="space-y-2">{isLoadingCp ? <Loader2 className="mx-auto my-4 h-6 w-6 animate-spin"/> : cpList.map(cp => (<div key={cp.id} className="p-2 border rounded text-xs"><p className="font-semibold">{cp.kode} (Fase {cp.fase} - {cp.elemen})</p><p className="text-muted-foreground truncate" title={cp.deskripsi}>{cp.deskripsi}</p></div>))}</CardContent></Card></ScrollArea></div><Separator className="my-4" /><div className="flex justify-center gap-4"><Button onClick={() => toast({title: "Pemetaan SKL-CP (Simulasi)", description: "Proses pemetaan simulasi telah dijalankan."})}><ArrowRightLeft className="mr-2 h-4 w-4"/> Lakukan Pemetaan</Button><Button variant="outline" onClick={() => toast({title: "Analisis Keselarasan (Simulasi)", description: "Hasil analisis keselarasan: 85% SKL terdukung oleh CP yang ada."})}><BarChartHorizontalBig className="mr-2 h-4 w-4"/> Analisis Keselarasan</Button></div><DialogFooter className="mt-4"><Button variant="outline" onClick={() => setIsPemetaanDialogOpen(false)}>Tutup</Button></DialogFooter></DialogContent></Dialog>
     
-      {/* Dialog Kategori Materi */}
       <Dialog open={isKategoriMateriDialogOpen} onOpenChange={setIsKategoriMateriDialogOpen}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Kelola Kategori Materi</DialogTitle><DialogDescription>Tambah atau lihat kategori untuk bank materi.</DialogDescription></DialogHeader><div className="py-4 space-y-4"><Form {...kategoriMateriForm}><form onSubmit={kategoriMateriForm.handleSubmit(handleKategoriMateriSubmit)} className="flex gap-2 items-start"><FormField control={kategoriMateriForm.control} name="nama" render={({ field }) => (<FormItem className="flex-grow"><FormLabel className="sr-only">Nama Kategori</FormLabel><FormControl><Input placeholder="Nama kategori baru" {...field} /></FormControl><FormMessage /></FormItem>)} /><Button type="submit" disabled={isKategoriMateriSubmitting}>{isKategoriMateriSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4"/>}</Button></form></Form>{isLoadingKategoriMateri ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : kategoriMateriList.length > 0 ? (<ScrollArea className="h-60 border rounded-md p-2"><div className="space-y-2">{kategoriMateriList.map(kat => (<div key={kat.id} className="p-2 bg-muted/50 rounded text-sm flex justify-between items-center"><span>{kat.nama}</span><Button variant="ghost" size="xs" className="text-destructive" onClick={() => openDeleteKategoriMateriDialog(kat)}><Trash2 className="h-3 w-3"/></Button></div>))}</div></ScrollArea>) : (<p className="text-sm text-muted-foreground text-center">Belum ada kategori.</p>)}</div><DialogFooter><Button variant="outline" onClick={() => setIsKategoriMateriDialogOpen(false)}>Tutup</Button></DialogFooter></DialogContent></Dialog>
       <AlertDialog open={!!kategoriMateriToDelete} onOpenChange={(open) => !open && setKategoriMateriToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Konfirmasi Hapus Kategori Materi</AlertDialogTitle><AlertDialogDescription>Yakin ingin hapus kategori "{kategoriMateriToDelete?.nama}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setKategoriMateriToDelete(null)} disabled={isKategoriMateriSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteKategoriMateriConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isKategoriMateriSubmitting}>{isKategoriMateriSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
 
-
-      {/* Dialog Struktur Kurikulum */}
       <Dialog open={isStrukturKurikulumDialogOpen} onOpenChange={setIsStrukturKurikulumDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader><DialogTitle>Struktur Kurikulum</DialogTitle><DialogDescription>Atur mata pelajaran dan alokasi jam per tingkat/jurusan.</DialogDescription></DialogHeader>
+        <DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>Struktur Kurikulum</DialogTitle><DialogDescription>Atur mata pelajaran dan alokasi jam per tingkat/jurusan.</DialogDescription></DialogHeader>
           <div className="py-4 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
               <Select value={selectedTingkat} onValueChange={setSelectedTingkat}><SelectTrigger><SelectValue placeholder="Pilih Tingkat" /></SelectTrigger><SelectContent>{SCHOOL_GRADE_LEVELS.map(g => <SelectItem key={g} value={g}>Tingkat {g}</SelectItem>)}</SelectContent></Select>
@@ -481,24 +350,8 @@ export default function AdminKurikulumPage() {
             ) : currentStrukturList.length > 0 ? (
               <ScrollArea className="h-72 border rounded-md">
                 <Table>
-                  <TableHeader className="bg-muted/50 sticky top-0">
-                    <TableRow>
-                      <TableHead>Mata Pelajaran</TableHead>
-                      <TableHead className="text-center">Alokasi Jam</TableHead>
-                      <TableHead>Guru Pengampu</TableHead>
-                      <TableHead className="text-right">Tindakan</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentStrukturList.map(item => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.namaMapel}</TableCell>
-                        <TableCell className="text-center">{item.alokasiJam}</TableCell>
-                        <TableCell>{item.guruPengampuNama || "-"}</TableCell>
-                        <TableCell className="text-right"><Button variant="ghost" size="sm" className="text-destructive" onClick={() => openDeleteStrukturItemDialog(item)}><Trash2 className="h-4 w-4"/></Button></TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
+                  <TableHeader className="bg-muted/50 sticky top-0"><TableRow><TableHead>Mata Pelajaran</TableHead><TableHead className="text-center">Alokasi Jam</TableHead><TableHead>Guru Pengampu</TableHead><TableHead className="text-right">Tindakan</TableHead></TableRow></TableHeader>
+                  <TableBody>{currentStrukturList.map(item => (<TableRow key={item.id}><TableCell className="font-medium">{item.namaMapel}</TableCell><TableCell className="text-center">{item.alokasiJam}</TableCell><TableCell>{item.guruPengampuNama || "-"}</TableCell><TableCell className="text-right"><Button variant="ghost" size="sm" className="text-destructive" onClick={() => openDeleteStrukturItemDialog(item)}><Trash2 className="h-4 w-4"/></Button></TableCell></TableRow>))}</TableBody>
                 </Table>
               </ScrollArea>
             ) : (<p className="text-muted-foreground text-center py-4">Belum ada struktur untuk {selectedTingkat} {selectedJurusan}.</p>)}
@@ -507,8 +360,7 @@ export default function AdminKurikulumPage() {
         </DialogContent>
       </Dialog>
       <Dialog open={isStrukturKurikulumFormOpen} onOpenChange={setIsStrukturKurikulumFormOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Tambah Mapel ke Struktur {selectedTingkat} {selectedJurusan}</DialogTitle></DialogHeader>
+        <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Tambah Mapel ke Struktur {selectedTingkat} {selectedJurusan}</DialogTitle></DialogHeader>
           <Form {...strukturKurikulumForm}>
             <form onSubmit={strukturKurikulumForm.handleSubmit(handleStrukturKurikulumSubmit)} className="space-y-4 py-2">
                 <FormField control={strukturKurikulumForm.control} name="mapelId" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Mapel" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.nama} ({s.kode})</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
@@ -519,26 +371,16 @@ export default function AdminKurikulumPage() {
           </Form>
         </DialogContent>
       </Dialog>
-      <AlertDialog open={!!strukturItemToDelete} onOpenChange={(open) => !open && setStrukturItemToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Konfirmasi Hapus Item Struktur</AlertDialogTitle><AlertDialogDescription>Yakin ingin hapus "{strukturItemToDelete?.namaMapel}" dari struktur kurikulum {strukturItemToDelete?.tingkat} {strukturItemToDelete?.jurusan}?</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel onClick={() => setStrukturItemToDelete(null)} disabled={isStrukturSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteStrukturItemConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isStrukturSubmitting}>{isStrukturSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AlertDialog open={!!strukturItemToDelete} onOpenChange={(open) => !open && setStrukturItemToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Konfirmasi Hapus Item Struktur</AlertDialogTitle><AlertDialogDescription>Yakin ingin hapus "{strukturItemToDelete?.namaMapel}" dari struktur kurikulum {strukturItemToDelete?.tingkat} {strukturItemToDelete?.jurusan}?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setStrukturItemToDelete(null)} disabled={isStrukturSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteStrukturItemConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isStrukturSubmitting}>{isStrukturSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
 
-
-      {/* Dialog Manajemen Silabus */}
-      <Dialog open={isSilabusDialogOpen} onOpenChange={setIsSilabusDialogOpen}><DialogContent className="sm:max-w-3xl"><DialogHeader><DialogTitle>Pengembangan Silabus</DialogTitle><DialogDescription>Kelola daftar silabus per mata pelajaran.</DialogDescription></DialogHeader><div className="py-4 space-y-4"><Button onClick={() => openSilabusForm()}><PlusCircle className="mr-2 h-4 w-4" /> Tambah Silabus</Button>{silabusList.length > 0 ? (<ScrollArea className="h-80 border rounded-md"><Table><TableHeader className="bg-muted/50 sticky top-0"><tr><TableHead>Judul</TableHead><TableHead>Mapel</TableHead><TableHead>Kelas</TableHead><TableHead>File</TableHead><TableHead className="text-right">Tindakan</TableHead></tr></TableHeader><TableBody>{silabusList.map(s => (<TableRow key={s.id}><TableCell className="font-medium max-w-xs truncate">{s.judul}</TableCell><TableCell>{s.namaMapel}</TableCell><TableCell>{s.kelas}</TableCell><TableCell>{s.namaFile || "-"}</TableCell><TableCell className="text-right"><Button variant="ghost" size="xs" onClick={() => openSilabusForm(s)} className="mr-1"><Edit className="h-3 w-3"/></Button><Button variant="ghost" size="xs" onClick={() => openDeleteSilabusDialog(s)} className="text-destructive"><Trash2 className="h-3 w-3"/></Button></TableCell></TableRow>))}</TableBody></Table></ScrollArea>) : (<p className="text-center text-muted-foreground py-4">Belum ada silabus.</p>)}</div><DialogFooter><Button variant="outline" onClick={() => setIsSilabusDialogOpen(false)}>Tutup</Button></DialogFooter></DialogContent></Dialog>
-      <Dialog open={isSilabusFormOpen} onOpenChange={(open) => { setIsSilabusFormOpen(open); if(!open) setCurrentEditingSilabus(null);}}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>{currentEditingSilabus ? "Edit Silabus" : "Tambah Silabus Baru"}</DialogTitle></DialogHeader><Form {...silabusForm}><form onSubmit={silabusForm.handleSubmit(handleSilabusSubmit)} className="space-y-4 py-2"><FormField control={silabusForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Silabus</FormLabel><FormControl><Input placeholder="Silabus Matematika Semester Ganjil" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="idMapel" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Mapel" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.map(s => <SelectItem key={s.id} value={s.nama}>{s.nama}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas</FormLabel><FormControl><Input placeholder="Contoh: X IPA 1, XI IPS Semua" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="deskripsiSingkat" render={({ field }) => (<FormItem><FormLabel>Deskripsi Singkat (Opsional)</FormLabel><FormControl><Textarea placeholder="Ringkasan isi silabus..." {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="file" render={({ field }) => (<FormItem><FormLabel>File Silabus {currentEditingSilabus ? "(Kosongkan jika tidak diubah)" : ""}</FormLabel><FormControl><Input type="file" /></FormControl><FormDescription>Unggah file PDF/DOCX.</FormDescription><FormMessage /></FormItem>)} /><DialogFooter><Button type="button" variant="outline" onClick={() => {setIsSilabusFormOpen(false);setCurrentEditingSilabus(null);}} disabled={isSilabusSubmitting}>Batal</Button><Button type="submit" disabled={isSilabusSubmitting}>{isSilabusSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{currentEditingSilabus ? "Simpan" : "Tambah"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
+      <Dialog open={isSilabusDialogOpen} onOpenChange={setIsSilabusDialogOpen}><DialogContent className="sm:max-w-3xl"><DialogHeader><DialogTitle>Pengembangan Silabus</DialogTitle><DialogDescription>Kelola daftar silabus per mata pelajaran.</DialogDescription></DialogHeader><div className="py-4 space-y-4"><Button onClick={() => openSilabusForm()}><PlusCircle className="mr-2 h-4 w-4" /> Tambah Silabus</Button>{isLoadingSilabus ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : silabusList.length > 0 ? (<ScrollArea className="h-80 border rounded-md"><Table><TableHeader className="bg-muted/50 sticky top-0"><TableRow><TableHead>Judul</TableHead><TableHead>Mapel</TableHead><TableHead>Kelas</TableHead><TableHead>File</TableHead><TableHead className="text-right">Tindakan</TableHead></TableRow></TableHeader><TableBody>{silabusList.map(s => (<TableRow key={s.id}><TableCell className="font-medium max-w-xs truncate">{s.judul}</TableCell><TableCell>{s.mapel?.nama || "-"}</TableCell><TableCell>{s.kelas}</TableCell><TableCell>{s.namaFileOriginal || "-"}</TableCell><TableCell className="text-right"><Button variant="ghost" size="xs" onClick={() => openSilabusForm(s)} className="mr-1"><Edit className="h-3 w-3"/></Button><Button variant="ghost" size="xs" onClick={() => openDeleteSilabusDialog(s)} className="text-destructive"><Trash2 className="h-3 w-3"/></Button></TableCell></TableRow>))}</TableBody></Table></ScrollArea>) : (<p className="text-center text-muted-foreground py-4">Belum ada silabus.</p>)}</div><DialogFooter><Button variant="outline" onClick={() => setIsSilabusDialogOpen(false)}>Tutup</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={isSilabusFormOpen} onOpenChange={(open) => { setIsSilabusFormOpen(open); if(!open) setCurrentEditingSilabus(null);}}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>{currentEditingSilabus ? "Edit Silabus" : "Tambah Silabus Baru"}</DialogTitle></DialogHeader><Form {...silabusForm}><form onSubmit={silabusForm.handleSubmit(handleSilabusSubmit)} className="space-y-4 py-2"><FormField control={silabusForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Silabus</FormLabel><FormControl><Input placeholder="Silabus Matematika Semester Ganjil" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="mapelId" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Mapel" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.nama}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas</FormLabel><FormControl><Input placeholder="Contoh: X IPA 1, XI IPS Semua" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="deskripsiSingkat" render={({ field }) => (<FormItem><FormLabel>Deskripsi Singkat (Opsional)</FormLabel><FormControl><Textarea placeholder="Ringkasan isi silabus..." {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="file" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>File Silabus {currentEditingSilabus?.namaFileOriginal ? `(Kosongkan jika tidak ingin mengubah: ${currentEditingSilabus.namaFileOriginal})` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>Unggah file PDF/DOCX.</FormDescription><FormMessage /></FormItem>)} /><DialogFooter><Button type="button" variant="outline" onClick={() => {setIsSilabusFormOpen(false);setCurrentEditingSilabus(null);}} disabled={isSilabusSubmitting}>Batal</Button><Button type="submit" disabled={isSilabusSubmitting}>{isSilabusSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{currentEditingSilabus ? "Simpan" : "Tambah"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
       <AlertDialog open={!!silabusToDelete} onOpenChange={(open) => !open && setSilabusToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Konfirmasi Hapus Silabus</AlertDialogTitle><AlertDialogDescription>Yakin ingin hapus silabus "{silabusToDelete?.judul}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setSilabusToDelete(null)} disabled={isSilabusSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSilabusConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isSilabusSubmitting}>{isSilabusSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
 
-      {/* Dialog Manajemen RPP */}
-      <Dialog open={isRPPDialogOpen} onOpenChange={setIsRPPDialogOpen}><DialogContent className="sm:max-w-3xl"><DialogHeader><DialogTitle>Penyusunan RPP</DialogTitle><DialogDescription>Kelola Rencana Pelaksanaan Pembelajaran.</DialogDescription></DialogHeader><div className="py-4 space-y-4"><Button onClick={() => openRPPForm()}><PlusCircle className="mr-2 h-4 w-4" /> Tambah RPP</Button>{rppList.length > 0 ? (<ScrollArea className="h-80 border rounded-md"><Table><TableHeader className="bg-muted/50 sticky top-0"><tr><TableHead>Judul</TableHead><TableHead>Mapel</TableHead><TableHead>Kelas</TableHead><TableHead className="text-center">Pertemuan</TableHead><TableHead className="text-right">Tindakan</TableHead></tr></TableHeader><TableBody>{rppList.map(r => (<TableRow key={r.id}><TableCell className="font-medium max-w-xs truncate">{r.judul}</TableCell><TableCell>{r.namaMapel}</TableCell><TableCell>{r.kelas}</TableCell><TableCell className="text-center">{r.pertemuanKe}</TableCell><TableCell className="text-right"><Button variant="ghost" size="xs" onClick={() => openRPPForm(r)} className="mr-1"><Edit className="h-3 w-3"/></Button><Button variant="ghost" size="xs" onClick={() => openDeleteRPPDialog(r)} className="text-destructive"><Trash2 className="h-3 w-3"/></Button></TableCell></TableRow>))}</TableBody></Table></ScrollArea>) : (<p className="text-center text-muted-foreground py-4">Belum ada RPP.</p>)}</div><DialogFooter><Button variant="outline" onClick={() => setIsRPPDialogOpen(false)}>Tutup</Button></DialogFooter></DialogContent></Dialog>
-      <Dialog open={isRPPFormOpen} onOpenChange={(open) => { setIsRPPFormOpen(open); if(!open) setCurrentEditingRPP(null);}}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>{currentEditingRPP ? "Edit RPP" : "Tambah RPP Baru"}</DialogTitle></DialogHeader><Form {...rppForm}><form onSubmit={rppForm.handleSubmit(handleRPPSubmit)} className="space-y-4 py-2"><FormField control={rppForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul RPP</FormLabel><FormControl><Input placeholder="RPP Fungsi Kuadrat Pertemuan 1" {...field} /></FormControl><FormMessage /></FormItem>)} /><div className="grid grid-cols-2 gap-4"><FormField control={rppForm.control} name="idMapel" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Mapel" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.map(s => <SelectItem key={s.id} value={s.nama}>{s.nama}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas</FormLabel><FormControl><Input placeholder="X IPA 1" {...field} /></FormControl><FormMessage /></FormItem>)} /></div><FormField control={rppForm.control} name="pertemuanKe" render={({ field }) => (<FormItem><FormLabel>Pertemuan Ke-</FormLabel><FormControl><Input type="number" placeholder="1" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="materiPokok" render={({ field }) => (<FormItem><FormLabel>Materi Pokok (Opsional)</FormLabel><FormControl><Textarea placeholder="Materi utama yang dibahas..." {...field} rows={2}/></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="kegiatanPembelajaran" render={({ field }) => (<FormItem><FormLabel>Kegiatan Pembelajaran (Opsional)</FormLabel><FormControl><Textarea placeholder="Langkah-langkah kegiatan..." {...field} rows={3}/></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="penilaian" render={({ field }) => (<FormItem><FormLabel>Penilaian (Opsional)</FormLabel><FormControl><Textarea placeholder="Teknik dan instrumen penilaian..." {...field} rows={2}/></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="file" render={({ field }) => (<FormItem><FormLabel>File RPP {currentEditingRPP ? "(Kosongkan jika tidak diubah)" : ""}</FormLabel><FormControl><Input type="file" /></FormControl><FormDescription>Unggah file PDF/DOCX.</FormDescription><FormMessage /></FormItem>)} /><DialogFooter><Button type="button" variant="outline" onClick={() => {setIsRPPFormOpen(false);setCurrentEditingRPP(null);}} disabled={isRPPSubmitting}>Batal</Button><Button type="submit" disabled={isRPPSubmitting}>{isRPPSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{currentEditingRPP ? "Simpan" : "Tambah"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
+      <Dialog open={isRPPDialogOpen} onOpenChange={setIsRPPDialogOpen}><DialogContent className="sm:max-w-3xl"><DialogHeader><DialogTitle>Penyusunan RPP</DialogTitle><DialogDescription>Kelola Rencana Pelaksanaan Pembelajaran.</DialogDescription></DialogHeader><div className="py-4 space-y-4"><Button onClick={() => openRPPForm()}><PlusCircle className="mr-2 h-4 w-4" /> Tambah RPP</Button>{isLoadingRpp ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) :rppList.length > 0 ? (<ScrollArea className="h-80 border rounded-md"><Table><TableHeader className="bg-muted/50 sticky top-0"><TableRow><TableHead>Judul</TableHead><TableHead>Mapel</TableHead><TableHead>Kelas</TableHead><TableHead className="text-center">Pertemuan</TableHead><TableHead className="text-right">Tindakan</TableHead></TableRow></TableHeader><TableBody>{rppList.map(r => (<TableRow key={r.id}><TableCell className="font-medium max-w-xs truncate">{r.judul}</TableCell><TableCell>{r.mapel?.nama || "-"}</TableCell><TableCell>{r.kelas}</TableCell><TableCell className="text-center">{r.pertemuanKe}</TableCell><TableCell className="text-right"><Button variant="ghost" size="xs" onClick={() => openRPPForm(r)} className="mr-1"><Edit className="h-3 w-3"/></Button><Button variant="ghost" size="xs" onClick={() => openDeleteRPPDialog(r)} className="text-destructive"><Trash2 className="h-3 w-3"/></Button></TableCell></TableRow>))}</TableBody></Table></ScrollArea>) : (<p className="text-center text-muted-foreground py-4">Belum ada RPP.</p>)}</div><DialogFooter><Button variant="outline" onClick={() => setIsRPPDialogOpen(false)}>Tutup</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={isRPPFormOpen} onOpenChange={(open) => { setIsRPPFormOpen(open); if(!open) setCurrentEditingRPP(null);}}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>{currentEditingRPP ? "Edit RPP" : "Tambah RPP Baru"}</DialogTitle></DialogHeader><Form {...rppForm}><form onSubmit={rppForm.handleSubmit(handleRPPSubmit)} className="space-y-4 py-2"><FormField control={rppForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul RPP</FormLabel><FormControl><Input placeholder="RPP Fungsi Kuadrat Pertemuan 1" {...field} /></FormControl><FormMessage /></FormItem>)} /><div className="grid grid-cols-2 gap-4"><FormField control={rppForm.control} name="mapelId" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Mapel" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.nama}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas</FormLabel><FormControl><Input placeholder="X IPA 1" {...field} /></FormControl><FormMessage /></FormItem>)} /></div><FormField control={rppForm.control} name="pertemuanKe" render={({ field }) => (<FormItem><FormLabel>Pertemuan Ke-</FormLabel><FormControl><Input type="number" placeholder="1" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="materiPokok" render={({ field }) => (<FormItem><FormLabel>Materi Pokok (Opsional)</FormLabel><FormControl><Textarea placeholder="Materi utama yang dibahas..." {...field} rows={2} value={field.value || ""}/></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="kegiatanPembelajaran" render={({ field }) => (<FormItem><FormLabel>Kegiatan Pembelajaran (Opsional)</FormLabel><FormControl><Textarea placeholder="Langkah-langkah kegiatan..." {...field} rows={3} value={field.value || ""}/></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="penilaian" render={({ field }) => (<FormItem><FormLabel>Penilaian (Opsional)</FormLabel><FormControl><Textarea placeholder="Teknik dan instrumen penilaian..." {...field} rows={2} value={field.value || ""}/></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="file" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>File RPP {currentEditingRPP?.namaFileOriginal ? `(Kosongkan jika tidak diubah: ${currentEditingRPP.namaFileOriginal})` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>Unggah file PDF/DOCX.</FormDescription><FormMessage /></FormItem>)} /><DialogFooter><Button type="button" variant="outline" onClick={() => {setIsRPPFormOpen(false);setCurrentEditingRPP(null);}} disabled={isRPPSubmitting}>Batal</Button><Button type="submit" disabled={isRPPSubmitting}>{isRPPSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{currentEditingRPP ? "Simpan" : "Tambah"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
       <AlertDialog open={!!rppToDelete} onOpenChange={(open) => !open && setRppToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Konfirmasi Hapus RPP</AlertDialogTitle><AlertDialogDescription>Yakin ingin hapus RPP "{rppToDelete?.judul}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setRppToDelete(null)} disabled={isRPPSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteRPPConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isRPPSubmitting}>{isRPPSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
 
     </div>
   );
 }
-
-    

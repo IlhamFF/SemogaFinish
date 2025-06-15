@@ -88,12 +88,12 @@ export interface StrukturKurikulumItem {
 export interface Silabus {
   id: string;
   judul: string;
-  mapelId: string; // ID mata pelajaran
-  namaMapel?: string; // Untuk tampilan, di-resolve di backend
+  mapelId: string;
+  mapel?: Pick<MataPelajaran, 'id' | 'nama' | 'kode'>;
   kelas: string;
   deskripsiSingkat?: string | null;
   namaFileOriginal?: string | null;
-  fileUrl?: string | null; // Path simulasi
+  fileUrl?: string | null;
   uploaderId: string;
   uploader?: Pick<User, 'id' | 'name' | 'fullName' | 'email'>;
   createdAt?: Date | string;
@@ -103,15 +103,15 @@ export interface Silabus {
 export interface RPP {
   id: string;
   judul: string;
-  mapelId: string; // ID mata pelajaran
-  namaMapel?: string; // Untuk tampilan, di-resolve di backend
+  mapelId: string;
+  mapel?: Pick<MataPelajaran, 'id' | 'nama' | 'kode'>;
   kelas: string;
   pertemuanKe: number;
   materiPokok?: string | null;
   kegiatanPembelajaran?: string | null;
   penilaian?: string | null;
   namaFileOriginal?: string | null;
-  fileUrl?: string | null; // Path simulasi
+  fileUrl?: string | null;
   uploaderId: string;
   uploader?: Pick<User, 'id' | 'name' | 'fullName' | 'email'>;
   createdAt?: Date | string;
