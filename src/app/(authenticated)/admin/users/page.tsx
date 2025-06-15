@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import type { User, Role } from "@/types";
 import { ROLES } from "@/lib/constants";
@@ -21,28 +21,40 @@ import { useToast } from "@/hooks/use-toast";
 type UserRoleTab = "semua" | Role;
 
 export default function AdminUsersPage() {
-  const { 
-    user: currentUser, 
-    users: allUsers, 
-    createUser, 
-    verifyUserEmail, 
-    updateUserRole, 
-    deleteUser, 
-    updateUserProfile,
-    isLoading: authLoading 
-  } = useAuth();
+  const { user: currentUser, isLoading: authIsLoading, updateSession } = useAuth(); // isLoading from useAuth is session loading
   const { toast } = useToast();
 
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportUserDialogOpen, setIsImportUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [pageLoading, setPageLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true); // For data fetching and submissions
   
   const [activeTab, setActiveTab] = useState<UserRoleTab>("semua");
   const [searchTerm, setSearchTerm] = useState("");
   const [kelasFilter, setKelasFilter] = useState<string>("semua");
   const [mataPelajaranFilter, setMataPelajaranFilter] = useState<string>("semua");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const fetchUsers = async () => {
+    setPageLoading(true);
+    try {
+      const response = await fetch('/api/users');
+      if (!response.ok) throw new Error("Gagal mengambil data pengguna.");
+      const data = await response.json();
+      setAllUsers(data);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Tidak dapat memuat pengguna.", variant: "destructive" });
+    } finally {
+      setPageLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin')) {
+      fetchUsers();
+    }
+  }, [currentUser]);
 
   const handleCreateUser = () => {
     setEditingUser(null);
@@ -56,62 +68,96 @@ export default function AdminUsersPage() {
 
   const handleDeleteUser = async (userId: string) => {
     setPageLoading(true);
-    await deleteUser(userId); 
-    setPageLoading(false);
+    try {
+      const response = await fetch(`/api/users/${userId}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal menghapus pengguna.");
+      }
+      toast({ title: "Pengguna Dihapus", description: "Pengguna telah berhasil dihapus." });
+      fetchUsers(); // Refresh list
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setPageLoading(false);
+    }
   };
   
-  const handleVerifySiswa = (userId: string) => {
-    setPageLoading(true);
-    verifyUserEmail(userId);
-    setPageLoading(false);
-  };
-
-  const handleChangeRole = (userToUpdate: User, newRole: Role) => {
-    setPageLoading(true);
-    updateUserRole(userToUpdate.id, newRole);
-    setPageLoading(false);
-  }
-
-  const handleFormSubmit = async (data: Partial<User> & { email: string; role: Role; password?: string; kelas?: string; mataPelajaran?: string; }, currentlyEditingUser: User | null) => {
+  const handleVerifySiswa = async (userId: string) => {
     setPageLoading(true);
     try {
-      if (currentlyEditingUser) {
-        const { email, password, ...profileData } = data; 
-        const success = await updateUserProfile(currentlyEditingUser.id, profileData);
-        if (success) {
-             toast({ title: "Pengguna Diperbarui", description: "Detail pengguna telah diperbarui." });
-             if (data.role && data.role !== currentlyEditingUser.role) {
-                updateUserRole(currentlyEditingUser.id, data.role); 
-             }
-             setIsFormOpen(false);
-        } else {
-            toast({ title: "Gagal Memperbarui", description: "Tidak dapat menyimpan perubahan pengguna.", variant: "destructive" });
-        }
-      } else {
-        const newUser = await createUser({ 
-            email: data.email!, 
-            password: data.password, 
-            role: data.role!, 
-            name: data.name,
-            fullName: data.fullName,
-            phone: data.phone,
-            address: data.address,
-            birthDate: data.birthDate as unknown as string, 
-            bio: data.bio,
-            nis: data.nis,
-            nip: data.nip,
-            joinDate: data.joinDate as unknown as string, 
-            avatarUrl: data.avatarUrl,
-            kelas: data.kelas,
-            mataPelajaran: data.mataPelajaran,
-         });
-        if (newUser) {
-          setIsFormOpen(false);
-          // form.reset(); // This would need to be handled inside UserForm or via a callback if needed
-        }
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isVerified: true }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal memverifikasi pengguna.");
       }
-    } catch (error) {
-      toast({ title: "Operasi Gagal", description: "Tidak dapat menyimpan data pengguna.", variant: "destructive"});
+      toast({ title: "Pengguna Diverifikasi", description: "Email pengguna telah diverifikasi." });
+      fetchUsers(); // Refresh list
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setPageLoading(false);
+    }
+  };
+
+  const handleChangeRole = async (userToUpdate: User, newRole: Role) => {
+    setPageLoading(true);
+    try {
+      const response = await fetch(`/api/users/${userToUpdate.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengubah peran pengguna.");
+      }
+      toast({ title: "Peran Diperbarui", description: `Peran untuk ${userToUpdate.email} telah diubah menjadi ${ROLES[newRole]}.` });
+      fetchUsers(); // Refresh list
+      if (currentUser?.id === userToUpdate.id) {
+          await updateSession(); // Update current user's session if their own role changed
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setPageLoading(false);
+    }
+  }
+
+  const handleFormSubmit = async (data: Partial<User> & { email: string; role: Role; password?: string; }, currentlyEditingUser: User | null) => {
+    setPageLoading(true);
+    const url = currentlyEditingUser ? `/api/users/${currentlyEditingUser.id}` : '/api/users';
+    const method = currentlyEditingUser ? 'PUT' : 'POST';
+    
+    // For PUT, only send changed fields. For POST, send all.
+    let payload: any = data;
+    if (method === 'PUT') {
+      // Ensure email is not sent for update if it's not allowed to change
+      const { email, ...updatePayload } = data;
+      payload = updatePayload;
+      if (!payload.password) delete payload.password; // Don't send empty password for update
+    }
+
+
+    try {
+      const response = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Gagal ${currentlyEditingUser ? 'memperbarui' : 'membuat'} pengguna.`);
+      }
+      toast({ title: "Berhasil!", description: `Pengguna telah ${currentlyEditingUser ? 'diperbarui' : 'dibuat'}.` });
+      setIsFormOpen(false);
+      fetchUsers(); // Refresh list
+    } catch (error: any) {
+      toast({ title: "Operasi Gagal", description: error.message, variant: "destructive"});
     } finally {
       setPageLoading(false);
     }
@@ -125,19 +171,18 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleImportSubmit = () => {
+  const handleImportSubmit = () => { // Placeholder simulation
     if (!selectedFile) {
       toast({ title: "Tidak Ada File", description: "Silakan pilih file untuk diimpor.", variant: "destructive" });
       return;
     }
-    // Simulate import process
     setPageLoading(true);
     setTimeout(() => {
       setPageLoading(false);
       toast({ title: "Simulasi Impor Berhasil", description: `File "${selectedFile.name}" telah (disimulasikan) diimpor. Pengguna baru akan ditambahkan.` });
       setIsImportUserDialogOpen(false);
       setSelectedFile(null); 
-      // Di aplikasi nyata, di sini Anda akan memproses file dan membuat pengguna
+      fetchUsers(); // Simulate refresh
     }, 1500);
   };
   
@@ -166,7 +211,7 @@ export default function AdminUsersPage() {
   }, [allUsers, activeTab, searchTerm, kelasFilter, mataPelajaranFilter]);
 
 
-  if (authLoading && !allUsers.length) {
+  if (authIsLoading && !currentUser) { // Show loader if session is initially loading and no current user yet
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
 
@@ -250,7 +295,7 @@ export default function AdminUsersPage() {
             </div>
             </CardHeader>
             <CardContent>
-            {(pageLoading || authLoading) && <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
+            {pageLoading && <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
             <div className="overflow-x-auto">
                 <Table>
                 <TableHeader>
@@ -302,7 +347,7 @@ export default function AdminUsersPage() {
                 </TableBody>
                 </Table>
             </div>
-            {filteredUsers.length === 0 && (
+            {filteredUsers.length === 0 && !pageLoading && (
                 <div className="text-center py-10 text-muted-foreground">
                     Tidak ada pengguna yang cocok dengan filter saat ini.
                 </div>
@@ -316,7 +361,7 @@ export default function AdminUsersPage() {
         onClose={() => setIsFormOpen(false)} 
         onSubmit={handleFormSubmit}
         editingUser={editingUser}
-        isLoading={pageLoading || authLoading}
+        isLoading={pageLoading}
       />
 
       <Dialog open={isImportUserDialogOpen} onOpenChange={setIsImportUserDialogOpen}>

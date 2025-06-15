@@ -1,4 +1,5 @@
 
+import "reflect-metadata"; // Ensure this is the very first import
 import NextAuth from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 

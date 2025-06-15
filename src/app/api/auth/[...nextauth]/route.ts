@@ -16,6 +16,16 @@ declare module "next-auth" {
       isVerified: boolean;
       fullName?: string | null;
       // name and email are already part of NextAuthUser
+      // Add other custom fields that you want in the session.user object
+      phone?: string | null;
+      address?: string | null;
+      birthDate?: string | null; // Store as string for session if needed
+      bio?: string | null;
+      nis?: string | null;
+      nip?: string | null;
+      joinDate?: string | null; // Store as string
+      kelasId?: string | null; // Changed from `kelas` to match UserEntity for consistency
+      mataPelajaran?: string[] | null; // Changed from `mataPelajaran` (string) to match UserEntity
     } & NextAuthUser; 
   }
 
@@ -24,6 +34,16 @@ declare module "next-auth" {
     isVerified: boolean;
     fullName?: string | null;
     passwordHash?: string | null; 
+    // Add fields from UserEntity that authorize and jwt callbacks might need
+    phone?: string | null;
+    address?: string | null;
+    birthDate?: string | null;
+    bio?: string | null;
+    nis?: string | null;
+    nip?: string | null;
+    joinDate?: string | null;
+    kelasId?: string | null;
+    mataPelajaran?: string[] | null;
   }
 }
 
@@ -32,9 +52,19 @@ declare module "next-auth/jwt" {
     id: string;
     role: Role;
     isVerified: boolean;
-    picture?: string | null; // Corresponds to image in User
+    picture?: string | null; 
     name?: string | null;
     fullName?: string | null;
+    // Add other custom fields from UserEntity that you want in the JWT
+    phone?: string | null;
+    address?: string | null;
+    birthDate?: string | null;
+    bio?: string | null;
+    nis?: string | null;
+    nip?: string | null;
+    joinDate?: string | null;
+    kelasId?: string | null;
+    mataPelajaran?: string[] | null;
   }
 }
 
@@ -79,6 +109,7 @@ export const authOptions: NextAuthOptions = {
         
         console.log("Authorize: Credentials valid for user:", user.email);
         // Return the user object that NextAuth expects, including custom fields
+        // This user object is passed to the jwt callback
         return {
           id: user.id,
           email: user.email,
@@ -87,6 +118,15 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           isVerified: user.isVerified,
           fullName: user.fullName,
+          phone: user.phone,
+          address: user.address,
+          birthDate: user.birthDate,
+          bio: user.bio,
+          nis: user.nis,
+          nip: user.nip,
+          joinDate: user.joinDate,
+          kelasId: user.kelasId,
+          mataPelajaran: user.mataPelajaran,
         };
       },
     }),
@@ -96,20 +136,36 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, trigger, session: newSessionData }) { 
-      if (user) { // User object is available on initial sign in
+      if (user) { // User object is available on initial sign in (from authorize)
         token.id = user.id;
         token.role = user.role;
         token.isVerified = user.isVerified;
         token.name = user.name; 
         token.picture = user.image;
         token.fullName = user.fullName;
+        token.phone = user.phone;
+        token.address = user.address;
+        token.birthDate = user.birthDate;
+        token.bio = user.bio;
+        token.nis = user.nis;
+        token.nip = user.nip;
+        token.joinDate = user.joinDate;
+        token.kelasId = user.kelasId;
+        token.mataPelajaran = user.mataPelajaran;
       }
       if (trigger === "update" && newSessionData?.user) {
         // When session is updated (e.g. user profile update), reflect changes in token
-        token.name = newSessionData.user.name;
-        token.picture = newSessionData.user.image;
-        if (newSessionData.user.fullName) token.fullName = newSessionData.user.fullName;
-        // Add other fields if they can be updated and need to be in the token
+        // Ensure newSessionData.user is typed correctly if it comes from update()
+        const updatedUser = newSessionData.user as User; // Cast if necessary
+        token.name = updatedUser.name; 
+        token.picture = updatedUser.image;
+        token.fullName = updatedUser.fullName;
+        token.phone = updatedUser.phone;
+        token.address = updatedUser.address;
+        token.birthDate = updatedUser.birthDate;
+        token.bio = updatedUser.bio;
+        // Note: Role, isVerified, nis, nip, joinDate, kelasId, mataPelajaran are less likely to be updated via client-side session update.
+        // If they are, ensure they are included here.
       }
       return token;
     },
@@ -121,6 +177,15 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.name; 
         session.user.image = token.picture;
         session.user.fullName = token.fullName;
+        session.user.phone = token.phone;
+        session.user.address = token.address;
+        session.user.birthDate = token.birthDate;
+        session.user.bio = token.bio;
+        session.user.nis = token.nis;
+        session.user.nip = token.nip;
+        session.user.joinDate = token.joinDate;
+        session.user.kelasId = token.kelasId;
+        session.user.mataPelajaran = token.mataPelajaran;
       }
       return session;
     },

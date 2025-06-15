@@ -1,5 +1,5 @@
 
-import "reflect-metadata"; // Added this line at the very top
+import "reflect-metadata"; // Ensure this is the very first import
 import { DataSource, type DataSourceOptions } from "typeorm";
 import { UserEntity } from "@/entities/user.entity";
 import { AccountEntity } from "@/entities/account.entity";
@@ -39,13 +39,13 @@ export const AppDataSource = new DataSource(dataSourceOptions);
 // or handle initialization carefully at the application's entry point.
 // For Next.js API routes, you might need to ensure it's initialized before use.
 
-let _isDataSourceInitialized = false; // Corrected variable declaration
+let _isDataSourceInitialized = false; 
 
 export async function getInitializedDataSource(): Promise<DataSource> {
-  if (!AppDataSource.isInitialized && !_isDataSourceInitialized) { // Now uses the corrected variable
+  if (!AppDataSource.isInitialized && !_isDataSourceInitialized) { 
     try {
       await AppDataSource.initialize();
-      _isDataSourceInitialized = true; // Assigns to the corrected variable
+      _isDataSourceInitialized = true; 
       console.log("DataSource has been initialized successfully.");
     } catch (err) {
       console.error("Error during DataSource initialization:", err);

@@ -8,45 +8,26 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import type { User, Role } from '@/types'; // Your application's User type
 import { useToast } from '@/hooks/use-toast';
 import { 
-    DEFAULT_USERS_STORAGE_KEY, // Keep for mock admin user management for now
     ROUTES, 
     ROLES
 } from '@/lib/constants';
 
-// This initialUsers and mockPasswords are now only for the *temporary* mock admin user management.
-// Real user data and passwords will be handled by NextAuth and your database.
-const initialMockUsers: User[] = [
-  { id: '1', email: 'admin@example.com', role: 'admin', isVerified: true, name: 'Admin User', fullName: 'Admin Utama', joinDate: '2023-01-01', avatarUrl: 'https://placehold.co/100x100.png?text=AU' },
-  { id: '2', email: 'guru@example.com', role: 'guru', isVerified: true, name: 'Guru Contoh', fullName: 'Guru Teladan', joinDate: '2023-01-01', avatarUrl: 'https://placehold.co/100x100.png?text=GC' },
-  { id: '3', email: 'siswa@example.com', role: 'siswa', isVerified: false, name: 'Siswa Baru', fullName: 'Siswa Belajar', joinDate: '2023-01-01', avatarUrl: 'https://placehold.co/100x100.png?text=SB' },
-  { id: '4', email: 'pimpinan@example.com', role: 'pimpinan', isVerified: true, name: 'Pimpinan Sekolah', fullName: 'Kepala Institusi', joinDate: '2023-01-01', avatarUrl: 'https://placehold.co/100x100.png?text=PS' },
-  { id: '5', email: 'super@example.com', role: 'superadmin', isVerified: true, name: 'Super Admin', fullName: 'Super Administrator', joinDate: '2023-01-01', avatarUrl: 'https://placehold.co/100x100.png?text=SA' },
-];
-const mockAdminPasswords: Record<string, string> = { // Only for mock admin functions
-  'admin@example.com': 'password',
-  'guru@example.com': 'password',
-  'siswa@example.com': 'password',
-  'pimpinan@example.com': 'password',
-  'super@example.com': 'password',
-};
-
+// Mock data for current user profile updates only, not for admin management.
+// Admin user list management will now be done via API calls in the admin pages.
 
 interface AuthContextType {
   user: User | null; // This will be derived from useSession
-  users: User[]; // TEMPORARY: For mock admin user management
   login: (email: string, passwordAttempt: string) => Promise<boolean>;
   register: (email: string, passwordAttempt: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  verifyUserEmail: (userIdToVerify?: string) => void; // TEMPORARY MOCK
-  createUser: (userData: Omit<User, 'id' | 'isVerified'> & { password?: string }) => User | null; // TEMPORARY MOCK
-  updateUserRole: (userId: string, newRole: Role) => void; // TEMPORARY MOCK
-  deleteUser: (userId: string) => void; // TEMPORARY MOCK
-  updateUserProfile: (userId: string, profileData: Partial<User>) => Promise<boolean>; // TEMPORARY MOCK
-  requestPasswordReset: (email: string) => Promise<boolean>; // To be implemented with backend
-  resetPassword: (email: string, newPassword: string) => Promise<boolean>; // To be implemented with backend
-  changePassword: (userId: string, currentPasswordAttempt: string, newPassword: string) => Promise<boolean>; // To be implemented with backend
-  isLoading: boolean; // This will be session.status === 'loading'
-  updateSession: () => Promise<void>; // For manually refreshing session
+  verifyUserEmail: (userIdToVerify?: string) => void; // For current user's verification primarily
+  updateUserProfile: (userId: string, profileData: Partial<User>) => Promise<boolean>; // For current user's own profile
+  requestPasswordReset: (email: string) => Promise<boolean>; 
+  resetPassword: (email: string, newPassword: string) => Promise<boolean>; 
+  changePassword: (userId: string, currentPasswordAttempt: string, newPassword: string) => Promise<boolean>; 
+  isLoading: boolean; 
+  updateSession: () => Promise<void>; 
+  users: User[]; // TEMPORARY: Will return empty array, admin pages fetch their own user list.
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,32 +37,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const { toast } = useToast();
 
-  // TEMPORARY: For mock admin user management
-  const [mockManagedUsers, setMockManagedUsers] = useState<User[]>([]);
-  useEffect(() => {
-    const storedUsers = localStorage.getItem(DEFAULT_USERS_STORAGE_KEY);
-    if (storedUsers) {
-      setMockManagedUsers(JSON.parse(storedUsers));
-    } else {
-      setMockManagedUsers(initialMockUsers);
-      localStorage.setItem(DEFAULT_USERS_STORAGE_KEY, JSON.stringify(initialMockUsers));
-    }
-  }, []);
-  const persistMockManagedUsers = useCallback((updatedUsers: User[]) => {
-    setMockManagedUsers(updatedUsers);
-    localStorage.setItem(DEFAULT_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
-  }, []);
-  // END TEMPORARY
-
   const appUser = session?.user ? {
     id: session.user.id,
-    email: session.user.email!, // email is guaranteed by NextAuth User type
+    email: session.user.email!, 
     name: session.user.name,
     role: session.user.role,
     isVerified: session.user.isVerified,
-    avatarUrl: session.user.image, // map image to avatarUrl
+    avatarUrl: session.user.image, 
     fullName: session.user.fullName,
-    // Other fields from your User type might not be in session by default unless added in callbacks
+    // Fetch other fields from DB if needed, or ensure they are in session token
+    phone: session.user.phone,
+    address: session.user.address,
+    birthDate: session.user.birthDate,
+    bio: session.user.bio,
+    nis: session.user.nis,
+    nip: session.user.nip,
+    joinDate: session.user.joinDate,
+    kelas: session.user.kelasId, // map kelasId to kelas for User type
+    mataPelajaran: session.user.mataPelajaran?.[0], // Assuming single string from array for User type
   } as User : null;
 
   const isLoading = status === 'loading';
@@ -95,19 +68,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (result?.error) {
       console.error("Login error:", result.error);
-      // Check if the error is due to unverified user (NextAuth doesn't directly give this, depends on authorize logic)
-      const userAttemptingLogin = mockManagedUsers.find(u => u.email === email); // Check mock, ideally backend tells us
-      if (userAttemptingLogin && !userAttemptingLogin.isVerified && userAttemptingLogin.role === 'siswa') {
-         toast({ title: "Login Gagal", description: "Akun belum diverifikasi. Silakan cek email Anda atau hubungi admin.", variant: "destructive" });
-         router.push(ROUTES.VERIFY_EMAIL); // Redirect to allow simulated verification
-      } else {
-        toast({ title: "Login Gagal", description: "Email atau kata sandi salah.", variant: "destructive" });
-      }
+      toast({ title: "Login Gagal", description: result.error === "CredentialsSignin" ? "Email atau kata sandi salah." : result.error , variant: "destructive" });
+      // Check if the error indicates an unverified user (this depends on your `authorize` logic)
+      // For now, we'll assume authorize either succeeds or gives generic error.
+      // If backend returns specific error for unverified user, handle it here.
+      // Example: if (result.error.includes("unverified")) router.push(ROUTES.VERIFY_EMAIL);
       return false;
     }
     
     if (result?.ok && !result.error) {
-      // The session will update automatically due to useSession, triggering redirects in pages
       toast({ title: "Login Berhasil", description: "Selamat datang!" });
       // Redirection is now handled by useEffect in login/home pages based on session status
       return true;
@@ -129,9 +98,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
       
-      toast({ title: "Pendaftaran Berhasil", description: "Silakan login dengan akun baru Anda. Verifikasi email mungkin diperlukan." });
-      // After successful registration, NextAuth doesn't automatically sign in.
-      // We direct them to login. If their email isn't verified, login flow will handle it.
+      toast({ title: "Pendaftaran Berhasil", description: "Akun Anda telah dibuat. Silakan login. Verifikasi email mungkin diperlukan." });
       router.push(ROUTES.LOGIN); 
       return true;
 
@@ -148,149 +115,96 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
   
   const updateSession = async () => {
-    await update(); // Manually trigger a session update
+    await update();
   };
 
-  // --- TEMPORARY MOCK FUNCTIONS for Admin User Management ---
-  const verifyUserEmail = (userIdToVerify?: string) => { // Mock
+  // --- Functions for current user's own actions ---
+  const verifyUserEmail = async (userIdToVerify?: string) => { 
+    // This function is now primarily for the current user verifying their *own* email on the /verify-email page.
+    // Admin verification will be an update through /api/users/[id]
     const targetUserId = userIdToVerify || appUser?.id;
     if (!targetUserId) return;
 
-    const updatedUsers = mockManagedUsers.map(u => 
-      u.id === targetUserId ? { ...u, isVerified: true } : u
-    );
-    persistMockManagedUsers(updatedUsers);
-
-    if (appUser && appUser.id === targetUserId) {
-      // Manually update session for current user
-      update({ ...session, user: { ...session?.user, isVerified: true }});
-      toast({ title: "Email Terverifikasi", description: "Email Anda telah diverifikasi." });
-      // Redirect in page after verification
-    } else if (userIdToVerify) {
-        toast({ title: "Pengguna Diverifikasi", description: `Email pengguna telah diverifikasi (mock).` });
+    if (appUser && appUser.id === targetUserId && !appUser.isVerified) {
+        // Simulate verification for demo on /verify-email page
+        // In a real app, this would involve a backend call that sets the user's email as verified
+        // For this demo, we'll just update the session if it's the current user
+        console.log("Simulating email verification for current user via session update.");
+        await update({ ...session, user: { ...session?.user, isVerified: true } });
+        toast({ title: "Email Terverifikasi", description: "Email Anda telah diverifikasi." });
+        // Redirection will be handled by the /verify-email page's useEffect
+    } else if (userIdToVerify && appUser?.id !== userIdToVerify) {
+        // This case should ideally not be hit from useAuth directly for admin actions.
+        // Admin verification is done via PUT /api/users/[id]
+        toast({ title: "Info", description: "Verifikasi pengguna oleh admin dilakukan melalui panel manajemen pengguna."});
     }
   };
   
-  const createUser = (userData: Omit<User, 'id' | 'isVerified'> & { password?: string }): User | null => { // Mock
-    if (mockManagedUsers.some(u => u.email === userData.email)) {
-      toast({ title: "Pembuatan Gagal", description: "Email sudah ada (mock).", variant: "destructive" });
-      return null;
-    }
-    const defaultName = userData.name || userData.email.split('@')[0];
-    const defaultFullName = userData.fullName || defaultName;
-
-    const newUser: User = {
-      id: String(Date.now()),
-      email: userData.email,
-      role: userData.role,
-      isVerified: true, 
-      name: defaultName,
-      fullName: defaultFullName,
-      phone: userData.phone,
-      address: userData.address,
-      birthDate: userData.birthDate,
-      bio: userData.bio,
-      nis: userData.role === 'siswa' ? userData.nis : undefined,
-      nip: userData.role !== 'siswa' ? userData.nip : undefined,
-      joinDate: userData.joinDate || new Date().toISOString().split('T')[0],
-      avatarUrl: userData.avatarUrl || `https://placehold.co/100x100.png?text=${defaultFullName.substring(0,2).toUpperCase()}`,
-      kelas: userData.role === 'siswa' ? userData.kelas : undefined,
-      mataPelajaran: userData.role === 'guru' ? userData.mataPelajaran : undefined,
-    };
-    mockAdminPasswords[userData.email] = userData.password || 'password'; // For mock login if needed
-    
-    const updatedUsers = [...mockManagedUsers, newUser];
-    persistMockManagedUsers(updatedUsers);
-    toast({ title: "Pengguna Dibuat", description: `${ROLES[newUser.role]} ${newUser.email} telah dibuat (mock).` });
-    return newUser;
-  };
-
-  const updateUserRole = (userId: string, newRole: Role) => { // Mock
-    const updatedUsers = mockManagedUsers.map(u =>
-      u.id === userId ? { ...u, role: newRole } : u
-    );
-    persistMockManagedUsers(updatedUsers);
+  const updateUserProfile = async (userId: string, profileData: Partial<User>): Promise<boolean> => { 
+    // This function is intended for the logged-in user updating their OWN profile.
+    // For now, it's a placeholder. In a real app, it would call `PUT /api/users/me/profile` or similar.
     if (appUser && appUser.id === userId) {
-        update({ ...session, user: { ...session?.user, role: newRole }});
-    }
-    toast({ title: "Peran Diperbarui", description: `Peran pengguna diperbarui menjadi ${ROLES[newRole]} (mock).` });
-  };
+        console.log("Simulating profile update for current user:", profileData);
+        // To make it reflect in the UI, we'd need to update the session.
+        // The `update` function from `useSession` can accept new session data.
+        // We'd need to construct what the new `session.user` object should look like.
+        const newSessionUser = {
+            ...session?.user,
+            name: profileData.name ?? session?.user?.name,
+            fullName: profileData.fullName ?? session?.user?.fullName,
+            image: profileData.avatarUrl ?? session?.user?.image,
+            // Map other profileData fields to session?.user fields
+            phone: profileData.phone,
+            address: profileData.address,
+            birthDate: profileData.birthDate, // Assuming profileData.birthDate is already string
+            bio: profileData.bio,
+        };
+        await update(newSessionUser); // This updates the session on the client-side
 
-  const deleteUser = (userId: string) => { // Mock
-    if (appUser && appUser.id === userId) {
-        toast({ title: "Tindakan Ditolak", description: "Tidak dapat menghapus pengguna yang sedang login (mock).", variant: "destructive" });
-        return;
+        toast({ title: "Profil Diperbarui", description: "Informasi profil Anda berhasil disimpan (simulasi)." });
+        return true;
     }
-    const updatedUsers = mockManagedUsers.filter(u => u.id !== userId);
-    persistMockManagedUsers(updatedUsers);
-    toast({ title: "Pengguna Dihapus", description: "Pengguna telah berhasil dihapus (mock)." });
-  };
-
-  const updateUserProfile = async (userId: string, profileData: Partial<User>): Promise<boolean> => { // Mock
-    let userUpdated = false;
-    const updatedMockUsers = mockManagedUsers.map(u => {
-      if (u.id === userId) {
-        userUpdated = true;
-        return { ...u, ...profileData };
-      }
-      return u;
-    });
-
-    if (userUpdated) {
-      persistMockManagedUsers(updatedMockUsers);
-      if (appUser && appUser.id === userId) {
-        // Trigger session update. NextAuth will refetch and include new data if callbacks are set right.
-        await update(); 
-      }
-      toast({ title: "Profil Diperbarui", description: "Informasi profil berhasil disimpan (mock)." });
-      return true;
-    }
-    toast({ title: "Pembaruan Gagal", description: "Pengguna tidak ditemukan (mock).", variant: "destructive" });
+    toast({ title: "Pembaruan Gagal", description: "Tidak dapat memperbarui profil pengguna lain (simulasi).", variant: "destructive" });
     return false;
   };
 
-  // --- END TEMPORARY MOCK FUNCTIONS ---
-
-  // --- PLACEHOLDER FUNCTIONS for features not yet connected to backend ---
-  const requestPasswordReset = async (email: string): Promise<boolean> => { // Placeholder
+  const requestPasswordReset = async (email: string): Promise<boolean> => { 
     toast({ title: "Simulasi Reset Password", description: `Instruksi reset (simulasi) akan dikirim ke ${email} jika terdaftar.` });
-    router.push(`${ROUTES.RESET_PASSWORD}?email=${encodeURIComponent(email)}`); // Simulate flow
+    router.push(`${ROUTES.RESET_PASSWORD}?email=${encodeURIComponent(email)}&token=mockresettoken`); // Simulate flow with a token
     return true;
   };
 
-  const resetPassword = async (email: string, newPassword: string): Promise<boolean> => { // Placeholder
+  const resetPassword = async (email: string, newPassword: string): Promise<boolean> => { 
+    // In a real app, this would call `POST /api/auth/reset-password` with email, token, newPassword
     toast({ title: "Simulasi Reset Berhasil", description: `Kata sandi untuk ${email} telah direset (simulasi). Silakan login.` });
     router.push(ROUTES.LOGIN);
     return true;
   };
 
-  const changePassword = async (userId: string, currentPasswordAttempt: string, newPassword: string): Promise<boolean> => { // Placeholder
-     if (currentPasswordAttempt === "oldpassword") { // Mock current password check
+  const changePassword = async (userId: string, currentPasswordAttempt: string, newPassword: string): Promise<boolean> => { 
+     // In a real app, this would call `POST /api/auth/change-password`
+     if (currentPasswordAttempt === "oldpasswordmock") { // Mock current password check
         toast({ title: "Kata Sandi Diubah", description: "Kata sandi berhasil diperbarui (simulasi)." });
         return true;
      }
      toast({ title: "Gagal Mengubah Kata Sandi", description: "Kata sandi saat ini salah (simulasi).", variant: "destructive" });
      return false;
   };
-  // --- END PLACEHOLDER FUNCTIONS ---
 
   return (
     <AuthContext.Provider value={{ 
       user: appUser, 
-      users: mockManagedUsers, // TEMPORARY
       login, 
       register, 
       logout, 
-      verifyUserEmail, // TEMPORARY MOCK
-      createUser,      // TEMPORARY MOCK
-      updateUserRole,  // TEMPORARY MOCK
-      deleteUser,      // TEMPORARY MOCK
-      updateUserProfile, // TEMPORARY MOCK
-      requestPasswordReset, // Placeholder
-      resetPassword,        // Placeholder
-      changePassword,       // Placeholder
+      verifyUserEmail,
+      updateUserProfile,
+      requestPasswordReset,
+      resetPassword,
+      changePassword,
       isLoading,
       updateSession,
+      users: [], // Admin user list now fetched by admin pages directly
     }}>
       {children}
     </AuthContext.Provider>
@@ -304,3 +218,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
