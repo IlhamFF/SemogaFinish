@@ -1,4 +1,5 @@
 
+import "reflect-metadata"; // Ensure this is the very first import
 import NextAuth, { type NextAuthOptions, type User as NextAuthUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { TypeORMAdapter } from "@auth/typeorm-adapter";
@@ -94,22 +95,21 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user, trigger, session: newSessionData }) { // Renamed session to newSessionData to avoid conflict
-      // On initial sign in
-      if (user) {
+    async jwt({ token, user, trigger, session: newSessionData }) { 
+      if (user) { // User object is available on initial sign in
         token.id = user.id;
         token.role = user.role;
         token.isVerified = user.isVerified;
-        token.name = user.name;
+        token.name = user.name; 
         token.picture = user.image;
         token.fullName = user.fullName;
       }
-      // If session is updated (e.g., profile update)
       if (trigger === "update" && newSessionData?.user) {
+        // When session is updated (e.g. user profile update), reflect changes in token
         token.name = newSessionData.user.name;
         token.picture = newSessionData.user.image;
-        // Potentially update other fields if they can be changed and you want them in the token
         if (newSessionData.user.fullName) token.fullName = newSessionData.user.fullName;
+        // Add other fields if they can be updated and need to be in the token
       }
       return token;
     },
@@ -118,7 +118,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.isVerified = token.isVerified;
-        session.user.name = token.name;
+        session.user.name = token.name; 
         session.user.image = token.picture;
         session.user.fullName = token.fullName;
       }
@@ -127,13 +127,8 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
-    // signOut: '/auth/signout',
-    // error: '/auth/error', // Error code passed in query string as ?error=
-    // verifyRequest: '/auth/verify-request', // (UNUSED) Used for email/passwordless login
-    // newUser: '/auth/new-user' // New users will be directed here on first sign in (leave an empty string to disable)
   },
   secret: process.env.NEXTAUTH_SECRET,
-  // debug: process.env.NODE_ENV === "development",
 };
 
 const handler = NextAuth(authOptions);

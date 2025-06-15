@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { MataPelajaran } from "@/types"; // Menggunakan interface dari types
+import type { MataPelajaran } from "@/types"; 
 import { KATEGORI_MAPEL } from "@/lib/constants";
 
 
@@ -40,25 +40,15 @@ const mataPelajaranSchema = z.object({
 
 type MataPelajaranFormValues = z.infer<typeof mataPelajaranSchema>;
 
-// Data awal tetap mock untuk UI, akan diganti dengan fetch
-const initialMataPelajaran: MataPelajaran[] = [
-  { id: "MP001", kode: "MTK-X", nama: "Matematika Kelas X", deskripsi: "Dasar-dasar matematika untuk kelas X.", kategori: "Wajib Umum" },
-  { id: "MP002", kode: "FIS-XI-IPA", nama: "Fisika Kelas XI (IPA)", deskripsi: "Mekanika, Termodinamika, dan Optik.", kategori: "Wajib Peminatan IPA" },
-  { id: "MP003", kode: "EKO-XII-IPS", nama: "Ekonomi Kelas XII (IPS)", deskripsi: "Ekonomi makro dan mikro lanjutan.", kategori: "Wajib Peminatan IPS" },
-  { id: "MP004", kode: "BIG-UM", nama: "Bahasa Inggris Umum", deskripsi: "Kemampuan berbahasa Inggris umum.", kategori: "Wajib Umum" },
-  { id: "MP005", kode: "SJR-LM-IPA", nama: "Sejarah (Lintas Minat IPA)", deskripsi: "Sejarah sebagai pilihan lintas minat.", kategori: "Pilihan Lintas Minat" },
-];
-
-
 export default function AdminMataPelajaranPage() {
-  const { user, isLoading: authLoading } = useAuth(); // Menggunakan isLoading dari useAuth
+  const { user, isLoading: authLoading } = useAuth(); 
   const { toast } = useToast();
-  const [mataPelajaranList, setMataPelajaranList] = useState<MataPelajaran[]>(initialMataPelajaran);
+  const [mataPelajaranList, setMataPelajaranList] = useState<MataPelajaran[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMapel, setEditingMapel] = useState<MataPelajaran | null>(null);
   const [mapelToDelete, setMapelToDelete] = useState<MataPelajaran | null>(null);
-  const [isLoadingData, setIsLoadingData] = useState(false); // Untuk loading data dari API
-  const [isSubmitting, setIsSubmitting] = useState(false); // Untuk submit form
+  const [isLoadingData, setIsLoadingData] = useState(true); 
+  const [isSubmitting, setIsSubmitting] = useState(false); 
   
   const [searchTerm, setSearchTerm] = useState("");
   const [kategoriFilter, setKategoriFilter] = useState<string>("semua");
@@ -74,25 +64,27 @@ export default function AdminMataPelajaranPage() {
     },
   });
 
-  // Placeholder untuk fungsi fetch data
-  // useEffect(() => {
-  //   const fetchMataPelajaran = async () => {
-  //     setIsLoadingData(true);
-  //     try {
-  //       const response = await fetch('/api/mapel');
-  //       if (!response.ok) {
-  //         throw new Error('Gagal mengambil data mata pelajaran');
-  //       }
-  //       const data = await response.json();
-  //       setMataPelajaranList(data);
-  //     } catch (error) {
-  //       toast({ title: "Error", description: error.message, variant: "destructive" });
-  //     } finally {
-  //       setIsLoadingData(false);
-  //     }
-  //   };
-  //   // fetchMataPelajaran(); // Aktifkan ini setelah backend siap
-  // }, [toast]);
+  const fetchMataPelajaran = async () => {
+    setIsLoadingData(true);
+    try {
+      const response = await fetch('/api/mapel');
+      if (!response.ok) {
+        throw new Error('Gagal mengambil data mata pelajaran');
+      }
+      const data = await response.json();
+      setMataPelajaranList(data);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Tidak dapat memuat data.", variant: "destructive" });
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && (user.role === 'admin' || user.role === 'superadmin')) {
+        fetchMataPelajaran();
+    }
+  }, [user]); // Removed toast from dependency array
 
 
   useEffect(() => {
@@ -109,7 +101,7 @@ export default function AdminMataPelajaranPage() {
   }, [editingMapel, form, isFormOpen]);
 
 
-  if (authLoading) { // Menunggu status auth
+  if (authLoading) { 
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
@@ -118,50 +110,34 @@ export default function AdminMataPelajaranPage() {
 
   const handleFormSubmit = async (values: MataPelajaranFormValues) => {
     setIsSubmitting(true);
-    // Placeholder untuk logika API call
-    // const url = editingMapel ? `/api/mapel/${editingMapel.id}` : '/api/mapel';
-    // const method = editingMapel ? 'PUT' : 'POST';
-    // try {
-    //   const response = await fetch(url, {
-    //     method: method,
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(values),
-    //   });
-    //   if (!response.ok) {
-    //     const errorData = await response.json();
-    //     throw new Error(errorData.message || 'Gagal menyimpan mata pelajaran');
-    //   }
-    //   const result = await response.json();
-    //   if (editingMapel) {
-    //     setMataPelajaranList(mataPelajaranList.map(mp => mp.id === editingMapel.id ? result : mp));
-    //     toast({ title: "Berhasil!", description: `Mata pelajaran ${values.nama} telah diperbarui.` });
-    //   } else {
-    //     setMataPelajaranList([...mataPelajaranList, result]);
-    //     toast({ title: "Berhasil!", description: `Mata pelajaran ${values.nama} telah ditambahkan.` });
-    //   }
-    //   setIsFormOpen(false);
-    //   setEditingMapel(null);
-    //   form.reset();
-    // } catch (error) {
-    //   toast({ title: "Error", description: error.message, variant: "destructive" });
-    // } finally {
-    //   setIsSubmitting(false);
-    // }
+    const url = editingMapel ? `/api/mapel/${editingMapel.id}` : '/api/mapel';
+    const method = editingMapel ? 'PUT' : 'POST';
+    
+    // Untuk PUT, hanya kirim field yang diubah jika backend mendukung partial update.
+    // Untuk sekarang, kita kirim semua (kecuali kode untuk PUT).
+    const payload = editingMapel ? { nama: values.nama, deskripsi: values.deskripsi, kategori: values.kategori } : values;
 
-    // Mock logic (sama seperti sebelumnya, untuk menjaga UI tetap berfungsi)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    if (editingMapel) {
-      setMataPelajaranList(mataPelajaranList.map(mp => mp.id === editingMapel.id ? { ...editingMapel, ...values } : mp));
-      toast({ title: "Berhasil (Mock)!", description: `Mata pelajaran ${values.nama} telah diperbarui.` });
-    } else {
-      const newMapel: MataPelajaran = { id: `MP${Date.now()}`, ...values, createdAt: new Date(), updatedAt: new Date() };
-      setMataPelajaranList([...mataPelajaranList, newMapel]);
-      toast({ title: "Berhasil (Mock)!", description: `Mata pelajaran ${values.nama} telah ditambahkan.` });
+    try {
+      const response = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Gagal menyimpan mata pelajaran');
+      }
+      // const result = await response.json(); // Tidak selalu perlu result jika hanya konfirmasi
+      toast({ title: "Berhasil!", description: `Mata pelajaran ${values.nama} telah ${editingMapel ? 'diperbarui' : 'ditambahkan'}.` });
+      setIsFormOpen(false);
+      setEditingMapel(null);
+      form.reset();
+      fetchMataPelajaran(); // Muat ulang data
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Terjadi kesalahan.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
-    setIsFormOpen(false);
-    setEditingMapel(null);
-    form.reset();
   };
 
   const handleEditMataPelajaran = (mapel: MataPelajaran) => {
@@ -176,28 +152,20 @@ export default function AdminMataPelajaranPage() {
   const handleDeleteConfirm = async () => {
     if (mapelToDelete) {
       setIsSubmitting(true);
-      // Placeholder untuk logika API call
-      // try {
-      //   const response = await fetch(`/api/mapel/${mapelToDelete.id}`, { method: 'DELETE' });
-      //   if (!response.ok) {
-      //     const errorData = await response.json();
-      //     throw new Error(errorData.message || 'Gagal menghapus mata pelajaran');
-      //   }
-      //   setMataPelajaranList(mataPelajaranList.filter(mp => mp.id !== mapelToDelete.id));
-      //   toast({ title: "Dihapus!", description: `Mata pelajaran ${mapelToDelete.nama} telah dihapus.` });
-      // } catch (error) {
-      //   toast({ title: "Error", description: error.message, variant: "destructive" });
-      // } finally {
-      //   setIsSubmitting(false);
-      //   setMapelToDelete(null);
-      // }
-
-      // Mock logic
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setMataPelajaranList(mataPelajaranList.filter(mp => mp.id !== mapelToDelete.id));
-      toast({ title: "Dihapus (Mock)!", description: `Mata pelajaran ${mapelToDelete.nama} telah dihapus.` });
-      setIsSubmitting(false);
-      setMapelToDelete(null);
+      try {
+        const response = await fetch(`/api/mapel/${mapelToDelete.id}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Gagal menghapus mata pelajaran');
+        }
+        toast({ title: "Dihapus!", description: `Mata pelajaran ${mapelToDelete.nama} telah dihapus.` });
+        fetchMataPelajaran(); // Muat ulang data
+      } catch (error: any) {
+        toast({ title: "Error", description: error.message || "Terjadi kesalahan.", variant: "destructive" });
+      } finally {
+        setIsSubmitting(false);
+        setMapelToDelete(null);
+      }
     }
   };
 
@@ -323,7 +291,7 @@ export default function AdminMataPelajaranPage() {
               <FormField control={form.control} name="nama" render={({ field }) => (<FormItem><FormLabel>Nama Mata Pelajaran</FormLabel><FormControl><Input placeholder="Contoh: Matematika Kelas X" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="kategori" render={({ field }) => (<FormItem><FormLabel>Kategori</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kategori mata pelajaran" /></SelectTrigger></FormControl><SelectContent>{KATEGORI_MAPEL.map(kat => (<SelectItem key={kat} value={kat}>{kat}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
               <FormField control={form.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea placeholder="Deskripsi singkat mata pelajaran..." {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <DialogFooter><Button type="button" variant="outline" onClick={() => { setIsFormOpen(false); setEditingMapel(null); }} disabled={isSubmitting}>Batal</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingMapel ? "Simpan Perubahan" : "Simpan Mata Pelajaran"}</Button></DialogFooter>
+              <DialogFooter><Button type="button" variant="outline" onClick={() => { setIsFormOpen(false); setEditingMapel(null); }} disabled={isSubmitting}>Batal</Button><Button type="submit" disabled={isSubmitting || isLoadingData}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingMapel ? "Simpan Perubahan" : "Simpan Mata Pelajaran"}</Button></DialogFooter>
             </form>
           </Form>
         </DialogContent>
@@ -338,3 +306,5 @@ export default function AdminMataPelajaranPage() {
     </div>
   );
 }
+
+    
