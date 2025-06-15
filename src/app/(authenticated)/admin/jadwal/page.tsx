@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -38,18 +38,20 @@ const ruanganSchema = z.object({
 });
 type RuanganFormValues = z.infer<typeof ruanganSchema>;
 
-const slotWaktuSchema = z.object({
+const slotWaktuFormSchema = z.object({ // Renamed to avoid conflict
+  id: z.string().optional(), // To track existing slots
   namaSlot: z.string().min(3, { message: "Nama slot minimal 3 karakter." }),
   waktuMulai: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "Format HH:MM, contoh: 07:30"}),
   waktuSelesai: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "Format HH:MM, contoh: 09:00"}),
+  urutan: z.coerce.number().optional().nullable(),
 }).refine(data => data.waktuMulai < data.waktuSelesai, {
   message: "Waktu mulai harus sebelum waktu selesai.",
   path: ["waktuSelesai"],
 });
-type SlotWaktuFormValues = z.infer<typeof slotWaktuSchema>;
+type SlotWaktuFormValues = z.infer<typeof slotWaktuFormSchema>;
 
 const konfigurasiJadwalSchema = z.object({
-  slots: z.array(slotWaktuSchema).min(1, "Minimal ada satu slot waktu."),
+  slots: z.array(slotWaktuFormSchema).min(1, "Minimal ada satu slot waktu."),
   hariEfektif: z.array(z.string()).refine(value => value.some(item => item), {
     message: "Minimal pilih satu hari efektif.",
   }),
@@ -57,20 +59,9 @@ const konfigurasiJadwalSchema = z.object({
 type KonfigurasiJadwalFormValues = z.infer<typeof konfigurasiJadwalSchema>;
 
 
-const initialRuangan: Ruangan[] = [
-  { id: "R001", nama: "Ruang Kelas X IPA 1", kode: "X-IPA-1", kapasitas: 32, fasilitas: "Proyektor, AC" },
-  { id: "R002", nama: "Laboratorium Fisika", kode: "LAB-FIS", kapasitas: 24, fasilitas: "Alat Praktikum Fisika, Proyektor" },
-  { id: "R003", nama: "Aula Serbaguna", kode: "AULA", kapasitas: 150, fasilitas: "Sound System, Panggung" },
-];
-
-const initialSlotsWaktu: SlotWaktu[] = [
-  { id: "SW001", namaSlot: "Jam ke-1", waktuMulai: "07:30", waktuSelesai: "08:15"},
-  { id: "SW002", namaSlot: "Jam ke-2", waktuMulai: "08:15", waktuSelesai: "09:00"},
-  { id: "SW003", namaSlot: "Istirahat 1", waktuMulai: "09:00", waktuSelesai: "09:15"},
-];
-const initialHariEfektif = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
 const namaHari = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
+// Mock data (akan digantikan dengan data dari API jika sudah terintegrasi)
 const mockGuruKetersediaan = [
     { id: "G001", nama: "Ratna Dewi, S.Pd.", mapel: "Matematika", ketersediaan: "Tersedia Penuh"},
     { id: "G002", nama: "Dimas Prasetyo, M.Sc.", mapel: "Fisika", ketersediaan: "Senin & Rabu Pagi Tidak Tersedia"},
@@ -88,7 +79,8 @@ export default function AdminJadwalPage() {
   const { toast } = useToast();
 
   // Ruangan State & Form
-  const [ruanganList, setRuanganList] = useState<Ruangan[]>(initialRuangan);
+  const [ruanganList, setRuanganList] = useState<Ruangan[]>([]);
+  const [isLoadingRuangan, setIsLoadingRuangan] = useState(true);
   const [isRuanganDialogOpen, setIsRuanganDialogOpen] = useState(false);
   const [isRuanganFormOpen, setIsRuanganFormOpen] = useState(false);
   const [editingRuangan, setEditingRuangan] = useState<Ruangan | null>(null);
@@ -101,14 +93,17 @@ export default function AdminJadwalPage() {
 
   // Konfigurasi Jadwal (Jam & Hari) State & Form
   const [isKonfigurasiOpen, setIsKonfigurasiOpen] = useState(false);
-  const [slotsWaktu, setSlotsWaktu] = useState<SlotWaktu[]>(initialSlotsWaktu);
-  const [hariEfektif, setHariEfektif] = useState<string[]>(initialHariEfektif);
+  const [slotsWaktu, setSlotsWaktu] = useState<SlotWaktu[]>([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(true);
+  const [hariEfektif, setHariEfektif] = useState<string[]>(["Senin", "Selasa", "Rabu", "Kamis", "Jumat"]); // Tetap lokal
   const [isKonfigurasiSubmitting, setIsKonfigurasiSubmitting] = useState(false);
+  const [slotsToDelete, setSlotsToDelete] = useState<string[]>([]); // Untuk menyimpan ID slot yang akan dihapus
+
   const konfigurasiForm = useForm<KonfigurasiJadwalFormValues>({
     resolver: zodResolver(konfigurasiJadwalSchema),
     defaultValues: {
-      slots: initialSlotsWaktu.map(({namaSlot, waktuMulai, waktuSelesai}) => ({namaSlot, waktuMulai, waktuSelesai})), 
-      hariEfektif: initialHariEfektif,
+      slots: [], 
+      hariEfektif: hariEfektif,
     },
   });
   const { fields: slotFields, append: appendSlot, remove: removeSlot, move: moveSlot } = useFieldArray({
@@ -123,9 +118,49 @@ export default function AdminJadwalPage() {
   const [isJadwalPenggantiOpen, setIsJadwalPenggantiOpen] = useState(false);
 
 
+  const fetchRuangan = useCallback(async () => {
+    setIsLoadingRuangan(true);
+    try {
+      const response = await fetch('/api/jadwal/ruangan');
+      if (!response.ok) throw new Error('Gagal mengambil data ruangan');
+      const data = await response.json();
+      setRuanganList(data);
+    } catch (error: any) {
+      toast({ title: "Error Ruangan", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoadingRuangan(false);
+    }
+  }, [toast]);
+
+  const fetchSlotsWaktu = useCallback(async () => {
+    setIsLoadingSlots(true);
+    try {
+      const response = await fetch('/api/jadwal/slot-waktu');
+      if (!response.ok) throw new Error('Gagal mengambil data slot waktu');
+      const data = await response.json();
+      setSlotsWaktu(data);
+    } catch (error: any) {
+      toast({ title: "Error Slot Waktu", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoadingSlots(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (user && (user.role === 'admin' || user.role === 'superadmin')) {
+      fetchRuangan();
+      fetchSlotsWaktu();
+    }
+  }, [user, fetchRuangan, fetchSlotsWaktu]);
+
   useEffect(() => {
     if (editingRuangan) {
-      ruanganForm.reset(editingRuangan);
+      ruanganForm.reset({
+        nama: editingRuangan.nama,
+        kode: editingRuangan.kode,
+        kapasitas: editingRuangan.kapasitas,
+        fasilitas: editingRuangan.fasilitas || "",
+      });
     } else {
       ruanganForm.reset({ nama: "", kode: "", kapasitas: 0, fasilitas: "" });
     }
@@ -134,9 +169,10 @@ export default function AdminJadwalPage() {
   useEffect(() => {
     if (isKonfigurasiOpen) {
       konfigurasiForm.reset({
-        slots: slotsWaktu.map(({namaSlot, waktuMulai, waktuSelesai}) => ({namaSlot, waktuMulai, waktuSelesai})),
+        slots: slotsWaktu.map(s => ({ id: s.id, namaSlot: s.namaSlot, waktuMulai: s.waktuMulai, waktuSelesai: s.waktuSelesai, urutan: s.urutan })),
         hariEfektif: hariEfektif,
       });
+      setSlotsToDelete([]); // Reset daftar slot yang akan dihapus saat dialog dibuka
     }
   }, [isKonfigurasiOpen, slotsWaktu, hariEfektif, konfigurasiForm]);
 
@@ -155,19 +191,29 @@ export default function AdminJadwalPage() {
 
   const handleRuanganFormSubmit = async (values: RuanganFormValues) => {
     setIsRuanganSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000)); 
+    const url = editingRuangan ? `/api/jadwal/ruangan/${editingRuangan.id}` : '/api/jadwal/ruangan';
+    const method = editingRuangan ? 'PUT' : 'POST';
+    const payload = editingRuangan ? { nama: values.nama, kapasitas: values.kapasitas, fasilitas: values.fasilitas } : values;
 
-    if (editingRuangan) {
-      setRuanganList(ruanganList.map(r => r.id === editingRuangan.id ? { ...editingRuangan, ...values } : r));
-      toast({ title: "Berhasil!", description: `Ruangan ${values.nama} telah diperbarui.` });
-    } else {
-      const newRuangan: Ruangan = { id: `R${Date.now()}`, ...values };
-      setRuanganList([...ruanganList, newRuangan]);
-      toast({ title: "Berhasil!", description: `Ruangan ${values.nama} telah ditambahkan.` });
+    try {
+      const response = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Gagal ${editingRuangan ? 'memperbarui' : 'menambah'} ruangan.`);
+      }
+      toast({ title: "Berhasil!", description: `Ruangan ${values.nama} telah ${editingRuangan ? 'diperbarui' : 'ditambahkan'}.` });
+      setIsRuanganFormOpen(false);
+      setEditingRuangan(null);
+      fetchRuangan();
+    } catch (error: any) {
+      toast({ title: "Error Ruangan", description: error.message, variant: "destructive" });
+    } finally {
+      setIsRuanganSubmitting(false);
     }
-    setIsRuanganSubmitting(false);
-    setIsRuanganFormOpen(false);
-    setEditingRuangan(null);
   };
 
   const openDeleteRuanganDialog = (ruangan: Ruangan) => {
@@ -177,11 +223,20 @@ export default function AdminJadwalPage() {
   const handleDeleteRuanganConfirm = async () => {
     if (ruanganToDelete) {
       setIsRuanganSubmitting(true);
-      await new Promise(resolve => setTimeout(resolve, 1000)); 
-      setRuanganList(ruanganList.filter(r => r.id !== ruanganToDelete.id));
-      toast({ title: "Dihapus!", description: `Ruangan ${ruanganToDelete.nama} telah dihapus.` });
-      setIsRuanganSubmitting(false);
-      setRuanganToDelete(null);
+      try {
+        const response = await fetch(`/api/jadwal/ruangan/${ruanganToDelete.id}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Gagal menghapus ruangan.');
+        }
+        toast({ title: "Dihapus!", description: `Ruangan ${ruanganToDelete.nama} telah dihapus.` });
+        fetchRuangan();
+      } catch (error: any) {
+        toast({ title: "Error Hapus Ruangan", description: error.message, variant: "destructive" });
+      } finally {
+        setIsRuanganSubmitting(false);
+        setRuanganToDelete(null);
+      }
     }
   };
   
@@ -189,22 +244,65 @@ export default function AdminJadwalPage() {
     setEditingRuangan(ruangan || null);
     setIsRuanganFormOpen(true);
   }
+  
+  const handleRemoveSlot = (index: number) => {
+    const slotToRemove = konfigurasiForm.getValues("slots")[index];
+    if (slotToRemove && slotToRemove.id) {
+      setSlotsToDelete(prev => [...prev, slotToRemove.id!]);
+    }
+    removeSlot(index);
+  };
 
   const handleKonfigurasiSubmit = async (values: KonfigurasiJadwalFormValues) => {
     setIsKonfigurasiSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newSlotsWaktu: SlotWaktu[] = values.slots.map((s, index) => ({
-        id: `SW${Date.now() + index}`, 
-        ...s
-    }));
+    let success = true;
+    const errors: string[] = [];
 
-    setSlotsWaktu(newSlotsWaktu);
-    setHariEfektif(values.hariEfektif);
+    // Process deletions
+    for (const slotId of slotsToDelete) {
+      try {
+        const response = await fetch(`/api/jadwal/slot-waktu/${slotId}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Gagal menghapus slot ID ${slotId}.`);
+        }
+      } catch (error: any) {
+        success = false;
+        errors.push(error.message);
+      }
+    }
+
+    // Process creations and updates
+    for (const slot of values.slots) {
+      const payload = { namaSlot: slot.namaSlot, waktuMulai: slot.waktuMulai, waktuSelesai: slot.waktuSelesai, urutan: slot.urutan };
+      const url = slot.id ? `/api/jadwal/slot-waktu/${slot.id}` : '/api/jadwal/slot-waktu';
+      const method = slot.id ? 'PUT' : 'POST';
+      try {
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Gagal ${slot.id ? 'memperbarui' : 'menambah'} slot "${slot.namaSlot}".`);
+        }
+      } catch (error: any) {
+        success = false;
+        errors.push(error.message);
+      }
+    }
     
-    toast({ title: "Berhasil!", description: "Konfigurasi jam dan hari telah disimpan."});
+    if (success && errors.length === 0) {
+      setHariEfektif(values.hariEfektif); // Simpan hari efektif (lokal)
+      toast({ title: "Berhasil!", description: "Konfigurasi jam dan hari telah disimpan."});
+      fetchSlotsWaktu(); // Panggil ulang data slot waktu
+      setSlotsToDelete([]); // Bersihkan daftar slot yang dihapus
+      setIsKonfigurasiOpen(false);
+    } else {
+      toast({ title: "Error Konfigurasi", description: `Terjadi beberapa kesalahan: ${errors.join(", ")}`, variant: "destructive" });
+    }
     setIsKonfigurasiSubmitting(false);
-    setIsKonfigurasiOpen(false);
   };
 
   return (
@@ -374,7 +472,9 @@ export default function AdminJadwalPage() {
             <Button onClick={() => openRuanganForm()}>
               <PlusCircle className="mr-2 h-4 w-4" /> Tambah Ruangan Baru
             </Button>
-            {ruanganList.length > 0 ? (
+            {isLoadingRuangan ? (
+                <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+            ) : ruanganList.length > 0 ? (
               <ScrollArea className="max-h-96 border rounded-md">
                 <Table>
                   <TableHeader className="bg-muted/50 sticky top-0">
@@ -392,7 +492,7 @@ export default function AdminJadwalPage() {
                         <TableCell className="font-medium">{r.nama}</TableCell>
                         <TableCell>{r.kode}</TableCell>
                         <TableCell className="text-center">{r.kapasitas}</TableCell>
-                        <TableCell className="max-w-xs truncate" title={r.fasilitas}>{r.fasilitas || "-"}</TableCell>
+                        <TableCell className="max-w-xs truncate" title={r.fasilitas || ""}>{r.fasilitas || "-"}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" onClick={() => openRuanganForm(r)} className="mr-1"><Edit className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="sm" onClick={() => openDeleteRuanganDialog(r)} className="text-destructive hover:text-destructive/80"><Trash2 className="h-4 w-4" /></Button>
@@ -421,9 +521,9 @@ export default function AdminJadwalPage() {
             <Form {...ruanganForm}>
                 <form onSubmit={ruanganForm.handleSubmit(handleRuanganFormSubmit)} className="space-y-4 py-2">
                     <FormField control={ruanganForm.control} name="nama" render={({ field }) => (<FormItem><FormLabel>Nama Ruangan</FormLabel><FormControl><Input placeholder="Contoh: Kelas X IPA 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={ruanganForm.control} name="kode" render={({ field }) => (<FormItem><FormLabel>Kode Ruangan</FormLabel><FormControl><Input placeholder="Contoh: X-IPA-1, LAB-BIO" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={ruanganForm.control} name="kode" render={({ field }) => (<FormItem><FormLabel>Kode Ruangan</FormLabel><FormControl><Input placeholder="Contoh: X-IPA-1, LAB-BIO" {...field} disabled={!!editingRuangan} /></FormControl>{editingRuangan && <FormMessage>Kode tidak dapat diubah.</FormMessage>}<FormMessage /></FormItem>)} />
                     <FormField control={ruanganForm.control} name="kapasitas" render={({ field }) => (<FormItem><FormLabel>Kapasitas (Orang)</FormLabel><FormControl><Input type="number" placeholder="32" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={ruanganForm.control} name="fasilitas" render={({ field }) => (<FormItem><FormLabel>Fasilitas (Opsional)</FormLabel><FormControl><Textarea placeholder="Contoh: Proyektor, AC, Papan Tulis Digital" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={ruanganForm.control} name="fasilitas" render={({ field }) => (<FormItem><FormLabel>Fasilitas (Opsional)</FormLabel><FormControl><Textarea placeholder="Contoh: Proyektor, AC, Papan Tulis Digital" {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>)} />
                     <DialogFooter className="pt-2"><Button type="button" variant="outline" onClick={() => {setIsRuanganFormOpen(false); setEditingRuangan(null);}} disabled={isRuanganSubmitting}>Batal</Button><Button type="submit" disabled={isRuanganSubmitting}>{isRuanganSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingRuangan ? "Simpan Perubahan" : "Simpan Ruangan"}</Button></DialogFooter>
                 </form>
             </Form>
@@ -445,31 +545,35 @@ export default function AdminJadwalPage() {
             <form onSubmit={konfigurasiForm.handleSubmit(handleKonfigurasiSubmit)} className="space-y-6 py-4">
               <div>
                 <h3 className="text-lg font-medium mb-2">Slot Waktu Pelajaran</h3>
-                <ScrollArea className="max-h-72 pr-2">
-                  <div className="space-y-3">
-                    {slotFields.map((field, index) => (
-                        <Card key={field.id} className="p-3 relative">
-                        <div className="flex items-start gap-2">
-                            <Button type="button" variant="ghost" size="sm" className="cursor-grab p-1 mt-6" title="Geser urutan (fungsi belum aktif)"><GripVertical className="h-4 w-4" /></Button>
-                            <div className="flex-grow grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <FormField control={konfigurasiForm.control} name={`slots.${index}.namaSlot`} render={({ field }) => (<FormItem><FormLabel className="text-xs">Nama Slot</FormLabel><FormControl><Input placeholder="Jam ke-1" {...field} /></FormControl><FormMessage className="text-xs"/></FormItem>)} />
-                            <FormField control={konfigurasiForm.control} name={`slots.${index}.waktuMulai`} render={({ field }) => (<FormItem><FormLabel className="text-xs">Mulai (HH:MM)</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage className="text-xs"/></FormItem>)} />
-                            <FormField control={konfigurasiForm.control} name={`slots.${index}.waktuSelesai`} render={({ field }) => (<FormItem><FormLabel className="text-xs">Selesai (HH:MM)</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage className="text-xs"/></FormItem>)} />
-                            </div>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => removeSlot(index)} className="text-destructive hover:text-destructive/80 absolute top-1 right-1"><Trash2 className="h-4 w-4" /></Button>
-                        </div>
-                        </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
-                <Button type="button" variant="outline" size="sm" onClick={() => appendSlot({ namaSlot: "", waktuMulai: "00:00", waktuSelesai: "00:00"})} className="mt-2"><PlusCircle className="mr-2 h-4 w-4"/> Tambah Slot</Button>
+                {isLoadingSlots ? (
+                     <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                ) : (
+                  <ScrollArea className="max-h-72 pr-2">
+                    <div className="space-y-3">
+                      {slotFields.map((field, index) => (
+                          <Card key={field.id || `new-${index}`} className="p-3 relative">
+                          <div className="flex items-start gap-2">
+                              <Button type="button" variant="ghost" size="sm" className="cursor-grab p-1 mt-6" title="Geser urutan (fungsi belum aktif)" onClick={() => toast({title: "Info", description: "Fitur geser urutan slot belum aktif."})}><GripVertical className="h-4 w-4" /></Button>
+                              <div className="flex-grow grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <FormField control={konfigurasiForm.control} name={`slots.${index}.namaSlot`} render={({ field: formField }) => (<FormItem><FormLabel className="text-xs">Nama Slot</FormLabel><FormControl><Input placeholder="Jam ke-1" {...formField} /></FormControl><FormMessage className="text-xs"/></FormItem>)} />
+                              <FormField control={konfigurasiForm.control} name={`slots.${index}.waktuMulai`} render={({ field: formField }) => (<FormItem><FormLabel className="text-xs">Mulai (HH:MM)</FormLabel><FormControl><Input type="time" {...formField} /></FormControl><FormMessage className="text-xs"/></FormItem>)} />
+                              <FormField control={konfigurasiForm.control} name={`slots.${index}.waktuSelesai`} render={({ field: formField }) => (<FormItem><FormLabel className="text-xs">Selesai (HH:MM)</FormLabel><FormControl><Input type="time" {...formField} /></FormControl><FormMessage className="text-xs"/></FormItem>)} />
+                              </div>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveSlot(index)} className="text-destructive hover:text-destructive/80 absolute top-1 right-1"><Trash2 className="h-4 w-4" /></Button>
+                          </div>
+                          </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+                <Button type="button" variant="outline" size="sm" onClick={() => appendSlot({ namaSlot: "", waktuMulai: "00:00", waktuSelesai: "00:00", urutan: slotsWaktu.length + 1 })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4"/> Tambah Slot</Button>
                  <FormMessage>{konfigurasiForm.formState.errors.slots?.message || konfigurasiForm.formState.errors.slots?.root?.message}</FormMessage>
               </div>
               <div>
                 <h3 className="text-lg font-medium mb-2">Hari Efektif Sekolah</h3>
                 <FormField control={konfigurasiForm.control} name="hariEfektif" render={() => (<FormItem className="grid grid-cols-2 sm:grid-cols-3 gap-2">{namaHari.slice(0,6).map((hari) => (<FormField key={hari} control={konfigurasiForm.control} name="hariEfektif" render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0 p-2 border rounded-md hover:bg-muted/50"><FormControl><Checkbox checked={field.value?.includes(hari)} onCheckedChange={(checked) => { return checked ? field.onChange([...field.value, hari]) : field.onChange(field.value?.filter(value => value !== hari))}}/></FormControl><FormLabel className="font-normal text-sm">{hari}</FormLabel></FormItem>)} />))} <FormMessage className="col-span-full">{konfigurasiForm.formState.errors.hariEfektif?.message}</FormMessage></FormItem>)} />
               </div>
-              <DialogFooter className="pt-4"><Button type="button" variant="outline" onClick={() => setIsKonfigurasiOpen(false)} disabled={isKonfigurasiSubmitting}>Batal</Button><Button type="submit" disabled={isKonfigurasiSubmitting}>{isKonfigurasiSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan Konfigurasi</Button></DialogFooter>
+              <DialogFooter className="pt-4"><Button type="button" variant="outline" onClick={() => setIsKonfigurasiOpen(false)} disabled={isKonfigurasiSubmitting}>Batal</Button><Button type="submit" disabled={isKonfigurasiSubmitting || isLoadingSlots}>{isKonfigurasiSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan Konfigurasi</Button></DialogFooter>
             </form>
           </Form>
         </DialogContent>
