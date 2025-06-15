@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useEffect, useState }  from "react";
+import React, { useEffect, useState, Suspense }  from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,28 +23,27 @@ const resetPasswordSchema = z.object({
 
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
-export default function ResetPasswordPage() {
-  const { resetPassword, isLoading } = useAuth(); // isLoading from useAuth (derived from useSession)
+function ResetPasswordContent() {
+  const { resetPassword, isLoading: authIsLoading } = useAuth(); 
   const searchParams = useSearchParams();
-  const router = useRouter(); // Keep router for potential future use, though useAuth handles redirect
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [email, setEmail] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null); // Placeholder for token if backend used one
+  const [token, setToken] = useState<string | null>(null); 
+  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
     const emailFromQuery = searchParams.get('email');
-    const tokenFromQuery = searchParams.get('token'); // For future if token is used
+    const tokenFromQuery = searchParams.get('token'); 
     
-    if (emailFromQuery) {
+    if (emailFromQuery && tokenFromQuery) {
       setEmail(decodeURIComponent(emailFromQuery));
+      setToken(tokenFromQuery);
     } else {
-      setFormError("Tautan reset tidak valid atau telah kedaluwarsa (email tidak ditemukan).");
+      setFormError("Tautan reset tidak valid atau telah kedaluwarsa.");
     }
-    // For simulation, token is not strictly checked here but can be passed if your backend generates it
-    if (tokenFromQuery) setToken(tokenFromQuery);
-
+    setPageLoading(false);
   }, [searchParams]);
-
 
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
@@ -52,25 +51,25 @@ export default function ResetPasswordPage() {
   });
 
   async function onSubmit(values: ResetPasswordFormValues) {
-    if (!email) { // Token check would also go here in a real app
-        setFormError("Email tidak ditemukan atau token tidak valid untuk reset kata sandi.");
+    if (!email || !token) { 
+        setFormError("Email atau token tidak valid untuk reset kata sandi.");
         return;
     }
     setFormError(null);
-    // resetPassword is now a placeholder, will show toast and simulate redirection
-    const success = await resetPassword(email, values.password); 
+    setIsSubmitting(true);
+    const success = await resetPassword(email, token, values.password); 
+    // useAuth's resetPassword will handle navigation on success via toast
     if (!success) {
-      // This path might not be hit if resetPassword always returns true for simulation
-      setFormError("Gagal mereset kata sandi. Silakan coba lagi.");
+      // Error toast already shown by useAuth
     }
+    setIsSubmitting(false);
   }
 
-  // Show loader if email is being validated or if form is submitting
-  if (isLoading || (!email && !formError)) {
+  if (pageLoading || authIsLoading) {
       return (
         <div className="flex min-h-screen items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            {!email && !formError && <p className="ml-4">Memvalidasi tautan...</p>}
+            {pageLoading && <p className="ml-4">Memvalidasi tautan...</p>}
         </div>
     );
   }
@@ -88,8 +87,8 @@ export default function ResetPasswordPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {formError && !email && <p className="mb-4 text-center text-sm font-medium text-destructive">{formError}</p>}
-          {email && (
+          {formError && (!email || !token) && <p className="mb-4 text-center text-sm font-medium text-destructive">{formError}</p>}
+          {email && token && (
             <>
             <p className="mb-4 text-center text-sm">
                 Anda mereset kata sandi untuk: <strong>{email}</strong>
@@ -122,9 +121,9 @@ export default function ResetPasswordPage() {
                     </FormItem>
                     )}
                 />
-                {formError && email && <p className="text-sm font-medium text-destructive">{formError}</p>}
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {formError && email && token && <p className="text-sm font-medium text-destructive">{formError}</p>}
+                <Button type="submit" className="w-full" disabled={isSubmitting || authIsLoading}>
+                    {(isSubmitting || authIsLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Simpan Kata Sandi Baru
                 </Button>
                 </form>
@@ -136,3 +135,13 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
+
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
+      <ResetPasswordContent />
+    </Suspense>
+  )
+}
+

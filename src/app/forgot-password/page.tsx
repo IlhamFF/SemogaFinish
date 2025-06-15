@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth"; 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ROUTES, APP_NAME } from "@/lib/constants";
 import { Loader2, KeyRound } from "lucide-react";
 import React from "react";
@@ -20,8 +21,9 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
-  const { requestPasswordReset, isLoading } = useAuth(); // isLoading from useAuth (derived from useSession)
-  const [formError, setFormError] = React.useState<string | null>(null); // For client-side specific errors
+  const { requestPasswordReset, isLoading } = useAuth(); 
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -29,13 +31,14 @@ export default function ForgotPasswordPage() {
   });
 
   async function onSubmit(values: ForgotPasswordFormValues) {
-    setFormError(null);
-    // requestPasswordReset is now a placeholder, will show toast and simulate redirection
-    const success = await requestPasswordReset(values.email); 
-    if (!success) {
-      // This path might not be hit if requestPasswordReset always returns true for simulation
-      setFormError("Jika email terdaftar, instruksi akan dikirim. Jika tidak, email mungkin tidak ditemukan.");
+    setIsSubmitting(true);
+    const demoToken = await requestPasswordReset(values.email); 
+    if (demoToken) {
+      // For DEMO: redirect with token. In real app, user gets email.
+      router.push(`${ROUTES.RESET_PASSWORD}?email=${encodeURIComponent(values.email)}&token=${demoToken}`);
     }
+    // If demoToken is null, toast already shown by useAuth
+    setIsSubmitting(false);
   }
 
   return (
@@ -52,7 +55,7 @@ export default function ForgotPasswordPage() {
         </CardHeader>
         <CardContent>
           <p className="mb-6 text-center text-sm text-muted-foreground">
-            Masukkan alamat email Anda di bawah ini. Jika akun ada, kami akan mengirimkan (mensimulasikan) tautan untuk mereset kata sandi Anda.
+            Masukkan alamat email Anda. Jika akun ada, kami akan (mensimulasikan) pengiriman tautan untuk mereset kata sandi Anda.
           </p>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -69,9 +72,8 @@ export default function ForgotPasswordPage() {
                   </FormItem>
                 )}
               />
-              {formError && <p className="text-sm font-medium text-destructive">{formError}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={isLoading || isSubmitting}>
+                {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Kirim Instruksi Reset
               </Button>
             </form>

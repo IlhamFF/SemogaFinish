@@ -2,8 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
-import { useRouter }
-from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useSession, signIn, signOut } from "next-auth/react";
 import type { User, Role } from '@/types'; // Your application's User type
 import { useToast } from '@/hooks/use-toast';
@@ -12,22 +11,19 @@ import {
     ROLES
 } from '@/lib/constants';
 
-// Mock data for current user profile updates only, not for admin management.
-// Admin user list management will now be done via API calls in the admin pages.
-
 interface AuthContextType {
-  user: User | null; // This will be derived from useSession
+  user: User | null; 
   login: (email: string, passwordAttempt: string) => Promise<boolean>;
   register: (email: string, passwordAttempt: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  verifyUserEmail: (userIdToVerify?: string) => void; // For current user's verification primarily
-  updateUserProfile: (userId: string, profileData: Partial<User>) => Promise<boolean>; // For current user's own profile
-  requestPasswordReset: (email: string) => Promise<boolean>; 
-  resetPassword: (email: string, newPassword: string) => Promise<boolean>; 
-  changePassword: (userId: string, currentPasswordAttempt: string, newPassword: string) => Promise<boolean>; 
+  verifyUserEmail: (userIdToVerify?: string) => void; 
+  updateUserProfile: (userId: string, profileData: Partial<User>) => Promise<boolean>; 
+  requestPasswordReset: (email: string) => Promise<string | null>; 
+  resetPassword: (email: string, token: string, newPassword: string) => Promise<boolean>; 
+  changePassword: (currentPasswordAttempt: string, newPassword: string) => Promise<boolean>; 
   isLoading: boolean; 
   updateSession: () => Promise<void>; 
-  users: User[]; // TEMPORARY: Will return empty array, admin pages fetch their own user list.
+  users: User[]; 
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,7 +41,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isVerified: session.user.isVerified,
     avatarUrl: session.user.image, 
     fullName: session.user.fullName,
-    // Fetch other fields from DB if needed, or ensure they are in session token
     phone: session.user.phone,
     address: session.user.address,
     birthDate: session.user.birthDate,
@@ -53,8 +48,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     nis: session.user.nis,
     nip: session.user.nip,
     joinDate: session.user.joinDate,
-    kelas: session.user.kelasId, // map kelasId to kelas for User type
-    mataPelajaran: session.user.mataPelajaran?.[0], // Assuming single string from array for User type
+    kelas: session.user.kelasId, 
+    mataPelajaran: session.user.mataPelajaran?.[0], 
   } as User : null;
 
   const isLoading = status === 'loading';
@@ -69,16 +64,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (result?.error) {
       console.error("Login error:", result.error);
       toast({ title: "Login Gagal", description: result.error === "CredentialsSignin" ? "Email atau kata sandi salah." : result.error , variant: "destructive" });
-      // Check if the error indicates an unverified user (this depends on your `authorize` logic)
-      // For now, we'll assume authorize either succeeds or gives generic error.
-      // If backend returns specific error for unverified user, handle it here.
-      // Example: if (result.error.includes("unverified")) router.push(ROUTES.VERIFY_EMAIL);
       return false;
     }
     
     if (result?.ok && !result.error) {
       toast({ title: "Login Berhasil", description: "Selamat datang!" });
-      // Redirection is now handled by useEffect in login/home pages based on session status
       return true;
     }
     return false;
@@ -98,7 +88,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
       
-      toast({ title: "Pendaftaran Berhasil", description: "Akun Anda telah dibuat. Silakan login. Verifikasi email mungkin diperlukan." });
+      toast({ title: "Pendaftaran Berhasil", description: "Akun Anda telah dibuat. Silakan login." });
       router.push(ROUTES.LOGIN); 
       return true;
 
@@ -118,49 +108,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await update();
   };
 
-  // --- Functions for current user's own actions ---
   const verifyUserEmail = async (userIdToVerify?: string) => { 
-    // This function is now primarily for the current user verifying their *own* email on the /verify-email page.
-    // Admin verification will be an update through /api/users/[id]
     const targetUserId = userIdToVerify || appUser?.id;
     if (!targetUserId) return;
 
     if (appUser && appUser.id === targetUserId && !appUser.isVerified) {
-        // Simulate verification for demo on /verify-email page
-        // In a real app, this would involve a backend call that sets the user's email as verified
-        // For this demo, we'll just update the session if it's the current user
         console.log("Simulating email verification for current user via session update.");
         await update({ ...session, user: { ...session?.user, isVerified: true } });
         toast({ title: "Email Terverifikasi", description: "Email Anda telah diverifikasi." });
-        // Redirection will be handled by the /verify-email page's useEffect
-    } else if (userIdToVerify && appUser?.id !== userIdToVerify) {
-        // This case should ideally not be hit from useAuth directly for admin actions.
-        // Admin verification is done via PUT /api/users/[id]
-        toast({ title: "Info", description: "Verifikasi pengguna oleh admin dilakukan melalui panel manajemen pengguna."});
     }
   };
   
   const updateUserProfile = async (userId: string, profileData: Partial<User>): Promise<boolean> => { 
-    // This function is intended for the logged-in user updating their OWN profile.
-    // For now, it's a placeholder. In a real app, it would call `PUT /api/users/me/profile` or similar.
     if (appUser && appUser.id === userId) {
         console.log("Simulating profile update for current user:", profileData);
-        // To make it reflect in the UI, we'd need to update the session.
-        // The `update` function from `useSession` can accept new session data.
-        // We'd need to construct what the new `session.user` object should look like.
         const newSessionUser = {
             ...session?.user,
             name: profileData.name ?? session?.user?.name,
             fullName: profileData.fullName ?? session?.user?.fullName,
             image: profileData.avatarUrl ?? session?.user?.image,
-            // Map other profileData fields to session?.user fields
             phone: profileData.phone,
             address: profileData.address,
-            birthDate: profileData.birthDate, // Assuming profileData.birthDate is already string
+            birthDate: profileData.birthDate, 
             bio: profileData.bio,
         };
-        await update(newSessionUser); // This updates the session on the client-side
-
+        await update(newSessionUser); 
         toast({ title: "Profil Diperbarui", description: "Informasi profil Anda berhasil disimpan (simulasi)." });
         return true;
     }
@@ -168,22 +140,65 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return false;
   };
 
-  const requestPasswordReset = async (email: string): Promise<boolean> => { 
-    toast({ title: "Simulasi Reset Password", description: `Instruksi reset (simulasi) akan dikirim ke ${email} jika terdaftar.` });
-    router.push(`${ROUTES.RESET_PASSWORD}?email=${encodeURIComponent(email)}&token=mockresettoken`); // Simulate flow with a token
-    return true;
+  const requestPasswordReset = async (email: string): Promise<string | null> => { 
+    try {
+      const response = await fetch('/api/auth/request-password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast({ title: "Gagal Meminta Reset", description: data.message || "Terjadi kesalahan.", variant: "destructive" });
+        return null;
+      }
+      
+      toast({ title: "Permintaan Terkirim", description: data.message });
+      // For DEMO, return the token so frontend can construct the link
+      return data.demoResetToken || null; 
+    } catch (error) {
+      console.error("Request password reset fetch error:", error);
+      toast({ title: "Gagal Meminta Reset", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
+      return null;
+    }
   };
 
-  const resetPassword = async (email: string, newPassword: string): Promise<boolean> => { 
-    // In a real app, this would call `POST /api/auth/reset-password` with email, token, newPassword
-    toast({ title: "Simulasi Reset Berhasil", description: `Kata sandi untuk ${email} telah direset (simulasi). Silakan login.` });
-    router.push(ROUTES.LOGIN);
-    return true;
+  const resetPassword = async (email: string, token: string, newPassword: string): Promise<boolean> => { 
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, token, newPassword }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast({ title: "Gagal Reset Kata Sandi", description: data.message || "Terjadi kesalahan.", variant: "destructive" });
+        return false;
+      }
+      
+      toast({ title: "Kata Sandi Direset", description: data.message });
+      router.push(ROUTES.LOGIN);
+      return true;
+    } catch (error) {
+      console.error("Reset password fetch error:", error);
+      toast({ title: "Gagal Reset Kata Sandi", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
+      return false;
+    }
   };
 
-  const changePassword = async (userId: string, currentPasswordAttempt: string, newPassword: string): Promise<boolean> => { 
-     // In a real app, this would call `POST /api/auth/change-password`
-     if (currentPasswordAttempt === "oldpasswordmock") { // Mock current password check
+  const changePassword = async (currentPasswordAttempt: string, newPassword: string): Promise<boolean> => { 
+     // TODO: Implement backend for change password: POST /api/auth/change-password
+     // For now, simulate
+     if (!appUser) {
+        toast({ title: "Aksi Gagal", description: "Anda harus login untuk mengubah kata sandi.", variant: "destructive" });
+        return false;
+     }
+     console.log("Simulating change password for user:", appUser.email, {currentPasswordAttempt: "******", newPassword: "******"});
+     // Assume currentPasswordAttempt is validated against user's actual current password on backend
+     // For demo, we'll just mock a success if current password is 'oldpasswordmock'
+     if (currentPasswordAttempt === "oldpasswordmock") { // Replace with actual check
         toast({ title: "Kata Sandi Diubah", description: "Kata sandi berhasil diperbarui (simulasi)." });
         return true;
      }
@@ -204,7 +219,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       changePassword,
       isLoading,
       updateSession,
-      users: [], // Admin user list now fetched by admin pages directly
+      users: [], 
     }}>
       {children}
     </AuthContext.Provider>
@@ -218,4 +233,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

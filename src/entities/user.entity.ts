@@ -65,6 +65,12 @@ export class UserEntity implements AdapterUser {
   @Column("simple-array", { nullable: true })
   mataPelajaran?: string[] | null; 
 
+  @Column({ type: "varchar", nullable: true })
+  resetPasswordToken?: string | null;
+
+  @Column({ type: "timestamp with time zone", nullable: true })
+  resetPasswordExpires?: Date | null;
+
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;
 
@@ -77,3 +83,4 @@ export class UserEntity implements AdapterUser {
   @OneToMany(() => SessionEntity, (session) => session.user)
   sessions?: SessionEntity[];
 }
+
