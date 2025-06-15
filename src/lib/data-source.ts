@@ -10,6 +10,7 @@ import { SklEntity } from "@/entities/skl.entity";
 import { CpEntity } from "@/entities/cp.entity";
 import { MateriKategoriEntity } from "@/entities/materi-kategori.entity";
 import { MateriAjarEntity } from "@/entities/materi-ajar.entity";
+import { StrukturKurikulumEntity } from "@/entities/struktur-kurikulum.entity";
 
 
 // Import other application-specific entities here as they are created
@@ -34,6 +35,7 @@ export const dataSourceOptions: DataSourceOptions = {
     CpEntity,
     MateriKategoriEntity,
     MateriAjarEntity,
+    StrukturKurikulumEntity,
     // Add other entities here:
     // KelasEntity,
   ],

@@ -1,6 +1,9 @@
 
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from "typeorm";
-import { KATEGORI_MAPEL } from "@/lib/constants"; // Pastikan ini diimpor jika digunakan untuk enum
+import "reflect-metadata"; // Ensure this is the very first import
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, OneToMany } from "typeorm";
+import { KATEGORI_MAPEL } from "@/lib/constants";
+import type { KategoriMapelType } from "@/entities/mata-pelajaran.entity"; // Self-reference for type
+import type { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
 
 // Menggunakan tipe string untuk kategori agar lebih fleksibel jika nilai berubah,
 // namun validasi bisa dilakukan di level aplikasi atau dengan check constraint di DB jika perlu.
@@ -27,6 +30,9 @@ export class MataPelajaranEntity {
     enum: KATEGORI_MAPEL, // Menggunakan konstanta sebagai enum
   })
   kategori!: KategoriMapelType;
+
+  @OneToMany("StrukturKurikulumEntity", (ske) => ske.mapel)
+  strukturKurikulumEntries?: StrukturKurikulumEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;

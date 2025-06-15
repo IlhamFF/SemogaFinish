@@ -71,12 +71,18 @@ export interface SlotWaktu {
   waktuSelesai: string;
 }
 
+// Interface yang digunakan di frontend, mungkin perlu penyesuaian setelah API dibuat
 export interface StrukturKurikulumItem {
-  id: string;
-  idMapel: string;
-  namaMapel: string;
+  id: string; // ID dari StrukturKurikulumEntity
+  tingkat: string;
+  jurusan: string;
+  mapelId: string; // ID dari MataPelajaranEntity
+  namaMapel: string; // Denormalized or from related MataPelajaranEntity
   alokasiJam: number;
-  guruPengampu?: string;
+  guruPengampuId?: string | null; // ID dari UserEntity (guru)
+  guruPengampuNama?: string | null; // Denormalized or from related UserEntity
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 export interface Silabus {
@@ -132,7 +138,7 @@ export interface MateriAjar {
   fileUrl?: string | null; // URL ke file yang disimpan atau link eksternal
   tanggalUpload: string; // YYYY-MM-DD
   uploaderId: string; // ID pengguna yang mengunggah
-  uploader?: User; // Detail pengguna (opsional, untuk join)
+  uploader?: Pick<User, 'id' | 'name' | 'fullName' | 'email'>; // Detail pengguna (opsional, untuk join) - Hanya field yang aman
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
