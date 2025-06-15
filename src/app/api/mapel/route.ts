@@ -13,12 +13,14 @@ const mataPelajaranSchema = z.object({
   kode: z.string().min(3, "Kode minimal 3 karakter.").max(50, "Kode maksimal 50 karakter."),
   nama: z.string().min(5, "Nama minimal 5 karakter.").max(255, "Nama maksimal 255 karakter."),
   deskripsi: z.string().optional().nullable(),
-  kategori: z.enum(KATEGORI_MAPEL, { required_error: "Kategori wajib diisi." }),
+  kategori: z.enum(KATEGORI_MAPEL as [string, ...string[]], { required_error: "Kategori wajib diisi." }),
 });
 
 // GET /api/mapel - Mendapatkan semua mata pelajaran
 export async function GET() {
   const session = await getServerSession(authOptions);
+  // For now, only admin can get all mapel for management.
+  // If other roles need to list mapel (e.g., for selection), adjust roles here or create a public endpoint.
   if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
@@ -46,7 +48,7 @@ export async function POST(request: Request) {
     const validation = mataPelajaranSchema.safeParse(body);
 
     if (!validation.success) {
-      return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.formErrors.fieldErrors }, { status: 400 });
+      return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
     const { kode, nama, deskripsi, kategori } = validation.data;
@@ -54,7 +56,6 @@ export async function POST(request: Request) {
     const dataSource = await getInitializedDataSource();
     const mapelRepo = dataSource.getRepository(MataPelajaranEntity);
 
-    // Cek duplikasi kode
     const existingMapel = await mapelRepo.findOneBy({ kode });
     if (existingMapel) {
       return NextResponse.json({ message: "Kode mata pelajaran sudah ada." }, { status: 409 });
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
       kode,
       nama,
       deskripsi,
-      kategori: kategori as KategoriMapelType, // Cast karena Zod enum mungkin berbeda sedikit dari tipe entity
+      kategori: kategori as KategoriMapelType, 
     });
 
     await mapelRepo.save(newMapel);
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("Error creating mata pelajaran:", error);
-    if (error.code === '23505') { // Kode error PostgreSQL untuk unique violation
+    if (error.code === '23505') { 
         return NextResponse.json({ message: "Kode mata pelajaran sudah ada (dari DB)." }, { status: 409 });
     }
     return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });

@@ -1,92 +1,101 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
-import { UploadCloud, FolderKanban, FileText, Link2, PlusCircle, Search, Edit3, Trash2, Loader2, Link2Icon } from "lucide-react";
+import { UploadCloud, FileText, Link2Icon as LinkIconLucide, PlusCircle, Search, Edit3, Trash2, Loader2, FolderKanban } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { MOCK_SUBJECTS } from "@/lib/constants";
+import { MOCK_SUBJECTS, JENIS_MATERI_AJAR } from "@/lib/constants"; // JENIS_MATERI_AJAR from constants
+import type { MateriAjar, JenisMateriAjarType } from "@/types"; // MateriAjar type from global types
+import { format, parseISO } from "date-fns";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-interface Materi {
-  id: string;
-  judul: string;
-  jenis: "PDF" | "Video" | "PPT" | "Link" | "Dokumen" | "Gambar";
-  mapel: string;
-  tanggalUpload: string;
-  ukuran?: string; // Untuk file
-  url?: string; // Untuk link
-  deskripsi?: string;
-  namaFileAsli?: string;
-}
 
-const materiSchema = z.object({
-  judul: z.string().min(5, { message: "Judul materi minimal 5 karakter." }),
-  mapel: z.string({ required_error: "Mata pelajaran wajib dipilih." }),
-  jenis: z.enum(["PDF", "Video", "PPT", "Link", "Dokumen", "Gambar"], { required_error: "Jenis materi wajib dipilih."}),
-  deskripsi: z.string().optional(),
-  file: z.any().optional(), // Untuk jenis File (PDF, PPT, Dokumen, Gambar)
-  url: z.string().url({ message: "URL tidak valid."}).optional(), // Untuk jenis Video atau Link
+const materiClientSchema = z.object({
+  judul: z.string().min(3, { message: "Judul materi minimal 3 karakter." }).max(255),
+  deskripsi: z.string().optional().nullable(),
+  mapelNama: z.string({ required_error: "Mata pelajaran wajib dipilih." }),
+  jenisMateri: z.enum(JENIS_MATERI_AJAR, { required_error: "Jenis materi wajib dipilih." }),
+  fileInput: z.any().optional(), 
+  externalUrl: z.string().url({ message: "URL tidak valid." }).optional().or(z.literal('')),
 }).refine(data => {
-  if ((data.jenis === "Video" || data.jenis === "Link") && !data.url) return false;
-  // Jika editing, file tidak wajib diisi lagi
-  // if (editingMateri && (data.jenis === "PDF" || data.jenis === "PPT" || data.jenis === "Dokumen" || data.jenis === "Gambar")) return true; 
-  if ((data.jenis === "PDF" || data.jenis === "PPT" || data.jenis === "Dokumen" || data.jenis === "Gambar") && !data.file && !editingMateri) return false;
+  if (data.jenisMateri === "Link" && !data.externalUrl) return false;
+  // Validasi fileInput akan lebih kompleks jika kita benar-benar mengupload,
+  // untuk saat ini, kita asumsikan jika jenisMateri="File", fileInput mungkin ada (saat buat) atau tidak (saat edit jika tak diubah)
   return true;
 }, {
-  message: "File atau URL wajib diisi sesuai jenis materi.",
-  path: ["file"], // Atau path: ["url"] tergantung logika validasi selanjutnya
+  message: "Jika jenis 'Link', URL wajib diisi. Jika jenis 'File', file mungkin diperlukan saat buat baru.",
+  path: ["externalUrl"], // atau path lain yang sesuai
 });
-
-type MateriFormValues = z.infer<typeof materiSchema>;
-
-let editingMateri: Materi | null = null; // Helper variable outside component to assist refine
-
-const initialMockMateri: Materi[] = [
-  { id: "MAT001", judul: "Modul Aljabar Linier", jenis: "PDF", mapel: "Matematika Wajib", tanggalUpload: "2024-07-20", ukuran: "2.5 MB", namaFileAsli: "Modul_Aljabar_Lengkap.pdf", deskripsi: "Materi lengkap Aljabar Linier untuk Kelas X." },
-  { id: "MAT002", judul: "Video Pembelajaran Termodinamika", jenis: "Video", mapel: "Fisika", tanggalUpload: "2024-07-22", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", deskripsi: "Penjelasan konsep dasar Termodinamika dengan animasi." },
-  { id: "MAT003", judul: "Presentasi Struktur Atom", jenis: "PPT", mapel: "Kimia", tanggalUpload: "2024-07-18", ukuran: "5.2 MB", namaFileAsli: "Struktur_Atom_XI.pptx" },
-  { id: "MAT004", judul: "Artikel Ilmiah tentang Fotosintesis", jenis: "Link", mapel: "Biologi", tanggalUpload: "2024-07-25", url:"https://example.com/fotosintesis", deskripsi: "Bacaan pendukung materi fotosintesis."}
-];
+type MateriClientFormValues = z.infer<typeof materiClientSchema>;
 
 
 export default function GuruMateriPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [mockMateri, setMockMateri] = useState<Materi[]>(initialMockMateri);
+
+  const [materiList, setMateriList] = useState<MateriAjar[]>([]);
+  const [isLoadingMateriList, setIsLoadingMateriList] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterMapel, setFilterMapel] = useState("semua");
+  
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [currentEditingMateri, setCurrentEditingMateri] = useState<Materi | null>(null);
+  const [currentEditingMateri, setCurrentEditingMateri] = useState<MateriAjar | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [materiToDelete, setMateriToDelete] = useState<MateriAjar | null>(null);
 
-  const materiForm = useForm<MateriFormValues>({
-    resolver: zodResolver(materiSchema),
-    defaultValues: { judul: "", mapel: undefined, jenis: undefined, deskripsi: "", file: undefined, url: "" },
+  const materiForm = useForm<MateriClientFormValues>({
+    resolver: zodResolver(materiClientSchema),
+    defaultValues: { judul: "", deskripsi: "", mapelNama: undefined, jenisMateri: undefined, fileInput: undefined, externalUrl: "" },
   });
+
+  const fetchMateriSaya = useCallback(async () => {
+    if (!user) return;
+    setIsLoadingMateriList(true);
+    try {
+      const response = await fetch('/api/kurikulum/materi-ajar');
+      if (!response.ok) throw new Error('Gagal mengambil data materi ajar');
+      const allMateri: MateriAjar[] = await response.json();
+      // Filter materi yang diunggah oleh guru yang sedang login
+      const myMateri = allMateri.filter(m => m.uploaderId === user.id);
+      setMateriList(myMateri);
+    } catch (error: any) {
+      toast({ title: "Error Materi Ajar", description: error.message || "Tidak dapat memuat materi ajar.", variant: "destructive" });
+    } finally {
+      setIsLoadingMateriList(false);
+    }
+  }, [user, toast]);
+
+  useEffect(() => {
+    if (user && (user.role === 'guru' || user.role === 'superadmin')) {
+      fetchMateriSaya();
+    }
+  }, [user, fetchMateriSaya]);
   
   useEffect(() => {
-    editingMateri = currentEditingMateri; // Update helper for zod refine
     if (currentEditingMateri) {
       materiForm.reset({
         judul: currentEditingMateri.judul,
-        mapel: currentEditingMateri.mapel,
-        jenis: currentEditingMateri.jenis,
         deskripsi: currentEditingMateri.deskripsi || "",
-        url: currentEditingMateri.url || "",
-        file: undefined,
+        mapelNama: currentEditingMateri.mapelNama,
+        jenisMateri: currentEditingMateri.jenisMateri,
+        externalUrl: currentEditingMateri.jenisMateri === "Link" ? currentEditingMateri.fileUrl || "" : "",
+        fileInput: undefined,
       });
     } else {
-      materiForm.reset({ judul: "", mapel: undefined, jenis: undefined, deskripsi: "", file: undefined, url: "" });
+      materiForm.reset({ judul: "", deskripsi: "", mapelNama: undefined, jenisMateri: undefined, fileInput: undefined, externalUrl: "" });
     }
   }, [currentEditingMateri, materiForm, isFormOpen]);
 
@@ -94,55 +103,92 @@ export default function GuruMateriPage() {
   if (!user || (user.role !== 'guru' && user.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Guru untuk melihat halaman ini.</p>;
   }
-
-  const handlePlaceholderAction = (action: string, id?: string) => {
-    toast({ title: "Fitur Disimulasikan", description: `Tindakan "${action}" ${id ? `untuk materi ${id} ` : ""}telah disimulasikan.`});
-  };
   
-  const handleFormSubmit = async (values: MateriFormValues) => {
+  const handleMateriSubmit = async (values: MateriClientFormValues) => {
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    
+    const payload: Partial<MateriAjar> = {
+      judul: values.judul,
+      deskripsi: values.deskripsi,
+      mapelNama: values.mapelNama,
+      jenisMateri: values.jenisMateri as JenisMateriAjarType,
+    };
 
-    const isFileBased = ["PDF", "PPT", "Dokumen", "Gambar"].includes(values.jenis);
-
-    if (currentEditingMateri) {
-      setMockMateri(prev => prev.map(m => m.id === currentEditingMateri.id ? { 
-        ...currentEditingMateri, 
-        ...values,
-        namaFileAsli: isFileBased && values.file ? (values.file as File).name : (isFileBased ? currentEditingMateri.namaFileAsli : undefined),
-        ukuran: isFileBased && values.file ? `${((values.file as File).size / (1024*1024)).toFixed(1)} MB` : (isFileBased ? currentEditingMateri.ukuran : undefined),
-        url: !isFileBased ? values.url : undefined,
-        tanggalUpload: format(new Date(), "yyyy-MM-dd"),
-      } : m));
-      toast({ title: "Berhasil!", description: `Materi "${values.judul}" telah diperbarui.` });
-    } else {
-      const newMateri: Materi = {
-        id: `MAT${Date.now()}`,
-        ...values,
-        namaFileAsli: isFileBased && values.file ? (values.file as File).name : undefined,
-        ukuran: isFileBased && values.file ? `${((values.file as File).size / (1024*1024)).toFixed(1)} MB` : undefined,
-        url: !isFileBased ? values.url : undefined,
-        tanggalUpload: format(new Date(), "yyyy-MM-dd"),
-      };
-      setMockMateri(prev => [newMateri, ...prev]);
-      toast({ title: "Berhasil!", description: `Materi "${values.judul}" telah ditambahkan.` });
+    if (values.jenisMateri === "File") {
+      // Jika ada file baru yang dipilih, sertakan nama file originalnya.
+      // Backend akan men-generate fileUrl (simulasi path).
+      if (values.fileInput && values.fileInput.name) {
+        payload.namaFileOriginal = values.fileInput.name;
+      } else if (currentEditingMateri && currentEditingMateri.jenisMateri === "File") {
+        // Jika edit dan tidak ada file baru, pertahankan nama file lama (jika perlu)
+        // Namun API PUT akan menghandle ini. Jika namaFileOriginal tidak dikirim, tidak akan diubah.
+        // Jika namaFileOriginal dikirim sbg null, maka file akan dihapus.
+        // Jika file tidak diubah, jangan kirim field ini.
+      }
+    } else if (values.jenisMateri === "Link") {
+      payload.fileUrl = values.externalUrl;
+      payload.namaFileOriginal = null; // Pastikan nama file null untuk jenis Link
     }
-    setIsSubmitting(false);
-    setIsFormOpen(false);
-    setCurrentEditingMateri(null);
+
+    const url = currentEditingMateri ? `/api/kurikulum/materi-ajar/${currentEditingMateri.id}` : '/api/kurikulum/materi-ajar';
+    const method = currentEditingMateri ? 'PUT' : 'POST';
+
+    try {
+      const response = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Gagal ${currentEditingMateri ? 'memperbarui' : 'menambahkan'} materi.`);
+      }
+      toast({ title: "Berhasil!", description: `Materi "${values.judul}" telah ${currentEditingMateri ? 'diperbarui' : 'ditambahkan'}.` });
+      setIsFormOpen(false);
+      setCurrentEditingMateri(null);
+      fetchMateriSaya(); // Muat ulang daftar materi
+    } catch (error: any) {
+      toast({ title: "Error Materi", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
-  const openFormDialog = (materi?: Materi) => {
+  const openFormDialog = (materi?: MateriAjar) => {
     setCurrentEditingMateri(materi || null);
     setIsFormOpen(true);
   }
 
-  const filteredMateri = mockMateri.filter(m => 
-    (m.judul.toLowerCase().includes(searchTerm.toLowerCase()) || m.mapel.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (filterMapel === "semua" || m.mapel === filterMapel)
+  const openDeleteMateriDialog = (materi: MateriAjar) => {
+    setMateriToDelete(materi);
+  };
+
+  const handleDeleteMateriConfirm = async () => {
+    if (materiToDelete) {
+      setIsSubmitting(true);
+      try {
+        const response = await fetch(`/api/kurikulum/materi-ajar/${materiToDelete.id}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Gagal menghapus materi.');
+        }
+        toast({ title: "Dihapus!", description: `Materi "${materiToDelete.judul}" telah dihapus.` });
+        fetchMateriSaya(); // Muat ulang daftar
+      } catch (error: any) {
+        toast({ title: "Error Hapus Materi", description: error.message, variant: "destructive" });
+      } finally {
+        setIsSubmitting(false);
+        setMateriToDelete(null);
+      }
+    }
+  };
+
+  const filteredMateri = materiList.filter(m => 
+    (m.judul.toLowerCase().includes(searchTerm.toLowerCase()) || m.mapelNama.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    (filterMapel === "semua" || m.mapelNama === filterMapel)
   );
 
-  const uniqueMapelOptions = ["semua", ...new Set(MOCK_SUBJECTS)];
+  const uniqueMapelOptions = ["semua", ...new Set(MOCK_SUBJECTS)]; // Tetap pakai MOCK_SUBJECTS untuk dropdown
 
   return (
     <div className="space-y-6">
@@ -157,10 +203,10 @@ export default function GuruMateriPage() {
         <CardHeader>
           <CardTitle className="flex items-center">
             <UploadCloud className="mr-2 h-6 w-6 text-primary" />
-            Bank Materi Pembelajaran
+            Bank Materi Pembelajaran Saya
           </CardTitle>
           <CardDescription>
-            Unggah, kelola, dan bagikan materi pembelajaran seperti modul, presentasi, video, dan tautan sumber belajar.
+            Unggah, kelola, dan bagikan materi pembelajaran yang Anda buat.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -172,28 +218,21 @@ export default function GuruMateriPage() {
                 <p className="text-xs text-muted-foreground">Unggah materi dari perangkat Anda.</p>
               </div>
             </Button>
-            <Button variant="outline" onClick={() => { setCurrentEditingMateri(null); materiForm.setValue("jenis", "Link"); setIsFormOpen(true); }} className="justify-start text-left h-auto py-3">
-              <Link2 className="mr-3 h-5 w-5" />
+            <Button variant="outline" onClick={() => { setCurrentEditingMateri(null); materiForm.setValue("jenisMateri", "Link"); setIsFormOpen(true); }} className="justify-start text-left h-auto py-3">
+              <LinkIconLucide className="mr-3 h-5 w-5" />
               <div>
                 <p className="font-semibold">Tambah Tautan Video/Sumber</p>
                 <p className="text-xs text-muted-foreground">Sematkan video atau sumber lain.</p>
               </div>
             </Button>
-            {/* <Button variant="outline" onClick={() => handlePlaceholderAction("Buat Folder Materi")} className="justify-start text-left h-auto py-3 md:col-span-2 lg:col-span-1">
-              <FolderKanban className="mr-3 h-5 w-5" />
-              <div>
-                <p className="font-semibold">Kelola Folder</p>
-                <p className="text-xs text-muted-foreground">Organisasikan materi dalam folder.</p>
-              </div>
-            </Button> */}
           </div>
 
           <Card>
             <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div>
-                        <CardTitle className="text-xl">Daftar Materi Saya</CardTitle>
-                        <CardDescription>Materi yang telah Anda unggah atau tambahkan.</CardDescription>
+                        <CardTitle className="text-xl">Daftar Materi Unggahan Saya</CardTitle>
+                        <CardDescription>Total: {filteredMateri.length} materi.</CardDescription>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                         <div className="relative flex-grow sm:flex-grow-0">
@@ -219,42 +258,46 @@ export default function GuruMateriPage() {
                 </div>
             </CardHeader>
             <CardContent>
-              {filteredMateri.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-border">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Judul Materi</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Jenis</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Mapel</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Tgl Upload</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Detail</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Tindakan</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-card divide-y divide-border">
+              {isLoadingMateriList ? (
+                <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+              ) : filteredMateri.length > 0 ? (
+                <ScrollArea className="h-[60vh] border rounded-md">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead>Judul Materi</TableHead>
+                        <TableHead>Mapel</TableHead>
+                        <TableHead>Jenis</TableHead>
+                        <TableHead>Tgl Upload</TableHead>
+                        <TableHead>File/Link</TableHead>
+                        <TableHead className="text-right">Tindakan</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {filteredMateri.map((m) => (
-                        <tr key={m.id}>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-foreground max-w-xs truncate" title={m.judul}>{m.judul}
+                        <TableRow key={m.id}>
+                          <TableCell className="font-medium max-w-xs truncate" title={m.judul}>{m.judul}
                             {m.deskripsi && <p className="text-xs text-muted-foreground truncate" title={m.deskripsi}>{m.deskripsi}</p>}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground">{m.jenis}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground">{m.mapel}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground">{m.tanggalUpload}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground">{m.url || m.namaFileAsli || m.ukuran || "-"}</td>
+                          </TableCell>
+                          <TableCell>{m.mapelNama}</TableCell>
+                          <TableCell>{m.jenisMateri}</TableCell>
+                          <TableCell>{m.tanggalUpload ? format(parseISO(m.tanggalUpload), "dd/MM/yyyy") : "-"}</TableCell>
+                          <TableCell className="text-xs truncate max-w-[150px]" title={m.jenisMateri === 'Link' ? m.fileUrl || "-" : m.namaFileOriginal || "-"}>
+                            {m.jenisMateri === 'Link' ? (m.fileUrl || "-") : (m.namaFileOriginal || "-")}
+                          </TableCell>
                           <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                             <Button variant="ghost" size="sm" onClick={() => openFormDialog(m)} className="mr-1">
                               <Edit3 className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handlePlaceholderAction(`Hapus`, m.id)} className="text-destructive hover:text-destructive/80">
+                            <Button variant="ghost" size="sm" onClick={() => openDeleteMateriDialog(m)} className="text-destructive hover:text-destructive/80">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </td>
-                        </tr>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <FolderKanban className="mx-auto h-12 w-12" />
@@ -266,7 +309,6 @@ export default function GuruMateriPage() {
         </CardContent>
       </Card>
 
-       {/* Dialog Form Tambah/Edit Materi */}
       <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setCurrentEditingMateri(null); }}>
         <DialogContent className="sm:max-w-lg">
             <DialogHeader>
@@ -274,19 +316,19 @@ export default function GuruMateriPage() {
                 <DialogDescription>{currentEditingMateri ? `Perbarui detail untuk materi "${currentEditingMateri.judul}".` : "Isi detail materi baru di bawah ini."}</DialogDescription>
             </DialogHeader>
             <Form {...materiForm}>
-                <form onSubmit={materiForm.handleSubmit(handleFormSubmit)} className="space-y-4 py-2">
+                <form onSubmit={materiForm.handleSubmit(handleMateriSubmit)} className="space-y-4 py-2">
                     <FormField control={materiForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Materi</FormLabel><FormControl><Input placeholder="Contoh: Modul Bab 1 Aljabar" {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                         <FormField control={materiForm.control} name="mapel" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih mapel" /></SelectTrigger></FormControl><SelectContent>{MOCK_SUBJECTS.map(subject => (<SelectItem key={subject} value={subject}>{subject}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-                         <FormField control={materiForm.control} name="jenis" render={({ field }) => (<FormItem><FormLabel>Jenis Materi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis" /></SelectTrigger></FormControl><SelectContent>{ (["PDF", "Dokumen", "PPT", "Gambar", "Video", "Link"] as Materi["jenis"][]).map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                         <FormField control={materiForm.control} name="mapelNama" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih mapel" /></SelectTrigger></FormControl><SelectContent>{MOCK_SUBJECTS.map(subject => (<SelectItem key={subject} value={subject}>{subject}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                         <FormField control={materiForm.control} name="jenisMateri" render={({ field }) => (<FormItem><FormLabel>Jenis Materi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis" /></SelectTrigger></FormControl><SelectContent>{JENIS_MATERI_AJAR.map(jenis => <SelectItem key={jenis} value={jenis}>{jenis === "File" ? <><UploadCloud className="inline-block mr-2 h-4 w-4" />Unggah File</> : <><LinkIconLucide className="inline-block mr-2 h-4 w-4" />Tautan Eksternal</>}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                     </div>
-                    <FormField control={materiForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea placeholder="Deskripsi singkat tentang materi..." {...field} rows={3} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={materiForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea placeholder="Deskripsi singkat tentang materi..." {...field} rows={3} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>)} />
                     
-                    {(materiForm.watch("jenis") === "PDF" || materiForm.watch("jenis") === "PPT" || materiForm.watch("jenis") === "Dokumen" || materiForm.watch("jenis") === "Gambar") && (
-                        <FormField control={materiForm.control} name="file" render={({ field }) => (<FormItem><FormLabel>Unggah File {currentEditingMateri && currentEditingMateri.namaFileAsli ? `(Kosongkan jika tidak ingin mengubah file: ${currentEditingMateri.namaFileAsli})` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => field.onChange(e.target.files ? e.target.files[0] : null)} /></FormControl><FormDescription>Maks. 10MB.</FormDescription><FormMessage /></FormItem>)} />
+                    {materiForm.watch("jenisMateri") === "File" && (
+                        <FormField control={materiForm.control} name="fileInput" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>Unggah File {currentEditingMateri?.namaFileOriginal && materiForm.getValues("jenisMateri") === "File" ? `(File saat ini: ${currentEditingMateri.namaFileOriginal}. Kosongkan jika tidak ingin mengubah file.)` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>PDF, DOCX, PPTX, Gambar, dll. Maks 10MB (Simulasi).</FormDescription><FormMessage /></FormItem>)} />
                     )}
-                    {(materiForm.watch("jenis") === "Video" || materiForm.watch("jenis") === "Link") && (
-                         <FormField control={materiForm.control} name="url" render={({ field }) => (<FormItem><FormLabel>URL Materi/Video</FormLabel><FormControl><Input placeholder="https://contoh.com/materi_atau_video" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    {materiForm.watch("jenisMateri") === "Link" && (
+                         <FormField control={materiForm.control} name="externalUrl" render={({ field }) => (<FormItem><FormLabel>URL Materi/Video</FormLabel><FormControl><Input placeholder="https://contoh.com/materi_atau_video" {...field} /></FormControl><FormMessage /></FormItem>)} />
                     )}
 
                     <DialogFooter className="pt-4"><Button type="button" variant="outline" onClick={() => {setIsFormOpen(false); setCurrentEditingMateri(null);}} disabled={isSubmitting}>Batal</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{currentEditingMateri ? "Simpan Perubahan" : "Simpan Materi"}</Button></DialogFooter>
@@ -294,7 +336,25 @@ export default function GuruMateriPage() {
             </Form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!materiToDelete} onOpenChange={(open) => !open && setMateriToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Hapus Materi</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus materi "{materiToDelete?.judul}"? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setMateriToDelete(null)} disabled={isSubmitting}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteMateriConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Ya, Hapus Materi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
-
+    

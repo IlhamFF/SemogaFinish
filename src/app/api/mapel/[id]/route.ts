@@ -10,10 +10,11 @@ import { KATEGORI_MAPEL } from "@/lib/constants";
 import type { KategoriMapelType } from "@/entities/mata-pelajaran.entity";
 
 const mataPelajaranUpdateSchema = z.object({
-  // Kode tidak boleh diubah setelah dibuat, jadi tidak ada di sini
   nama: z.string().min(5, "Nama minimal 5 karakter.").max(255, "Nama maksimal 255 karakter.").optional(),
   deskripsi: z.string().optional().nullable(),
-  kategori: z.enum(KATEGORI_MAPEL).optional(),
+  kategori: z.enum(KATEGORI_MAPEL as [string, ...string[]]).optional(),
+}).refine(data => Object.keys(data).length > 0, {
+  message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });
 
 // GET /api/mapel/[id] - Mendapatkan satu mata pelajaran
@@ -66,15 +67,14 @@ export async function PUT(
     const validation = mataPelajaranUpdateSchema.safeParse(body);
 
     if (!validation.success) {
-      return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.formErrors.fieldErrors }, { status: 400 });
+      return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
     
-    // Kumpulkan data yang akan diupdate. Jangan sertakan 'kode'.
     const { nama, deskripsi, kategori } = validation.data;
     const updateData: Partial<MataPelajaranEntity> = {};
-    if (nama) updateData.nama = nama;
-    if (deskripsi !== undefined) updateData.deskripsi = deskripsi; // Allow null
-    if (kategori) updateData.kategori = kategori as KategoriMapelType;
+    if (nama !== undefined) updateData.nama = nama;
+    if (deskripsi !== undefined) updateData.deskripsi = deskripsi; 
+    if (kategori !== undefined) updateData.kategori = kategori as KategoriMapelType;
 
 
     if (Object.keys(updateData).length === 0) {
@@ -122,10 +122,9 @@ export async function DELETE(
     if (deleteResult.affected === 0) {
       return NextResponse.json({ message: "Mata pelajaran tidak ditemukan untuk dihapus." }, { status: 404 });
     }
-    return NextResponse.json({ message: "Mata pelajaran berhasil dihapus." }, { status: 200 }); // 200 OK atau 204 No Content
+    return NextResponse.json({ message: "Mata pelajaran berhasil dihapus." }, { status: 200 }); 
   } catch (error) {
     console.error("Error deleting mata pelajaran:", error);
-    // TODO: Handle error jika mapel masih terhubung ke entitas lain (foreign key constraint)
     return NextResponse.json({ message: "Terjadi kesalahan internal server atau mapel terkait dengan data lain." }, { status: 500 });
   }
 }

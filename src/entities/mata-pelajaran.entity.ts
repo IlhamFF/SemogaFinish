@@ -2,14 +2,11 @@
 import "reflect-metadata"; // Ensure this is the very first import
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, OneToMany } from "typeorm";
 import { KATEGORI_MAPEL } from "@/lib/constants";
-import type { KategoriMapelType } from "@/entities/mata-pelajaran.entity"; // Self-reference for type
+// Removed self-reference for type: import type { KategoriMapelType } from "@/entities/mata-pelajaran.entity"; 
 import type { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
 import type { SilabusEntity } from "./silabus.entity";
 import type { RppEntity } from "./rpp.entity";
 
-// Menggunakan tipe string untuk kategori agar lebih fleksibel jika nilai berubah,
-// namun validasi bisa dilakukan di level aplikasi atau dengan check constraint di DB jika perlu.
-// Jika KATEGORI_MAPEL adalah enum string, Anda bisa menggunakannya langsung.
 export type KategoriMapelType = typeof KATEGORI_MAPEL[number];
 
 @Entity({ name: "mata_pelajaran" })
@@ -29,17 +26,17 @@ export class MataPelajaranEntity {
 
   @Column({
     type: "enum",
-    enum: KATEGORI_MAPEL, // Menggunakan konstanta sebagai enum
+    enum: KATEGORI_MAPEL, 
   })
   kategori!: KategoriMapelType;
 
-  @OneToMany("StrukturKurikulumEntity", (ske) => ske.mapel)
+  @OneToMany("StrukturKurikulumEntity", (ske: StrukturKurikulumEntity) => ske.mapel)
   strukturKurikulumEntries?: StrukturKurikulumEntity[];
 
-  @OneToMany("SilabusEntity", (silabus) => silabus.mapel)
+  @OneToMany("SilabusEntity", (silabus: SilabusEntity) => silabus.mapel)
   silabusList?: SilabusEntity[];
 
-  @OneToMany("RppEntity", (rpp) => rpp.mapel)
+  @OneToMany("RppEntity", (rpp: RppEntity) => rpp.mapel)
   rppList?: RppEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })

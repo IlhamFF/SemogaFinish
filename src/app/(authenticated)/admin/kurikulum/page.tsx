@@ -15,7 +15,7 @@ import * as z from "zod";
 import { useAuth } from "@/hooks/use-auth";
 import { BookOpenCheck, Target, BookCopy, BookUp, Layers, FileText, FolderKanban, PlusCircle, Edit, Search, Loader2, UploadCloud, Link2Icon, Trash2, ArrowRightLeft, BarChartHorizontalBig, Book, Library, List } from "lucide-react";
 import Link from "next/link";
-import { ROUTES, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, KATEGORI_MAPEL as KATEGORI_MAPEL_CONST, JENIS_MATERI_AJAR, KATEGORI_SKL as KATEGORI_SKL_CONST, FASE_CP as FASE_CP_CONST } from "@/lib/constants";
+import { ROUTES, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR as JENIS_MATERI_AJAR_CONST } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import type { SKL, CapaianPembelajaran, MateriKategori, StrukturKurikulumItem, Silabus, RPP, KategoriSklType, FaseCpType, MateriAjar, JenisMateriAjarType, MataPelajaran, User } from "@/types";
 import {
@@ -38,7 +38,7 @@ const materiAjarClientSchema = z.object({
   judul: z.string().min(3, { message: "Judul materi minimal 3 karakter." }).max(255),
   deskripsi: z.string().optional(),
   mapelNama: z.string({ required_error: "Mata pelajaran wajib dipilih." }),
-  jenisMateri: z.enum(JENIS_MATERI_AJAR, { required_error: "Jenis materi wajib dipilih." }),
+  jenisMateri: z.enum(JENIS_MATERI_AJAR_CONST, { required_error: "Jenis materi wajib dipilih." }),
   fileInput: z.any().optional(), 
   externalUrl: z.string().url({ message: "URL tidak valid." }).optional().or(z.literal('')),
 }).refine(data => {
@@ -82,7 +82,7 @@ type StrukturKurikulumClientFormValues = z.infer<typeof strukturKurikulumClientS
 const silabusSchema = z.object({
   judul: z.string().min(5, { message: "Judul silabus minimal 5 karakter." }),
   mapelId: z.string({ required_error: "Mata pelajaran wajib dipilih."}).uuid({ message: "Mata pelajaran tidak valid."}),
-  kelas: z.string().min(2, {message: "Kelas minimal 2 karakter."}),
+  kelas: z.string().min(1, {message: "Kelas minimal 1 karakter."}),
   deskripsiSingkat: z.string().optional(),
   file: z.any().optional(),
 });
@@ -91,7 +91,7 @@ type SilabusFormValues = z.infer<typeof silabusSchema>;
 const rppSchema = z.object({
   judul: z.string().min(5, { message: "Judul RPP minimal 5 karakter." }),
   mapelId: z.string({ required_error: "Mata pelajaran wajib dipilih."}).uuid({ message: "Mata pelajaran tidak valid."}),
-  kelas: z.string().min(2, {message: "Kelas minimal 2 karakter."}),
+  kelas: z.string().min(1, {message: "Kelas minimal 1 karakter."}),
   pertemuanKe: z.coerce.number().min(1, { message: "Pertemuan minimal 1."}),
   materiPokok: z.string().optional(),
   kegiatanPembelajaran: z.string().optional(),
@@ -315,7 +315,7 @@ export default function AdminKurikulumPage() {
               <FormField control={materiAjarForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Materi</FormLabel><FormControl><Input placeholder="Modul Bab 1 Termodinamika" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={materiAjarForm.control} name="mapelNama" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih mata pelajaran" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.map(subject => (<SelectItem key={subject.id} value={subject.nama}>{subject.nama}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
               <FormField control={materiAjarForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea placeholder="Deskripsi singkat materi..." {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={materiAjarForm.control} name="jenisMateri" render={({ field }) => (<FormItem><FormLabel>Jenis Materi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis materi" /></SelectTrigger></FormControl><SelectContent>{JENIS_MATERI_AJAR.map(jenis => <SelectItem key={jenis} value={jenis}>{jenis === "File" ? <><UploadCloud className="inline-block mr-2 h-4 w-4" />Unggah File</> : <><Link2Icon className="inline-block mr-2 h-4 w-4" />Tautan Eksternal</>}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={materiAjarForm.control} name="jenisMateri" render={({ field }) => (<FormItem><FormLabel>Jenis Materi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis materi" /></SelectTrigger></FormControl><SelectContent>{JENIS_MATERI_AJAR_CONST.map(jenis => <SelectItem key={jenis} value={jenis}>{jenis === "File" ? <><UploadCloud className="inline-block mr-2 h-4 w-4" />Unggah File</> : <><Link2Icon className="inline-block mr-2 h-4 w-4" />Tautan Eksternal</>}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
               {materiAjarForm.watch("jenisMateri") === "File" && (<FormField control={materiAjarForm.control} name="fileInput" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>Unggah File {currentEditingMateri?.namaFileOriginal ? `(Kosongkan jika tidak ingin mengubah: ${currentEditingMateri.namaFileOriginal})` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>PDF, DOCX, PPTX, dll. Maks 10MB (Simulasi).</FormDescription><FormMessage /></FormItem>)} />)}
               {materiAjarForm.watch("jenisMateri") === "Link" && (<FormField control={materiAjarForm.control} name="externalUrl" render={({ field }) => (<FormItem><FormLabel>URL Materi</FormLabel><FormControl><Input placeholder="https://contoh.com/materi" {...field} /></FormControl><FormDescription>URL lengkap sumber materi.</FormDescription><FormMessage /></FormItem>)} />)}
               <DialogFooter><Button type="button" variant="outline" onClick={() => { setIsMateriFormOpen(false); setCurrentEditingMateri(null); }} disabled={isMateriSubmitting}>Batal</Button><Button type="submit" disabled={isMateriSubmitting}>{isMateriSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{currentEditingMateri ? "Simpan Perubahan" : "Simpan Materi"}</Button></DialogFooter>

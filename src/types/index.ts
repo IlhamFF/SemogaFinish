@@ -1,5 +1,8 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
+// KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR moved to constants.ts
+import { KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR } from "@/lib/constants";
+
 export type Role = 'admin' | 'guru' | 'siswa' | 'pimpinan' | 'superadmin';
 
 export interface User {
@@ -18,11 +21,11 @@ export interface User {
   nis?: string | null; 
   nip?: string | null; 
   joinDate?: string | null; 
-  kelas?: string | null; // Untuk siswa, ID kelas atau nama kelas. Di session akan jadi kelasId
-  mataPelajaran?: string | null; // Untuk guru, bisa string nama mapel atau array jika > 1
+  kelas?: string | null; 
+  mataPelajaran?: string | null; 
 }
 
-export interface NavItem {
+export interface NavItem { // This might be used internally by AppSidebarContent
   href: string;
   label: string;
   icon: React.ElementType;
@@ -30,8 +33,7 @@ export interface NavItem {
   subItems?: NavItem[];
 }
 
-export const KATEGORI_SKL = ["Sikap", "Pengetahuan", "Keterampilan"] as const;
-export type KategoriSklType = typeof KATEGORI_SKL[number];
+export type KategoriSklType = typeof KATEGORI_SKL_CONST[number];
 
 export interface SKL {
   id: string;
@@ -42,8 +44,7 @@ export interface SKL {
   updatedAt?: Date | string;
 }
 
-export const FASE_CP = ["A", "B", "C", "D", "E", "F", "Lainnya"] as const;
-export type FaseCpType = typeof FASE_CP[number];
+export type FaseCpType = typeof FASE_CP_CONST[number];
 
 export interface CapaianPembelajaran {
   id: string;
@@ -138,7 +139,6 @@ export interface MataPelajaran {
   updatedAt?: Date | string;
 }
 
-export const JENIS_MATERI_AJAR = ["File", "Link"] as const;
 export type JenisMateriAjarType = typeof JENIS_MATERI_AJAR[number];
 
 export interface MateriAjar {
@@ -156,4 +156,5 @@ export interface MateriAjar {
   updatedAt?: Date | string;
 }
 
-    
+// Re-exporting from constants.ts for convenience if some files were importing them from types/index.ts
+export { KATEGORI_SKL_CONST as KATEGORI_SKL, FASE_CP_CONST as FASE_CP };

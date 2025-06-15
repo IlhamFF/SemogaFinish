@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth"; 
-import { APP_NAME, USER_NAV_ITEMS, ROLES, ROUTES } from "@/lib/constants";
+import { APP_NAME, ROLES, ROUTES } from "@/lib/constants"; // ROUTES from constants
+import { USER_NAV_ITEMS } from "@/lib/navigation"; // USER_NAV_ITEMS from navigation
 import { ChevronDown, LogOut, UserCircle, Settings } from "lucide-react";
 import Link from "next/link";
 
@@ -48,7 +49,6 @@ export function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative flex items-center gap-2 p-2 h-auto rounded-full focus-visible:ring-primary">
                 <Avatar className="h-8 w-8">
-                  {/* Ensure user.avatarUrl (mapped from session.user.image) is used */}
                   <AvatarImage src={user.avatarUrl || `https://placehold.co/40x40.png?text=${getInitials(user.fullName || user.name, user.email)}`} alt={user.fullName || user.name || user.email || "User"} data-ai-hint="user avatar" />
                   <AvatarFallback>{getInitials(user.fullName || user.name, user.email)}</AvatarFallback>
                 </Avatar>
@@ -91,5 +91,3 @@ export function AppHeader() {
     </header>
   );
 }
-
-    

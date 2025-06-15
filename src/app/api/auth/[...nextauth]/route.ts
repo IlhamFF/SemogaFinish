@@ -7,6 +7,7 @@ import { dataSourceOptions, getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import bcrypt from "bcryptjs";
 import type { Role } from "@/types";
+import { ROUTES } from "@/lib/constants"; // Ensure ROUTES is imported
 
 declare module "next-auth" {
   interface Session {
@@ -15,22 +16,22 @@ declare module "next-auth" {
       role: Role;
       isVerified: boolean;
       fullName?: string | null;
-      name?: string | null; // Already part of NextAuthUser if available
-      email?: string | null; // Already part of NextAuthUser
-      image?: string | null; // Already part of NextAuthUser (maps to avatarUrl in our case)
+      name?: string | null; 
+      email?: string | null; 
+      image?: string | null; 
       phone?: string | null;
       address?: string | null;
-      birthDate?: string | null; // Store as string for session
+      birthDate?: string | null; 
       bio?: string | null;
       nis?: string | null;
       nip?: string | null;
-      joinDate?: string | null; // Store as string
+      joinDate?: string | null; 
       kelasId?: string | null; 
       mataPelajaran?: string[] | null; 
     };
   }
 
-  interface User extends NextAuthUser { // This interface is used by the authorize callback and adapter
+  interface User extends NextAuthUser { 
     role: Role;
     isVerified: boolean;
     fullName?: string | null;
@@ -52,9 +53,9 @@ declare module "next-auth/jwt" {
     id: string;
     role: Role;
     isVerified: boolean;
-    name?: string | null; // from NextAuthUser
-    email?: string | null; // from NextAuthUser
-    picture?: string | null; // from NextAuthUser, maps to user.image
+    name?: string | null; 
+    email?: string | null; 
+    picture?: string | null; 
     fullName?: string | null;
     phone?: string | null;
     address?: string | null;
@@ -97,12 +98,11 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
         
-        // Return all fields needed for the JWT and Session objects
         return {
           id: user.id,
           email: user.email,
           name: user.name, 
-          image: user.image, // This will be user.avatarUrl from your form/db
+          image: user.image, 
           role: user.role,
           isVerified: user.isVerified,
           fullName: user.fullName,
@@ -124,12 +124,12 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, trigger, session: newSessionData }) { 
-      if (user) { // user object is available on sign-in
+      if (user) { 
         token.id = user.id;
         token.role = user.role;
         token.isVerified = user.isVerified;
         token.name = user.name; 
-        token.picture = user.image; // maps to image from authorize, which should be avatarUrl
+        token.picture = user.image; 
         token.email = user.email;
         token.fullName = user.fullName;
         token.phone = user.phone;
@@ -142,27 +142,24 @@ export const authOptions: NextAuthOptions = {
         token.kelasId = user.kelasId;
         token.mataPelajaran = user.mataPelajaran;
       }
-      // Handle session updates, e.g., after profile update
       if (trigger === "update" && newSessionData?.user) {
-        const updatedUserFields = newSessionData.user as Partial<User>; // Cast to your extended User type
+        const updatedUserFields = newSessionData.user as Partial<User>; 
         token.name = updatedUserFields.name ?? token.name;
-        token.picture = updatedUserFields.image ?? token.picture; // image for avatar
+        token.picture = updatedUserFields.image ?? token.picture; 
         token.fullName = updatedUserFields.fullName ?? token.fullName;
         token.phone = updatedUserFields.phone ?? token.phone;
         token.address = updatedUserFields.address ?? token.address;
         token.birthDate = updatedUserFields.birthDate ?? token.birthDate;
         token.bio = updatedUserFields.bio ?? token.bio;
-        // Role and isVerified are typically not updated this way, handle via specific admin APIs
       }
       return token;
     },
     async session({ session, token }) {
-      // Transfer properties from JWT token to session object
       session.user.id = token.id;
       session.user.role = token.role;
       session.user.isVerified = token.isVerified;
       session.user.name = token.name; 
-      session.user.image = token.picture; // `image` in session, from `picture` in token
+      session.user.image = token.picture; 
       session.user.email = token.email;
       session.user.fullName = token.fullName;
       session.user.phone = token.phone;
@@ -178,11 +175,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: {
-    signIn: ROUTES.LOGIN, // Use constant for maintainability
-    // signOut: '/auth/signout',
-    // error: '/auth/error', // Error code passed in query string as ?error=
-    // verifyRequest: '/auth/verify-request', // (Email provider) Used for check email page
-    // newUser: null // If set, new users will be directed here on first sign in
+    signIn: ROUTES.LOGIN, 
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
@@ -190,5 +183,3 @@ export const authOptions: NextAuthOptions = {
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
-
-    

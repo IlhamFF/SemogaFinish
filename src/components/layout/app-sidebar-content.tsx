@@ -8,8 +8,9 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { useAuth } from "@/hooks/use-auth"; // useAuth now wraps useSession
-import { NAV_LINKS_CONFIG, APP_NAME } from "@/lib/constants";
+import { useAuth } from "@/hooks/use-auth"; 
+import { APP_NAME } from "@/lib/constants"; // APP_NAME from constants
+import { NAV_LINKS_CONFIG } from "@/lib/navigation"; // NAV_LINKS_CONFIG from navigation
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpenText, LogOut } from "lucide-react";
@@ -19,16 +20,15 @@ import { sidebarMenuButtonVariants } from "@/components/ui/sidebar";
 
 
 export function AppSidebarContent() {
-  const { user, logout } = useAuth(); // user from useSession, logout calls signOut
+  const { user, logout } = useAuth(); 
   const pathname = usePathname();
 
-  if (!user) return null; // Or some loading state if preferred, though AppLayout handles major loading
+  if (!user) return null; 
 
   const accessibleLinks = NAV_LINKS_CONFIG.filter(link => 
     link.roles.includes(user.role) || user.role === 'superadmin'
   );
 
-  // Deduplicate links based on href for display, roles are for access control
   const uniqueLinksByHref = [...new Map(accessibleLinks.map(item => [item.href, item])).values()];
   
   const displayLinks = user.role === 'superadmin' 
@@ -51,10 +51,9 @@ export function AppSidebarContent() {
             <SidebarMenuItem key={link.href} tooltipContent={link.label}>
               <Link
                 href={link.href}
-                // legacyBehavior={false} // Not needed as we are applying classes directly
                 className={cn(
                   sidebarMenuButtonVariants({ variant: "default", size: "default" }),
-                  "justify-start", // Ensure text aligns left when expanded
+                  "justify-start", 
                   (pathname === link.href || (link.href !== "/" && pathname.startsWith(`${link.href}/`))) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                 )}
                 data-active={(pathname === link.href || (link.href !== "/" && pathname.startsWith(`${link.href}/`)))}
