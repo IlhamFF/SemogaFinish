@@ -1,0 +1,138 @@
+
+import "reflect-metadata"; // Ensure this is the very first import
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getInitializedDataSource } from "@/lib/data-source";
+import { MateriKategoriEntity } from "@/entities/materi-kategori.entity";
+import * as z from "zod";
+
+const kategoriUpdateSchema = z.object({
+  nama: z.string().min(3, { message: "Nama kategori minimal 3 karakter." }).max(255, { message: "Nama kategori maksimal 255 karakter." }).optional(),
+}).refine(data => Object.keys(data).length > 0, {
+  message: "Minimal satu field (nama) harus diisi untuk melakukan pembaruan.",
+});
+
+
+// GET /api/kurikulum/materi-kategori/[id] - Mendapatkan satu kategori materi
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
+
+  const { id } = params;
+  if (!id) {
+    return NextResponse.json({ message: "ID kategori tidak valid." }, { status: 400 });
+  }
+
+  try {
+    const dataSource = await getInitializedDataSource();
+    const kategoriRepo = dataSource.getRepository(MateriKategoriEntity);
+    const kategori = await kategoriRepo.findOneBy({ id });
+
+    if (!kategori) {
+      return NextResponse.json({ message: "Kategori materi tidak ditemukan." }, { status: 404 });
+    }
+    return NextResponse.json(kategori);
+  } catch (error) {
+    console.error("Error fetching kategori materi:", error);
+    return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
+  }
+}
+
+// PUT /api/kurikulum/materi-kategori/[id] - Memperbarui kategori materi
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
+
+  const { id } = params;
+  if (!id) {
+    return NextResponse.json({ message: "ID kategori tidak valid." }, { status: 400 });
+  }
+
+  try {
+    const body = await request.json();
+    const validation = kategoriUpdateSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
+    }
+    
+    const updateData: Partial<MateriKategoriEntity> = {};
+    if (validation.data.nama !== undefined) {
+      updateData.nama = validation.data.nama;
+    }
+    
+    if (Object.keys(updateData).length === 0) { // Seharusnya sudah ditangani refine, tapi sebagai fallback
+      return NextResponse.json({ message: "Tidak ada data untuk diperbarui." }, { status: 400 });
+    }
+    
+    const dataSource = await getInitializedDataSource();
+    const kategoriRepo = dataSource.getRepository(MateriKategoriEntity);
+
+    // Cek jika nama baru sudah ada (dan bukan kategori yang sama)
+    if (updateData.nama) {
+        const existingKategori = await kategoriRepo.findOne({ where: { nama: updateData.nama }});
+        if (existingKategori && existingKategori.id !== id) {
+            return NextResponse.json({ message: "Nama kategori sudah ada." }, { status: 409 });
+        }
+    }
+
+    const updateResult = await kategoriRepo.update(id, updateData);
+
+    if (updateResult.affected === 0) {
+      return NextResponse.json({ message: "Kategori materi tidak ditemukan untuk diperbarui." }, { status: 404 });
+    }
+
+    const updatedKategori = await kategoriRepo.findOneBy({ id });
+    return NextResponse.json(updatedKategori);
+
+  } catch (error: any) {
+    console.error("Error updating kategori materi:", error);
+     if (error.code === '23505') { // Kode error PostgreSQL untuk unique violation
+        return NextResponse.json({ message: "Nama kategori sudah ada (dari DB)." }, { status: 409 });
+    }
+    return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
+  }
+}
+
+// DELETE /api/kurikulum/materi-kategori/[id] - Menghapus kategori materi
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
+
+  const { id } = params;
+  if (!id) {
+    return NextResponse.json({ message: "ID kategori tidak valid." }, { status: 400 });
+  }
+
+  try {
+    const dataSource = await getInitializedDataSource();
+    const kategoriRepo = dataSource.getRepository(MateriKategoriEntity);
+    const deleteResult = await kategoriRepo.delete(id);
+
+    if (deleteResult.affected === 0) {
+      return NextResponse.json({ message: "Kategori materi tidak ditemukan untuk dihapus." }, { status: 404 });
+    }
+    return NextResponse.json({ message: "Kategori materi berhasil dihapus." });
+  } catch (error) {
+    console.error("Error deleting kategori materi:", error);
+    // TODO: Handle error jika kategori masih terhubung ke entitas materi ajar
+    return NextResponse.json({ message: "Terjadi kesalahan internal server atau kategori terkait dengan data lain." }, { status: 500 });
+  }
+}
+    
