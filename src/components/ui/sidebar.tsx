@@ -226,6 +226,7 @@ const Sidebar = React.forwardRef<
         <div
           className={cn(
             "duration-200 relative h-svh w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
+            "group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
@@ -530,7 +531,7 @@ const SidebarMenuItem = React.forwardRef<
 });
 SidebarMenuItem.displayName = "SidebarMenuItem"
 
-const sidebarMenuButtonVariants = cva(
+export const sidebarMenuButtonVariants = cva(
   "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-[width,height,padding] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
   {
     variants: {
@@ -554,7 +555,7 @@ const sidebarMenuButtonVariants = cva(
 
 const SidebarMenuButton = React.forwardRef<
   HTMLAnchorElement,
-  Omit<React.ComponentPropsWithoutRef<"a">, "asChild"> & { // Ensure 'a' props, excluding asChild from direct type
+  Omit<React.ComponentPropsWithoutRef<"a">, "asChild"> & {
     isActive?: boolean;
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
@@ -564,25 +565,23 @@ const SidebarMenuButton = React.forwardRef<
       variant = "default",
       size = "default",
       className,
-      children, // These are the icon and span
-      ...props // This will receive `href` and potentially `asChild` from `Link`
+      children,
+      ...props
     },
     ref
   ) => {
-    // Explicitly destructure and ignore `asChild` if it's passed down from <Link asChild>.
-    // We want SidebarMenuButton to always render an 'a' tag itself here.
-    const { asChild: _forwardedAsChild, ...anchorSpecificProps } = props as React.ComponentPropsWithoutRef<"a"> & { asChild?: boolean };
+    const { asChild: _forwardedAsChildIgnored, ...anchorSpecificProps } = props as (React.ComponentPropsWithoutRef<"a"> & { asChild?: boolean });
 
     return (
-      <a // Always render an 'a' tag.
+      <a
         ref={ref}
         data-sidebar="menu-button"
         data-size={size}
         data-active={isActive}
-        className={cn(sidebarMenuButtonVariants({ variant, size, className }))} // Apply variants and className
-        {...anchorSpecificProps} // Spread the href, onClick etc. from Link, but not asChild
+        className={cn(sidebarMenuButtonVariants({ variant, size, className }))}
+        {...anchorSpecificProps}
       >
-        {children} {/* Render the icon and span inside the <a> tag */}
+        {children}
       </a>
     );
   }
@@ -746,6 +745,7 @@ export {
   SidebarMenuAction,
   SidebarMenuBadge,
   SidebarMenuButton,
+  sidebarMenuButtonVariants, // Export variants
   SidebarMenuItem,
   SidebarMenuSkeleton,
   SidebarMenuSub,

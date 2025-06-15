@@ -6,15 +6,18 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
-  SidebarMenuButton,
+  // SidebarMenuButton, // No longer directly using SidebarMenuButton here
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
-import { NAV_LINKS_CONFIG, APP_NAME, ROUTES, ROLES } from "@/lib/constants";
+import { NAV_LINKS_CONFIG, APP_NAME } from "@/lib/constants";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpenText, LogOut } from "lucide-react";
 import { Button } from "../ui/button";
+import { cn } from "@/lib/utils";
+import { sidebarMenuButtonVariants } from "@/components/ui/sidebar"; // Import variants
+
 
 export function AppSidebarContent() {
   const { user, logout } = useAuth();
@@ -55,14 +58,19 @@ export function AppSidebarContent() {
         <SidebarMenu>
           {displayLinks.map((link) => (
             <SidebarMenuItem key={link.href} tooltipContent={link.label}>
-              <Link href={link.href} asChild legacyBehavior={false}>
-                <SidebarMenuButton
-                  isActive={pathname === link.href || pathname.startsWith(`${link.href}/`)}
-                  className="justify-start"
-                >
-                  <link.icon className="h-5 w-5" />
-                  <span className="group-data-[collapsible=icon]:hidden">{link.label}</span>
-                </SidebarMenuButton>
+              <Link
+                href={link.href}
+                legacyBehavior={false} // Important for Next.js 13+ App Router and styling
+                className={cn(
+                  sidebarMenuButtonVariants({ variant: "default", size: "default", className: "justify-start" }),
+                  (pathname === link.href || pathname.startsWith(`${link.href}/`)) && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                )}
+                data-sidebar="menu-button" 
+                data-size="default"
+                data-active={pathname === link.href || pathname.startsWith(`${link.href}/`)}
+              >
+                <link.icon className="h-5 w-5" />
+                <span className="group-data-[collapsible=icon]:hidden">{link.label}</span>
               </Link>
             </SidebarMenuItem>
           ))}
