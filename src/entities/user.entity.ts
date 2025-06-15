@@ -1,6 +1,6 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
-import type { AdapterUser } from "@auth/core/adapters";
+// import type { AdapterUser } from "@auth/core/adapters"; // Removed
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
 import type { Role } from "@/types";
 import type { AccountEntity } from "./account.entity";
@@ -8,7 +8,7 @@ import type { SessionEntity } from "./session.entity";
 import type { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
 
 @Entity({ name: "users" })
-export class UserEntity implements AdapterUser {
+export class UserEntity /* implements AdapterUser */ { // Removed implements
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
@@ -73,13 +73,13 @@ export class UserEntity implements AdapterUser {
   @Column({ type: "timestamp with time zone", nullable: true })
   resetPasswordExpires?: Date | null;
   
-  @OneToMany("AccountEntity", (account) => account.user)
+  @OneToMany("AccountEntity", account => account.user)
   accounts?: AccountEntity[];
 
-  @OneToMany("SessionEntity", (session) => session.user)
+  @OneToMany("SessionEntity", session => session.user)
   sessions?: SessionEntity[];
 
-  @OneToMany("StrukturKurikulumEntity", (ske) => ske.guruPengampu)
+  @OneToMany("StrukturKurikulumEntity", ske => ske.guruPengampu)
   strukturKurikulumDiajar?: StrukturKurikulumEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
