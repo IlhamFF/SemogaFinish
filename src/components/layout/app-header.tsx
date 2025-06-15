@@ -12,19 +12,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { useAuth } from "@/hooks/use-auth"; // useAuth now wraps useSession
+import { useAuth } from "@/hooks/use-auth"; 
 import { APP_NAME, USER_NAV_ITEMS, ROLES, ROUTES } from "@/lib/constants";
 import { ChevronDown, LogOut, UserCircle, Settings } from "lucide-react";
 import Link from "next/link";
 
 export function AppHeader() {
-  const { user, logout } = useAuth(); // user from useSession, logout calls signOut
+  const { user, logout } = useAuth(); 
   const { isMobile } = useSidebar();
 
   const getInitials = (name?: string | null, email?: string | null) => {
     if (name) {
       const parts = name.split(' ');
-      if (parts.length > 1) {
+      if (parts.length > 1 && parts[0] && parts[parts.length-1]) {
         return `${parts[0][0]}${parts[parts.length-1][0]}`.toUpperCase();
       }
       return name.substring(0,2).toUpperCase();
@@ -48,6 +48,7 @@ export function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative flex items-center gap-2 p-2 h-auto rounded-full focus-visible:ring-primary">
                 <Avatar className="h-8 w-8">
+                  {/* Ensure user.avatarUrl (mapped from session.user.image) is used */}
                   <AvatarImage src={user.avatarUrl || `https://placehold.co/40x40.png?text=${getInitials(user.fullName || user.name, user.email)}`} alt={user.fullName || user.name || user.email || "User"} data-ai-hint="user avatar" />
                   <AvatarFallback>{getInitials(user.fullName || user.name, user.email)}</AvatarFallback>
                 </Avatar>
@@ -72,7 +73,6 @@ export function AppHeader() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {/* USER_NAV_ITEMS could be filtered by role here if needed */}
               <DropdownMenuItem asChild className="cursor-pointer">
                   <Link href={ROUTES.SETTINGS} className="flex items-center w-full">
                     <Settings className="mr-2 h-4 w-4" />
@@ -91,3 +91,5 @@ export function AppHeader() {
     </header>
   );
 }
+
+    

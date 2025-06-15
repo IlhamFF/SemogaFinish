@@ -3,7 +3,7 @@ import "reflect-metadata"; // Ensure this is the very first import
 import NextAuth, { type NextAuthOptions, type User as NextAuthUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { TypeORMAdapter } from "@auth/typeorm-adapter";
-import { dataSourceOptions, getInitializedDataSource } from "@/lib/data-source"; // Corrected import
+import { dataSourceOptions, getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import bcrypt from "bcryptjs";
 import type { Role } from "@/types";
@@ -15,26 +15,26 @@ declare module "next-auth" {
       role: Role;
       isVerified: boolean;
       fullName?: string | null;
-      // name and email are already part of NextAuthUser
-      // Add other custom fields that you want in the session.user object
+      name?: string | null; // Already part of NextAuthUser if available
+      email?: string | null; // Already part of NextAuthUser
+      image?: string | null; // Already part of NextAuthUser (maps to avatarUrl in our case)
       phone?: string | null;
       address?: string | null;
-      birthDate?: string | null; // Store as string for session if needed
+      birthDate?: string | null; // Store as string for session
       bio?: string | null;
       nis?: string | null;
       nip?: string | null;
       joinDate?: string | null; // Store as string
       kelasId?: string | null; 
       mataPelajaran?: string[] | null; 
-    } & NextAuthUser; 
+    };
   }
 
-  interface User extends NextAuthUser {
+  interface User extends NextAuthUser { // This interface is used by the authorize callback and adapter
     role: Role;
     isVerified: boolean;
     fullName?: string | null;
     passwordHash?: string | null; 
-    // Add fields from UserEntity that authorize and jwt callbacks might need
     phone?: string | null;
     address?: string | null;
     birthDate?: string | null;
@@ -52,10 +52,10 @@ declare module "next-auth/jwt" {
     id: string;
     role: Role;
     isVerified: boolean;
-    picture?: string | null; 
-    name?: string | null;
+    name?: string | null; // from NextAuthUser
+    email?: string | null; // from NextAuthUser
+    picture?: string | null; // from NextAuthUser, maps to user.image
     fullName?: string | null;
-    // Add other custom fields from UserEntity that you want in the JWT
     phone?: string | null;
     address?: string | null;
     birthDate?: string | null;
@@ -69,7 +69,7 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: TypeORMAdapter(dataSourceOptions), // Use dataSourceOptions here
+  adapter: TypeORMAdapter(dataSourceOptions),
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -79,40 +79,30 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials, req) {
         if (!credentials?.email || !credentials.password) {
-          console.log("Authorize: Missing credentials");
           return null;
         }
         
-        const dataSource = await getInitializedDataSource(); // This is correct for authorize
+        const dataSource = await getInitializedDataSource();
         const userRepo = dataSource.getRepository(UserEntity);
         
-        console.log("Authorize: Attempting to find user by email:", credentials.email);
         const user = await userRepo.findOne({ where: { email: credentials.email } });
 
-        if (!user) {
-          console.log("Authorize: No user found with email:", credentials.email);
+        if (!user || !user.passwordHash) {
           return null;
         }
-
-        if (!user.passwordHash) {
-          console.log("Authorize: User found but has no passwordHash:", user.email);
-          return null; 
-        }
         
-        console.log("Authorize: User found, comparing password for:", user.email);
         const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
 
         if (!isValidPassword) {
-          console.log("Authorize: Invalid password for user:", user.email);
           return null;
         }
         
-        console.log("Authorize: Credentials valid for user:", user.email);
+        // Return all fields needed for the JWT and Session objects
         return {
           id: user.id,
           email: user.email,
           name: user.name, 
-          image: user.image,
+          image: user.image, // This will be user.avatarUrl from your form/db
           role: user.role,
           isVerified: user.isVerified,
           fullName: user.fullName,
@@ -134,12 +124,13 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, trigger, session: newSessionData }) { 
-      if (user) { 
+      if (user) { // user object is available on sign-in
         token.id = user.id;
         token.role = user.role;
         token.isVerified = user.isVerified;
         token.name = user.name; 
-        token.picture = user.image;
+        token.picture = user.image; // maps to image from authorize, which should be avatarUrl
+        token.email = user.email;
         token.fullName = user.fullName;
         token.phone = user.phone;
         token.address = user.address;
@@ -151,41 +142,47 @@ export const authOptions: NextAuthOptions = {
         token.kelasId = user.kelasId;
         token.mataPelajaran = user.mataPelajaran;
       }
+      // Handle session updates, e.g., after profile update
       if (trigger === "update" && newSessionData?.user) {
-        const updatedUser = newSessionData.user as User; 
-        token.name = updatedUser.name; 
-        token.picture = updatedUser.image;
-        token.fullName = updatedUser.fullName;
-        token.phone = updatedUser.phone;
-        token.address = updatedUser.address;
-        token.birthDate = updatedUser.birthDate;
-        token.bio = updatedUser.bio;
+        const updatedUserFields = newSessionData.user as Partial<User>; // Cast to your extended User type
+        token.name = updatedUserFields.name ?? token.name;
+        token.picture = updatedUserFields.image ?? token.picture; // image for avatar
+        token.fullName = updatedUserFields.fullName ?? token.fullName;
+        token.phone = updatedUserFields.phone ?? token.phone;
+        token.address = updatedUserFields.address ?? token.address;
+        token.birthDate = updatedUserFields.birthDate ?? token.birthDate;
+        token.bio = updatedUserFields.bio ?? token.bio;
+        // Role and isVerified are typically not updated this way, handle via specific admin APIs
       }
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-        session.user.isVerified = token.isVerified;
-        session.user.name = token.name; 
-        session.user.image = token.picture;
-        session.user.fullName = token.fullName;
-        session.user.phone = token.phone;
-        session.user.address = token.address;
-        session.user.birthDate = token.birthDate;
-        session.user.bio = token.bio;
-        session.user.nis = token.nis;
-        session.user.nip = token.nip;
-        session.user.joinDate = token.joinDate;
-        session.user.kelasId = token.kelasId;
-        session.user.mataPelajaran = token.mataPelajaran;
-      }
+      // Transfer properties from JWT token to session object
+      session.user.id = token.id;
+      session.user.role = token.role;
+      session.user.isVerified = token.isVerified;
+      session.user.name = token.name; 
+      session.user.image = token.picture; // `image` in session, from `picture` in token
+      session.user.email = token.email;
+      session.user.fullName = token.fullName;
+      session.user.phone = token.phone;
+      session.user.address = token.address;
+      session.user.birthDate = token.birthDate;
+      session.user.bio = token.bio;
+      session.user.nis = token.nis;
+      session.user.nip = token.nip;
+      session.user.joinDate = token.joinDate;
+      session.user.kelasId = token.kelasId;
+      session.user.mataPelajaran = token.mataPelajaran;
       return session;
     },
   },
   pages: {
-    signIn: "/login",
+    signIn: ROUTES.LOGIN, // Use constant for maintainability
+    // signOut: '/auth/signout',
+    // error: '/auth/error', // Error code passed in query string as ?error=
+    // verifyRequest: '/auth/verify-request', // (Email provider) Used for check email page
+    // newUser: null // If set, new users will be directed here on first sign in
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
@@ -193,3 +190,5 @@ export const authOptions: NextAuthOptions = {
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
+
+    

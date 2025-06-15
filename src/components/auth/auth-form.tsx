@@ -25,8 +25,8 @@ type AuthFormProps = {
 };
 
 export function AuthForm({ mode }: AuthFormProps) {
-  const { login, register, isLoading } = useAuth();
-  const [formError, setFormError] = React.useState<string | null>(null); // Kept for additional client-side error display if needed
+  const { login, register, isLoading: authIsLoading } = useAuth(); // Renamed isLoading to authIsLoading
+  const [isSubmitting, setIsSubmitting] = React.useState(false); // Local submitting state for the form
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -37,23 +37,13 @@ export function AuthForm({ mode }: AuthFormProps) {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setFormError(null);
-    let success = false;
+    setIsSubmitting(true);
     if (mode === "login") {
-      success = await login(values.email, values.password);
-      // Error handling is now more reliant on toasts from useAuth/signIn
+      await login(values.email, values.password);
     } else {
-      success = await register(values.email, values.password);
-      // Error handling for registration is now more reliant on toasts from useAuth/fetch
+      await register(values.email, values.password);
     }
-    // No need to setFormError here if toasts cover it, but can be kept for specific non-toast errors
-    if (!success && mode === "login") {
-      // This might be redundant if signIn error handling is sufficient
-      // setFormError("Kredensial tidak valid atau pengguna belum diverifikasi.");
-    } else if (!success && mode === "register") {
-      // This might be redundant
-      // setFormError("Pendaftaran gagal. Email mungkin sudah digunakan.");
-    }
+    setIsSubmitting(false);
   }
 
   return (
@@ -94,10 +84,8 @@ export function AuthForm({ mode }: AuthFormProps) {
                   </FormItem>
                 )}
               />
-              {/* formError state can be used for errors not covered by toasts if needed */}
-              {/* {formError && <p className="text-sm font-medium text-destructive">{formError}</p>} */}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={isSubmitting || authIsLoading}>
+                {(isSubmitting || authIsLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {mode === "login" ? "Masuk" : "Buat Akun"}
               </Button>
             </form>
@@ -128,3 +116,5 @@ export function AuthForm({ mode }: AuthFormProps) {
     </div>
   );
 }
+
+    

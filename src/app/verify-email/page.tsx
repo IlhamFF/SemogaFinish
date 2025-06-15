@@ -16,10 +16,8 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
-        // No user session, redirect to login
         router.replace(ROUTES.LOGIN);
       } else if (user.isVerified) {
-        // User is already verified, redirect to their dashboard
         switch (user.role) {
           case 'admin': router.replace(ROUTES.ADMIN_DASHBOARD); break;
           case 'guru': router.replace(ROUTES.GURU_DASHBOARD); break;
@@ -29,17 +27,19 @@ export default function VerifyEmailPage() {
           default: router.replace(ROUTES.HOME);
         }
       }
-      // If user exists but is not verified, they stay on this page.
     }
   }, [user, isLoading, router]);
 
-  const handleVerify = () => {
-    if (user) {
-      // For the mock, this directly calls the verifyUserEmail in useAuth
-      // In a real app, this might resend a verification email or check a token
-      verifyUserEmail(user.id); 
-      // The verifyUserEmail in useAuth (mock) will now update the session
-      // and the useEffect above will handle redirection.
+  const handleVerify = async () => {
+    if (user && !user.isVerified) {
+      // The verifyUserEmail function in useAuth now just provides a message for demo.
+      // Real verification would involve a backend call if it's a token-based system.
+      // For admin-initiated verification, it's done through the admin panel.
+      // For self-verification simulation:
+      await verifyUserEmail(user.id); 
+      // Since verifyUserEmail in the new useAuth doesn't auto-redirect based on session updates for self-verification,
+      // we might need to manually prompt or re-check session status.
+      // For demo, let's assume it tells user to re-login or refreshes.
     }
   };
 
@@ -51,8 +51,8 @@ export default function VerifyEmailPage() {
     );
   }
   
-  if (!user || user.isVerified) {
-    // If no user (redirecting) or already verified (redirecting), show loader or null
+  // Redirecting or already verified
+  if (!user || (user && user.isVerified)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -60,7 +60,6 @@ export default function VerifyEmailPage() {
     );
   }
   
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-xl">
@@ -75,12 +74,19 @@ export default function VerifyEmailPage() {
         </CardHeader>
         <CardContent className="space-y-6 text-center">
           <p>
-            Terima kasih telah mendaftar, {user.email}! Untuk sistem demo ini, akun Anda belum terverifikasi.
+            Terima kasih telah mendaftar, {user.email}! Akun Anda belum terverifikasi.
           </p>
-          <p>Silakan klik tombol di bawah untuk mensimulasikan verifikasi email.</p>
+          <p>
+            Untuk sistem demo ini, verifikasi email akan disimulasikan.
+            Di aplikasi nyata, Anda akan menerima email dengan tautan verifikasi.
+            Setelah diverifikasi oleh Admin atau melalui tautan email, status Anda akan diperbarui.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            (Tombol di bawah ini hanya untuk tujuan demonstrasi dan tidak melakukan verifikasi email sesungguhnya di backend tanpa token. Verifikasi aktual dilakukan oleh admin atau melalui link email yang valid.)
+          </p>
           
           <Button onClick={handleVerify} className="w-full" disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Verifikasi Email Saya (Simulasi)"}
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Simulasikan Cek Verifikasi"}
           </Button>
           <Button variant="link" onClick={logout} className="text-sm text-muted-foreground">
             Keluar
@@ -90,3 +96,5 @@ export default function VerifyEmailPage() {
     </div>
   );
 }
+
+    

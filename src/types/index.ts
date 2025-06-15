@@ -5,22 +5,21 @@ export type Role = 'admin' | 'guru' | 'siswa' | 'pimpinan' | 'superadmin';
 export interface User {
   id: string;
   email: string;
-  name?: string; // Nama panggilan/pendek, bisa dari email
+  name?: string | null; 
   role: Role;
   isVerified: boolean;
-  avatarUrl?: string; // URL untuk avatar
+  avatarUrl?: string | null; 
 
-  // Detail profil tambahan
-  fullName?: string; // Nama lengkap
-  phone?: string;
-  address?: string;
-  birthDate?: string; // Simpan sebagai string "YYYY-MM-DD" untuk mock
-  bio?: string;
-  nis?: string; // Nomor Induk Siswa
-  nip?: string; // Nomor Induk Pegawai/Pengajar
-  joinDate?: string; // Tanggal bergabung, simpan sebagai string "YYYY-MM-DD"
-  kelas?: string; // Untuk siswa, ID kelas atau nama kelas
-  mataPelajaran?: string; // Untuk guru, bisa string nama mapel atau array jika > 1
+  fullName?: string | null; 
+  phone?: string | null;
+  address?: string | null;
+  birthDate?: string | null; 
+  bio?: string | null;
+  nis?: string | null; 
+  nip?: string | null; 
+  joinDate?: string | null; 
+  kelas?: string | null; // Untuk siswa, ID kelas atau nama kelas. Di session akan jadi kelasId
+  mataPelajaran?: string | null; // Untuk guru, bisa string nama mapel atau array jika > 1
 }
 
 export interface NavItem {
@@ -76,16 +75,15 @@ export interface SlotWaktu {
   updatedAt?: Date | string;
 }
 
-// Interface yang digunakan di frontend, mungkin perlu penyesuaian setelah API dibuat
 export interface StrukturKurikulumItem {
-  id: string; // ID dari StrukturKurikulumEntity
+  id: string; 
   tingkat: string;
   jurusan: string;
-  mapelId: string; // ID dari MataPelajaranEntity
-  namaMapel: string; // Denormalized or from related MataPelajaranEntity
+  mapelId: string; 
+  namaMapel: string; 
   alokasiJam: number;
-  guruPengampuId?: string | null; // ID dari UserEntity (guru)
-  guruPengampuNama?: string | null; // Denormalized or from related UserEntity
+  guruPengampuId?: string | null; 
+  guruPengampuNama?: string | null; 
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
@@ -147,13 +145,15 @@ export interface MateriAjar {
   id: string;
   judul: string;
   deskripsi?: string | null;
-  mapelNama: string; // Nama mata pelajaran
+  mapelNama: string; 
   jenisMateri: JenisMateriAjarType;
-  namaFileOriginal?: string | null; // Nama file asli saat diunggah
-  fileUrl?: string | null; // URL ke file yang disimpan atau link eksternal
+  namaFileOriginal?: string | null; 
+  fileUrl?: string | null; 
   tanggalUpload: string; // YYYY-MM-DD
-  uploaderId: string; // ID pengguna yang mengunggah
-  uploader?: Pick<User, 'id' | 'name' | 'fullName' | 'email'>; // Detail pengguna (opsional, untuk join) - Hanya field yang aman
+  uploaderId: string; 
+  uploader?: Pick<User, 'id' | 'name' | 'fullName' | 'email'>; 
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
+
+    

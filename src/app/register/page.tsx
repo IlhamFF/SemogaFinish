@@ -13,7 +13,6 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      // If user is already logged in, redirect them away from register page
       if (user.role === 'siswa' && !user.isVerified) {
         router.replace(ROUTES.VERIFY_EMAIL);
       } else {
@@ -39,3 +38,5 @@ export default function RegisterPage() {
 
   return <AuthForm mode="register" />;
 }
+
+    

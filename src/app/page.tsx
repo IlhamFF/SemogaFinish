@@ -23,20 +23,20 @@ export default function HomePage() {
             case 'siswa': router.replace(ROUTES.SISWA_DASHBOARD); break;
             case 'pimpinan': router.replace(ROUTES.PIMPINAN_DASHBOARD); break;
             case 'superadmin': router.replace(ROUTES.ADMIN_DASHBOARD); break;
-            default: router.replace(ROUTES.LOGIN); // Fallback, should ideally not happen if role is set
+            default: router.replace(ROUTES.LOGIN); 
           }
         }
       } else {
-        // No user, redirect to login
         router.replace(ROUTES.LOGIN);
       }
     }
   }, [user, isLoading, router]);
 
-  // Show loader while determining auth state and redirecting
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-background">
       <Loader2 className="h-16 w-16 animate-spin text-primary" />
     </div>
   );
 }
+
+    

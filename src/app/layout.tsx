@@ -1,12 +1,12 @@
 
-"use client"; // Make this a client component to use SessionProvider
+"use client"; 
 
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider as CustomAuthProvider } from "@/hooks/use-auth"; // Renamed for clarity
-import { SessionProvider } from "next-auth/react"; // Import SessionProvider
+import { AuthProvider as CustomAuthProvider } from "@/hooks/use-auth"; 
+import { SessionProvider } from "next-auth/react"; 
 import { APP_NAME } from '@/lib/constants';
-import type { Metadata } from 'next'; // Can still use Metadata type
+// import type { Metadata } from 'next'; // Metadata cannot be used in client components directly
 
 // export const metadata: Metadata = { // Metadata cannot be used in client components directly
 //   title: APP_NAME,
@@ -19,9 +19,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
+    <html lang="id" suppressHydrationWarning={true}> {/* Added suppressHydrationWarning */}
       <head>
-        {/* Metadata can be set here or in specific page components if needed */}
         <title>{APP_NAME}</title>
         <meta name="description" content="Sistem Manajemen Pendidikan Komprehensif untuk SMA Az-Bail" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -29,9 +28,9 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased" suppressHydrationWarning={true}>
-        <SessionProvider> {/* Wrap with NextAuth SessionProvider */}
-          <CustomAuthProvider> {/* Your existing AuthProvider for mock data/logic can remain if needed, or be phased out */}
+      <body className="font-body antialiased">
+        <SessionProvider> 
+          <CustomAuthProvider> 
             {children}
             <Toaster />
           </CustomAuthProvider>
@@ -40,3 +39,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    
