@@ -107,7 +107,7 @@ export default function AdminUsersPage() {
          });
         if (newUser) {
           setIsFormOpen(false);
-          form.reset(); // Reset form after successful creation
+          // form.reset(); // This would need to be handled inside UserForm or via a callback if needed
         }
       }
     } catch (error) {
@@ -165,7 +165,6 @@ export default function AdminUsersPage() {
     });
   }, [allUsers, activeTab, searchTerm, kelasFilter, mataPelajaranFilter]);
 
-  const { control, handleSubmit, reset, formState: { errors } } = UserForm({}).form; // Destructure form from UserForm
 
   if (authLoading && !allUsers.length) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
@@ -352,6 +351,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-
-
-    
