@@ -9,10 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import type { User, Role } from "@/types";
 import { ROLES } from "@/lib/constants";
-import { UserPlus, CheckCircle, ShieldAlert, Loader2, Search } from "lucide-react";
+import { UserPlus, CheckCircle, ShieldAlert, Loader2, Search, UploadCloud } from "lucide-react";
 import { UserForm } from "@/components/admin/user-form";
 import { UserTableActions } from "@/components/admin/user-table-actions";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +34,7 @@ export default function AdminUsersPage() {
   const { toast } = useToast();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isImportUserDialogOpen, setIsImportUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [pageLoading, setPageLoading] = useState(false);
   
@@ -40,6 +42,7 @@ export default function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [kelasFilter, setKelasFilter] = useState<string>("semua");
   const [mataPelajaranFilter, setMataPelajaranFilter] = useState<string>("semua");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handleCreateUser = () => {
     setEditingUser(null);
@@ -93,17 +96,18 @@ export default function AdminUsersPage() {
             fullName: data.fullName,
             phone: data.phone,
             address: data.address,
-            birthDate: data.birthDate as unknown as string, // Already formatted in UserForm
+            birthDate: data.birthDate as unknown as string, 
             bio: data.bio,
             nis: data.nis,
             nip: data.nip,
-            joinDate: data.joinDate as unknown as string, // Already formatted in UserForm
+            joinDate: data.joinDate as unknown as string, 
             avatarUrl: data.avatarUrl,
             kelas: data.kelas,
             mataPelajaran: data.mataPelajaran,
          });
         if (newUser) {
           setIsFormOpen(false);
+          form.reset(); // Reset form after successful creation
         }
       }
     } catch (error) {
@@ -112,15 +116,39 @@ export default function AdminUsersPage() {
       setPageLoading(false);
     }
   };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setSelectedFile(event.target.files[0]);
+    } else {
+      setSelectedFile(null);
+    }
+  };
+
+  const handleImportSubmit = () => {
+    if (!selectedFile) {
+      toast({ title: "Tidak Ada File", description: "Silakan pilih file untuk diimpor.", variant: "destructive" });
+      return;
+    }
+    // Simulate import process
+    setPageLoading(true);
+    setTimeout(() => {
+      setPageLoading(false);
+      toast({ title: "Simulasi Impor Berhasil", description: `File "${selectedFile.name}" telah (disimulasikan) diimpor. Pengguna baru akan ditambahkan.` });
+      setIsImportUserDialogOpen(false);
+      setSelectedFile(null); 
+      // Di aplikasi nyata, di sini Anda akan memproses file dan membuat pengguna
+    }, 1500);
+  };
   
   const uniqueKelas = useMemo(() => {
     const kls = new Set(allUsers.filter(u => u.role === 'siswa' && u.kelas).map(u => u.kelas!));
-    return ["semua", ...Array.from(kls)];
+    return ["semua", ...Array.from(kls).sort()];
   }, [allUsers]);
 
   const uniqueMataPelajaran = useMemo(() => {
     const mp = new Set(allUsers.filter(u => u.role === 'guru' && u.mataPelajaran).map(u => u.mataPelajaran!));
-    return ["semua", ...Array.from(mp)];
+    return ["semua", ...Array.from(mp).sort()];
   }, [allUsers]);
 
   const filteredUsers = useMemo(() => {
@@ -137,6 +165,8 @@ export default function AdminUsersPage() {
     });
   }, [allUsers, activeTab, searchTerm, kelasFilter, mataPelajaranFilter]);
 
+  const { control, handleSubmit, reset, formState: { errors } } = UserForm({}).form; // Destructure form from UserForm
+
   if (authLoading && !allUsers.length) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
@@ -152,9 +182,14 @@ export default function AdminUsersPage() {
           <h1 className="text-3xl font-headline font-semibold">Manajemen Pengguna</h1>
           <p className="text-muted-foreground">Lihat, buat, dan kelola akun pengguna di sistem.</p>
         </div>
-        <Button onClick={handleCreateUser} disabled={pageLoading}>
-          <UserPlus className="mr-2 h-4 w-4" /> Buat Pengguna
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsImportUserDialogOpen(true)} variant="outline" disabled={pageLoading}>
+            <UploadCloud className="mr-2 h-4 w-4" /> Impor Pengguna
+          </Button>
+          <Button onClick={handleCreateUser} disabled={pageLoading}>
+            <UserPlus className="mr-2 h-4 w-4" /> Buat Pengguna
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as UserRoleTab)}>
@@ -225,7 +260,7 @@ export default function AdminUsersPage() {
                     <TableHead>Email</TableHead>
                     <TableHead>Peran</TableHead>
                     {activeTab === 'siswa' && <TableHead>Kelas</TableHead>}
-                    {activeTab === 'guru' && <TableHead>Mata Pelajaran</TableHead>}
+                    {activeTab === 'guru' && <TableHead>Mapel</TableHead>}
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Tindakan</TableHead>
                     </TableRow>
@@ -284,6 +319,39 @@ export default function AdminUsersPage() {
         editingUser={editingUser}
         isLoading={pageLoading || authLoading}
       />
+
+      <Dialog open={isImportUserDialogOpen} onOpenChange={setIsImportUserDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Impor Pengguna Massal</DialogTitle>
+            <DialogDescription>
+              Unggah file CSV atau Excel untuk menambahkan beberapa pengguna sekaligus.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <Input 
+              type="file" 
+              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+              onChange={handleFileChange}
+              disabled={pageLoading}
+            />
+            {selectedFile && <p className="text-xs text-muted-foreground">File terpilih: {selectedFile.name}</p>}
+            <p className="text-xs text-muted-foreground">
+              Pastikan format file sesuai. <a href="/contoh_template_impor.csv" download className="text-primary hover:underline">Unduh contoh template CSV</a>.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImportUserDialogOpen(false)} disabled={pageLoading}>Batal</Button>
+            <Button onClick={handleImportSubmit} disabled={pageLoading || !selectedFile}>
+              {pageLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Impor dari File
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+
+    
