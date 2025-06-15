@@ -6,11 +6,15 @@ import { AccountEntity } from "@/entities/account.entity";
 import { SessionEntity } from "@/entities/session.entity";
 import { VerificationTokenEntity } from "@/entities/verification-token.entity";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
+import { SklEntity } from "@/entities/skl.entity";
+import { CpEntity } from "@/entities/cp.entity";
+import { MateriKategoriEntity } from "@/entities/materi-kategori.entity";
+
 
 // Import other application-specific entities here as they are created
 // e.g., import { KelasEntity } from "@/entities/kelas.entity";
 
-const dataSourceOptions: DataSourceOptions = {
+export const dataSourceOptions: DataSourceOptions = {
   type: "postgres",
   host: process.env.POSTGRES_HOST || "localhost",
   port: Number(process.env.POSTGRES_PORT) || 5432,
@@ -25,6 +29,9 @@ const dataSourceOptions: DataSourceOptions = {
     SessionEntity,
     VerificationTokenEntity,
     MataPelajaranEntity,
+    SklEntity,
+    CpEntity,
+    MateriKategoriEntity,
     // Add other entities here:
     // KelasEntity,
   ],
@@ -32,24 +39,25 @@ const dataSourceOptions: DataSourceOptions = {
   subscribers: [],
 };
 
-export const AppDataSource = new DataSource(dataSourceOptions);
+// export const AppDataSource = new DataSource(dataSourceOptions);
+let AppDataSource: DataSource;
 
-// Initialize DataSource
-// It's often better to initialize it once and export the initialized instance
-// or handle initialization carefully at the application's entry point.
-// For Next.js API routes, you might need to ensure it's initialized before use.
-
-let _isDataSourceInitialized = false; 
 
 export async function getInitializedDataSource(): Promise<DataSource> {
-  if (!AppDataSource.isInitialized && !_isDataSourceInitialized) { 
+  if (!AppDataSource || !AppDataSource.isInitialized) {
+    const newDataSource = new DataSource(dataSourceOptions);
     try {
-      await AppDataSource.initialize();
-      _isDataSourceInitialized = true; 
+      await newDataSource.initialize();
+      AppDataSource = newDataSource;
       console.log("DataSource has been initialized successfully.");
     } catch (err) {
       console.error("Error during DataSource initialization:", err);
-      throw err; // Re-throw error to handle it further up the call stack if needed
+      // Attempt to use existing AppDataSource if initialization fails but it was already initialized
+      if (AppDataSource && AppDataSource.isInitialized) {
+        console.warn("Using previously initialized AppDataSource despite new initialization attempt error.");
+        return AppDataSource;
+      }
+      throw err; 
     }
   }
   return AppDataSource;

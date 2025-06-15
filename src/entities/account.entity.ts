@@ -1,7 +1,7 @@
-
+import "reflect-metadata"; // Ensure this is the very first import
 import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn } from "typeorm";
 import type { AdapterAccount } from "@auth/core/adapters";
-import { UserEntity } from "./user.entity"; // Correctly import UserEntity
+import type { UserEntity } from "./user.entity";
 
 @Entity({ name: "accounts" })
 export class AccountEntity implements AdapterAccount {
@@ -42,7 +42,7 @@ export class AccountEntity implements AdapterAccount {
   session_state?: string | null;
 
   // Foreign key to UserEntity
-  @ManyToOne(() => UserEntity, (user) => user.accounts, {
+  @ManyToOne("UserEntity", user => user.accounts, {
     onDelete: "CASCADE", // If user is deleted, delete their accounts
   })
   @JoinColumn({ name: "userId" }) // Specify the foreign key column name

@@ -1,9 +1,9 @@
-
+import "reflect-metadata"; // Ensure this is the very first import
 import type { AdapterUser } from "@auth/core/adapters";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
 import type { Role } from "@/types";
-import { AccountEntity } from "./account.entity";
-import { SessionEntity } from "./session.entity"; // Added for completeness if needed for user relations
+import type { AccountEntity } from "./account.entity";
+import type { SessionEntity } from "./session.entity";
 
 @Entity({ name: "users" })
 export class UserEntity implements AdapterUser {
@@ -77,10 +77,9 @@ export class UserEntity implements AdapterUser {
   @UpdateDateColumn({ type: "timestamp with time zone" })
   updatedAt!: Date;
 
-  @OneToMany(() => AccountEntity, (account) => account.user)
+  @OneToMany("AccountEntity", account => account.user)
   accounts?: AccountEntity[];
 
-  @OneToMany(() => SessionEntity, (session) => session.user)
+  @OneToMany("SessionEntity", session => session.user)
   sessions?: SessionEntity[];
 }
-

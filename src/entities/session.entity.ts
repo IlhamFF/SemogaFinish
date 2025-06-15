@@ -1,7 +1,7 @@
-
+import "reflect-metadata"; // Ensure this is the very first import
 import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn, Index } from "typeorm";
 import type { AdapterSession } from "@auth/core/adapters";
-import { UserEntity } from "./user.entity";
+import type { UserEntity } from "./user.entity";
 
 @Entity({ name: "sessions" })
 export class SessionEntity implements AdapterSession {
@@ -17,7 +17,7 @@ export class SessionEntity implements AdapterSession {
   @Column({ type: "timestamp" })
   expires!: Date;
 
-  @ManyToOne(() => UserEntity, { onDelete: "CASCADE" })
+  @ManyToOne("UserEntity", user => user.sessions, { onDelete: "CASCADE" })
   @JoinColumn({ name: "userId" })
   user!: UserEntity;
 }

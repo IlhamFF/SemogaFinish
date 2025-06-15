@@ -3,7 +3,7 @@ import "reflect-metadata"; // Ensure this is the very first import
 import NextAuth, { type NextAuthOptions, type User as NextAuthUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { TypeORMAdapter } from "@auth/typeorm-adapter";
-import { AppDataSource, getInitializedDataSource } from "@/lib/data-source";
+import { dataSourceOptions, getInitializedDataSource } from "@/lib/data-source"; // Corrected import
 import { UserEntity } from "@/entities/user.entity";
 import bcrypt from "bcryptjs";
 import type { Role } from "@/types";
@@ -24,8 +24,8 @@ declare module "next-auth" {
       nis?: string | null;
       nip?: string | null;
       joinDate?: string | null; // Store as string
-      kelasId?: string | null; // Changed from `kelas` to match UserEntity for consistency
-      mataPelajaran?: string[] | null; // Changed from `mataPelajaran` (string) to match UserEntity
+      kelasId?: string | null; 
+      mataPelajaran?: string[] | null; 
     } & NextAuthUser; 
   }
 
@@ -69,7 +69,7 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: TypeORMAdapter(AppDataSource),
+  adapter: TypeORMAdapter(dataSourceOptions), // Use dataSourceOptions here
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -83,7 +83,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
         
-        const dataSource = await getInitializedDataSource();
+        const dataSource = await getInitializedDataSource(); // This is correct for authorize
         const userRepo = dataSource.getRepository(UserEntity);
         
         console.log("Authorize: Attempting to find user by email:", credentials.email);
@@ -108,8 +108,6 @@ export const authOptions: NextAuthOptions = {
         }
         
         console.log("Authorize: Credentials valid for user:", user.email);
-        // Return the user object that NextAuth expects, including custom fields
-        // This user object is passed to the jwt callback
         return {
           id: user.id,
           email: user.email,
@@ -136,7 +134,7 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, trigger, session: newSessionData }) { 
-      if (user) { // User object is available on initial sign in (from authorize)
+      if (user) { 
         token.id = user.id;
         token.role = user.role;
         token.isVerified = user.isVerified;
@@ -154,9 +152,7 @@ export const authOptions: NextAuthOptions = {
         token.mataPelajaran = user.mataPelajaran;
       }
       if (trigger === "update" && newSessionData?.user) {
-        // When session is updated (e.g. user profile update), reflect changes in token
-        // Ensure newSessionData.user is typed correctly if it comes from update()
-        const updatedUser = newSessionData.user as User; // Cast if necessary
+        const updatedUser = newSessionData.user as User; 
         token.name = updatedUser.name; 
         token.picture = updatedUser.image;
         token.fullName = updatedUser.fullName;
@@ -164,8 +160,6 @@ export const authOptions: NextAuthOptions = {
         token.address = updatedUser.address;
         token.birthDate = updatedUser.birthDate;
         token.bio = updatedUser.bio;
-        // Note: Role, isVerified, nis, nip, joinDate, kelasId, mataPelajaran are less likely to be updated via client-side session update.
-        // If they are, ensure they are included here.
       }
       return token;
     },
