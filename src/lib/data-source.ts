@@ -1,12 +1,14 @@
 
-import "reflect-metadata";
+import "reflect-metadata"; // Added this line at the very top
 import { DataSource, type DataSourceOptions } from "typeorm";
 import { UserEntity } from "@/entities/user.entity";
 import { AccountEntity } from "@/entities/account.entity";
 import { SessionEntity } from "@/entities/session.entity";
 import { VerificationTokenEntity } from "@/entities/verification-token.entity";
+import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
+
 // Import other application-specific entities here as they are created
-// e.g., import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
+// e.g., import { KelasEntity } from "@/entities/kelas.entity";
 
 const dataSourceOptions: DataSourceOptions = {
   type: "postgres",
@@ -22,8 +24,9 @@ const dataSourceOptions: DataSourceOptions = {
     AccountEntity,
     SessionEntity,
     VerificationTokenEntity,
+    MataPelajaranEntity,
     // Add other entities here:
-    // MataPelajaranEntity,
+    // KelasEntity,
   ],
   migrations: [], // Add path to migration files for production
   subscribers: [],
@@ -36,13 +39,13 @@ export const AppDataSource = new DataSource(dataSourceOptions);
 // or handle initialization carefully at the application's entry point.
 // For Next.js API routes, you might need to ensure it's initialized before use.
 
-let_isDataSourceInitialized = false;
+let _isDataSourceInitialized = false; // Corrected variable declaration
 
 export async function getInitializedDataSource(): Promise<DataSource> {
-  if (!AppDataSource.isInitialized && !_isDataSourceInitialized) {
+  if (!AppDataSource.isInitialized && !_isDataSourceInitialized) { // Now uses the corrected variable
     try {
       await AppDataSource.initialize();
-      _isDataSourceInitialized = true;
+      _isDataSourceInitialized = true; // Assigns to the corrected variable
       console.log("DataSource has been initialized successfully.");
     } catch (err) {
       console.error("Error during DataSource initialization:", err);

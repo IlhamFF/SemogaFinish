@@ -1,0 +1,130 @@
+
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getInitializedDataSource } from "@/lib/data-source";
+import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
+import * as z from "zod";
+import { KATEGORI_MAPEL } from "@/lib/constants";
+import type { KategoriMapelType } from "@/entities/mata-pelajaran.entity";
+
+const mataPelajaranUpdateSchema = z.object({
+  // Kode tidak boleh diubah setelah dibuat, jadi tidak ada di sini
+  nama: z.string().min(5, "Nama minimal 5 karakter.").max(255, "Nama maksimal 255 karakter.").optional(),
+  deskripsi: z.string().optional().nullable(),
+  kategori: z.enum(KATEGORI_MAPEL).optional(),
+});
+
+// GET /api/mapel/[id] - Mendapatkan satu mata pelajaran
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
+
+  const { id } = params;
+  if (!id) {
+    return NextResponse.json({ message: "ID mata pelajaran tidak valid." }, { status: 400 });
+  }
+
+  try {
+    const dataSource = await getInitializedDataSource();
+    const mapelRepo = dataSource.getRepository(MataPelajaranEntity);
+    const mapel = await mapelRepo.findOneBy({ id });
+
+    if (!mapel) {
+      return NextResponse.json({ message: "Mata pelajaran tidak ditemukan." }, { status: 404 });
+    }
+    return NextResponse.json(mapel);
+  } catch (error) {
+    console.error("Error fetching mata pelajaran:", error);
+    return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
+  }
+}
+
+// PUT /api/mapel/[id] - Memperbarui mata pelajaran
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
+
+  const { id } = params;
+  if (!id) {
+    return NextResponse.json({ message: "ID mata pelajaran tidak valid." }, { status: 400 });
+  }
+
+  try {
+    const body = await request.json();
+    const validation = mataPelajaranUpdateSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.formErrors.fieldErrors }, { status: 400 });
+    }
+    
+    // Kumpulkan data yang akan diupdate. Jangan sertakan 'kode'.
+    const { nama, deskripsi, kategori } = validation.data;
+    const updateData: Partial<MataPelajaranEntity> = {};
+    if (nama) updateData.nama = nama;
+    if (deskripsi !== undefined) updateData.deskripsi = deskripsi; // Allow null
+    if (kategori) updateData.kategori = kategori as KategoriMapelType;
+
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ message: "Tidak ada data untuk diperbarui." }, { status: 400 });
+    }
+
+    const dataSource = await getInitializedDataSource();
+    const mapelRepo = dataSource.getRepository(MataPelajaranEntity);
+
+    const updateResult = await mapelRepo.update(id, updateData);
+
+    if (updateResult.affected === 0) {
+      return NextResponse.json({ message: "Mata pelajaran tidak ditemukan untuk diperbarui." }, { status: 404 });
+    }
+
+    const updatedMapel = await mapelRepo.findOneBy({ id });
+    return NextResponse.json(updatedMapel);
+
+  } catch (error) {
+    console.error("Error updating mata pelajaran:", error);
+    return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
+  }
+}
+
+// DELETE /api/mapel/[id] - Menghapus mata pelajaran
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
+
+  const { id } = params;
+  if (!id) {
+    return NextResponse.json({ message: "ID mata pelajaran tidak valid." }, { status: 400 });
+  }
+
+  try {
+    const dataSource = await getInitializedDataSource();
+    const mapelRepo = dataSource.getRepository(MataPelajaranEntity);
+    const deleteResult = await mapelRepo.delete(id);
+
+    if (deleteResult.affected === 0) {
+      return NextResponse.json({ message: "Mata pelajaran tidak ditemukan untuk dihapus." }, { status: 404 });
+    }
+    return NextResponse.json({ message: "Mata pelajaran berhasil dihapus." }, { status: 200 }); // 200 OK atau 204 No Content
+  } catch (error) {
+    console.error("Error deleting mata pelajaran:", error);
+    // TODO: Handle error jika mapel masih terhubung ke entitas lain (foreign key constraint)
+    return NextResponse.json({ message: "Terjadi kesalahan internal server atau mapel terkait dengan data lain." }, { status: 500 });
+  }
+}

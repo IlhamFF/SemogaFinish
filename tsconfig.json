@@ -13,6 +13,8 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "emitDecoratorMetadata": true, // Added this line
+    "experimentalDecorators": true, // Often needed with emitDecoratorMetadata
     "plugins": [
       {
         "name": "next"

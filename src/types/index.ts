@@ -96,3 +96,15 @@ export interface MateriKategori {
   id: string;
   nama: string;
 }
+
+// Definisi untuk MataPelajaran yang bisa digunakan di frontend
+// Selaras dengan MataPelajaranEntity
+export interface MataPelajaran {
+  id: string;
+  kode: string;
+  nama: string;
+  deskripsi?: string | null;
+  kategori: "Wajib Umum" | "Wajib Peminatan IPA" | "Wajib Peminatan IPS" | "Pilihan Lintas Minat" | "Muatan Lokal";
+  createdAt?: Date | string; // string jika dari API, Date jika dari state langsung
+  updatedAt?: Date | string;
+}

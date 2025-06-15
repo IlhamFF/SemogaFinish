@@ -97,3 +97,10 @@ export const MOCK_SUBJECTS = [
   "Geografi", "Sosiologi", "Ekonomi", "Sejarah Peminatan" // IPS
 ];
 
+export const KATEGORI_MAPEL = [
+  "Wajib Umum",
+  "Wajib Peminatan IPA",
+  "Wajib Peminatan IPS",
+  "Pilihan Lintas Minat",
+  "Muatan Lokal",
+] as const; // `as const` makes it a tuple of string literals, good for enum-like usage
