@@ -59,3 +59,40 @@ export interface SlotWaktu {
   waktuMulai: string; // format HH:mm
   waktuSelesai: string; // format HH:mm
 }
+
+// Baru ditambahkan untuk Kurikulum
+export interface StrukturKurikulumItem {
+  id: string;
+  idMapel: string; // Merujuk ke ID mata pelajaran
+  namaMapel: string;
+  alokasiJam: number;
+  guruPengampu?: string; // Nama guru (mock)
+}
+
+export interface Silabus {
+  id: string;
+  judul: string;
+  idMapel: string;
+  namaMapel: string;
+  kelas: string; // Misal X IPA 1, XI IPS 2
+  deskripsiSingkat?: string;
+  namaFile?: string; // Untuk mock upload
+}
+
+export interface RPP {
+  id: string;
+  judul: string;
+  idMapel: string;
+  namaMapel: string;
+  kelas: string;
+  pertemuanKe: number;
+  materiPokok?: string;
+  kegiatanPembelajaran?: string;
+  penilaian?: string;
+  namaFile?: string; // Untuk mock upload
+}
+
+export interface MateriKategori {
+  id: string;
+  nama: string;
+}
