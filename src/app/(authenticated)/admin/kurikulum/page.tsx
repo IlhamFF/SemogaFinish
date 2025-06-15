@@ -17,7 +17,7 @@ import { BookOpenCheck, Target, BookCopy, BookUp, Layers, FileText, FolderKanban
 import Link from "next/link";
 import { ROUTES, MOCK_SUBJECTS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
-import type { SKL } from "@/types";
+import type { SKL, CapaianPembelajaran } from "@/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +38,7 @@ const materiSchema = z.object({
   url: z.string().url({ message: "URL tidak valid."}).optional(),
 }).refine(data => {
   if (data.jenisMateri === "Link" && !data.url) return false;
-  if (data.jenisMateri === "File" && !data.file) return false; 
+  if (data.jenisMateri === "File" && !data.file && !editingMateri) return false; // Allow no file if editing
   return true;
 }, {
   message: "File atau URL wajib diisi sesuai jenis materi.",
@@ -65,34 +65,64 @@ const sklSchema = z.object({
 });
 type SKLFormValues = z.infer<typeof sklSchema>;
 
+const cpSchema = z.object({
+  kode: z.string().min(2, { message: "Kode CP minimal 2 karakter." }),
+  deskripsi: z.string().min(10, { message: "Deskripsi CP minimal 10 karakter." }),
+  fase: z.enum(["A", "B", "C", "D", "E", "F", "Lainnya"], { required_error: "Fase wajib dipilih."}),
+  elemen: z.string().min(3, {message: "Elemen minimal 3 karakter."}),
+});
+type CPFormValues = z.infer<typeof cpSchema>;
+
+
 const initialSKLData: SKL[] = [
   { id: "SKL001", kode: "S-01", deskripsi: "Menunjukkan perilaku jujur, disiplin, tanggung jawab, peduli (gotong royong, kerja sama, toleran, damai), santun, responsif, dan pro-aktif.", kategori: "Sikap" },
   { id: "SKL002", kode: "P-01", deskripsi: "Memahami, menerapkan, menganalisis pengetahuan faktual, konseptual, prosedural berdasarkan rasa ingin tahunya tentang ilmu pengetahuan.", kategori: "Pengetahuan" },
   { id: "SKL003", kode: "K-01", deskripsi: "Mengolah, menalar, dan menyaji dalam ranah konkret dan ranah abstrak terkait dengan pengembangan dari yang dipelajarinya di sekolah secara mandiri.", kategori: "Keterampilan" },
 ];
 
+const initialCPData: CapaianPembelajaran[] = [
+    { id: "CP001", kode: "MTK.F.BIL.1", deskripsi: "Peserta didik dapat menggeneralisasi sifat-sifat operasi bilangan berpangkat (eksponen) dan logaritma, serta menggunakan barisan dan deret (aritmetika dan geometri) dalam bunga tunggal dan bunga majemuk.", fase: "E", elemen: "Bilangan"},
+    { id: "CP002", kode: "IND.E.MEM.1", deskripsi: "Peserta didik memiliki kemampuan berbahasa untuk berkomunikasi dan bernalar sesuai dengan tujuan, konteks sosial, akademis, dan dunia kerja.", fase: "E", elemen: "Membaca dan Memirsa"},
+];
+
+let editingMateri: MateriAjar | null = null; // Workaround for refine issue
+
 export default function AdminKurikulumPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Materi Ajar State & Form
   const [isMateriFormOpen, setIsMateriFormOpen] = useState(false);
+  const [currentEditingMateri, setCurrentEditingMateri] = useState<MateriAjar | null>(null);
   const [isLoadingMateriSubmit, setIsLoadingMateriSubmit] = useState(false);
   const [materiList, setMateriList] = useState<MateriAjar[]>([]);
+  const materiForm = useForm<MateriFormValues>({
+    resolver: zodResolver(materiSchema),
+    defaultValues: { judul: "", deskripsi: "", mapel: undefined, jenisMateri: undefined, file: undefined, url: "" },
+  });
 
+  // SKL State & Form
   const [isSKLDialogOpen, setIsSKLDialogOpen] = useState(false);
   const [isSKLFormOpen, setIsSKLFormOpen] = useState(false);
   const [editingSKL, setEditingSKL] = useState<SKL | null>(null);
   const [sklToDelete, setSklToDelete] = useState<SKL | null>(null);
   const [sklList, setSklList] = useState<SKL[]>(initialSKLData);
   const [isSKLSubmitting, setIsSKLSubmitting] = useState(false);
-
-  const materiForm = useForm<MateriFormValues>({
-    resolver: zodResolver(materiSchema),
-    defaultValues: { judul: "", deskripsi: "", mapel: undefined, jenisMateri: undefined, file: undefined, url: "" },
-  });
-
   const sklForm = useForm<SKLFormValues>({
     resolver: zodResolver(sklSchema),
     defaultValues: { kode: "", deskripsi: "", kategori: undefined },
+  });
+  
+  // CP State & Form
+  const [isCPDialogOpen, setIsCPDialogOpen] = useState(false);
+  const [isCPFormOpen, setIsCPFormOpen] = useState(false);
+  const [editingCP, setEditingCP] = useState<CapaianPembelajaran | null>(null);
+  const [cpToDelete, setCpToDelete] = useState<CapaianPembelajaran | null>(null);
+  const [cpList, setCpList] = useState<CapaianPembelajaran[]>(initialCPData);
+  const [isCPSubmitting, setIsCPSubmitting] = useState(false);
+  const cpForm = useForm<CPFormValues>({
+    resolver: zodResolver(cpSchema),
+    defaultValues: { kode: "", deskripsi: "", fase: undefined, elemen: "" },
   });
 
   useEffect(() => {
@@ -102,6 +132,31 @@ export default function AdminKurikulumPage() {
       sklForm.reset({ kode: "", deskripsi: "", kategori: undefined });
     }
   }, [editingSKL, sklForm, isSKLFormOpen]);
+  
+  useEffect(() => {
+    if (editingCP) {
+      cpForm.reset(editingCP);
+    } else {
+      cpForm.reset({ kode: "", deskripsi: "", fase: undefined, elemen: "" });
+    }
+  }, [editingCP, cpForm, isCPFormOpen]);
+
+  useEffect(() => {
+    if (currentEditingMateri) {
+      editingMateri = currentEditingMateri; // set global editingMateri
+      materiForm.reset({
+        judul: currentEditingMateri.judul,
+        deskripsi: currentEditingMateri.deskripsi,
+        mapel: currentEditingMateri.mapel,
+        jenisMateri: currentEditingMateri.jenisMateri,
+        url: currentEditingMateri.url,
+        file: undefined, // File is not pre-filled for edit
+      });
+    } else {
+      editingMateri = null;
+      materiForm.reset({ judul: "", deskripsi: "", mapel: undefined, jenisMateri: undefined, file: undefined, url: "" });
+    }
+  }, [currentEditingMateri, materiForm, isMateriFormOpen]);
 
 
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
@@ -112,25 +167,40 @@ export default function AdminKurikulumPage() {
     toast({ title: "Fitur Dalam Pengembangan", description: `Fungsi "${action}" belum diimplementasikan sepenuhnya.`});
   };
 
+  const openMateriForm = (materi?: MateriAjar) => {
+    setCurrentEditingMateri(materi || null);
+    setIsMateriFormOpen(true);
+  }
+
   const handleMateriSubmit = async (values: MateriFormValues) => {
     setIsLoadingMateriSubmit(true);
     await new Promise(resolve => setTimeout(resolve, 1000)); 
 
-    const newMateri: MateriAjar = {
-      id: `MAT${Date.now()}`,
-      judul: values.judul,
-      deskripsi: values.deskripsi,
-      mapel: values.mapel,
-      jenisMateri: values.jenisMateri,
-      namaFile: values.jenisMateri === "File" ? (values.file as File)?.name || "file_contoh.pdf" : undefined,
-      url: values.jenisMateri === "Link" ? values.url : undefined,
-      tanggalUpload: new Date().toLocaleDateString('id-ID'),
-    };
-    setMateriList(prev => [...prev, newMateri]); 
-    
-    toast({ title: "Berhasil!", description: `Materi "${values.judul}" telah ditambahkan.` });
+    if (currentEditingMateri) {
+      setMateriList(materiList.map(m => m.id === currentEditingMateri.id ? {
+        ...currentEditingMateri, 
+        ...values,
+        namaFile: values.jenisMateri === "File" && values.file ? (values.file as File).name : currentEditingMateri.namaFile,
+        url: values.jenisMateri === "Link" ? values.url : undefined,
+      } : m));
+      toast({ title: "Berhasil!", description: `Materi "${values.judul}" telah diperbarui.` });
+    } else {
+      const newMateri: MateriAjar = {
+        id: `MAT${Date.now()}`,
+        judul: values.judul,
+        deskripsi: values.deskripsi,
+        mapel: values.mapel,
+        jenisMateri: values.jenisMateri,
+        namaFile: values.jenisMateri === "File" ? (values.file as File)?.name || "file_contoh.pdf" : undefined,
+        url: values.jenisMateri === "Link" ? values.url : undefined,
+        tanggalUpload: new Date().toLocaleDateString('id-ID'),
+      };
+      setMateriList(prev => [...prev, newMateri]); 
+      toast({ title: "Berhasil!", description: `Materi "${values.judul}" telah ditambahkan.` });
+    }
     setIsLoadingMateriSubmit(false);
     setIsMateriFormOpen(false);
+    setCurrentEditingMateri(null);
     materiForm.reset();
   };
   
@@ -141,7 +211,7 @@ export default function AdminKurikulumPage() {
 
   const handleSKLFormSubmit = async (values: SKLFormValues) => {
     setIsSKLSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
 
     if (editingSKL) {
       setSklList(sklList.map(s => s.id === editingSKL.id ? { ...editingSKL, ...values } : s));
@@ -163,11 +233,48 @@ export default function AdminKurikulumPage() {
   const handleDeleteSKLConfirm = async () => {
     if (sklToDelete) {
       setIsSKLSubmitting(true);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API
+      await new Promise(resolve => setTimeout(resolve, 1000)); 
       setSklList(sklList.filter(s => s.id !== sklToDelete.id));
       toast({ title: "Dihapus!", description: `SKL ${sklToDelete.kode} telah dihapus.` });
       setIsSKLSubmitting(false);
       setSklToDelete(null);
+    }
+  };
+  
+  const openCPForm = (cp?: CapaianPembelajaran) => {
+    setEditingCP(cp || null);
+    setIsCPFormOpen(true);
+  };
+
+  const handleCPFormSubmit = async (values: CPFormValues) => {
+    setIsCPSubmitting(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    if (editingCP) {
+      setCpList(cpList.map(c => c.id === editingCP.id ? { ...editingCP, ...values } : c));
+      toast({ title: "Berhasil!", description: `CP ${values.kode} telah diperbarui.` });
+    } else {
+      const newCP: CapaianPembelajaran = { id: `CP${Date.now()}`, ...values };
+      setCpList([...cpList, newCP]);
+      toast({ title: "Berhasil!", description: `CP ${values.kode} telah ditambahkan.` });
+    }
+    setIsCPSubmitting(false);
+    setIsCPFormOpen(false);
+    setEditingCP(null);
+  };
+
+  const openDeleteCPDialog = (cp: CapaianPembelajaran) => {
+    setCpToDelete(cp);
+  };
+
+  const handleDeleteCPConfirm = async () => {
+    if (cpToDelete) {
+      setIsCPSubmitting(true);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setCpList(cpList.filter(c => c.id !== cpToDelete.id));
+      toast({ title: "Dihapus!", description: `CP ${cpToDelete.kode} telah dihapus.` });
+      setIsCPSubmitting(false);
+      setCpToDelete(null);
     }
   };
 
@@ -210,7 +317,7 @@ export default function AdminKurikulumPage() {
                   <p className="text-xs text-muted-foreground">Definisikan profil lulusan.</p>
                 </div>
               </Button>
-              <Button variant="outline" onClick={() => handlePlaceholderAction("Kelola CP")} className="justify-start text-left h-auto py-3">
+              <Button variant="outline" onClick={() => setIsCPDialogOpen(true)} className="justify-start text-left h-auto py-3">
                 <FileText className="mr-3 h-5 w-5" />
                  <div>
                   <p className="font-semibold">Capaian Pembelajaran (CP)</p>
@@ -275,7 +382,7 @@ export default function AdminKurikulumPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <Button variant="default" onClick={() => setIsMateriFormOpen(true)} className="justify-start text-left h-auto py-3">
+                <Button variant="default" onClick={() => openMateriForm()} className="justify-start text-left h-auto py-3">
                   <PlusCircle className="mr-3 h-5 w-5" />
                   <div>
                     <p className="font-semibold">Tambah Materi Baru</p>
@@ -307,7 +414,7 @@ export default function AdminKurikulumPage() {
                           <span className="font-medium">{m.judul}</span> ({m.mapel}) - {m.jenisMateri === "File" ? m.namaFile : m.url}
                           <span className="text-xs text-muted-foreground ml-2">({m.tanggalUpload})</span>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => handlePlaceholderAction(`Edit Materi ${m.id}`)}><Edit className="h-3 w-3"/></Button>
+                        <Button variant="ghost" size="sm" onClick={() => openMateriForm(m)}><Edit className="h-3 w-3"/></Button>
                       </li>
                     ))}
                   </ul>
@@ -319,10 +426,10 @@ export default function AdminKurikulumPage() {
       </Card>
 
       {/* Dialog untuk Bank Materi */}
-      <Dialog open={isMateriFormOpen} onOpenChange={setIsMateriFormOpen}>
+      <Dialog open={isMateriFormOpen} onOpenChange={(open) => { setIsMateriFormOpen(open); if (!open) setCurrentEditingMateri(null); }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Tambah Materi Pembelajaran Baru</DialogTitle>
+            <DialogTitle>{currentEditingMateri ? "Edit Materi Pembelajaran" : "Tambah Materi Pembelajaran Baru"}</DialogTitle>
             <DialogDescription>
               Isi detail materi di bawah ini. Anda bisa mengunggah file atau menambahkan tautan.
             </DialogDescription>
@@ -404,7 +511,7 @@ export default function AdminKurikulumPage() {
                   name="file"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unggah File</FormLabel>
+                      <FormLabel>Unggah File {currentEditingMateri ? "(Kosongkan jika tidak ingin mengubah)" : ""}</FormLabel>
                       <FormControl>
                         <Input 
                           type="file" 
@@ -434,12 +541,12 @@ export default function AdminKurikulumPage() {
                 />
               )}
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsMateriFormOpen(false)} disabled={isLoadingMateriSubmit}>
+                <Button type="button" variant="outline" onClick={() => { setIsMateriFormOpen(false); setCurrentEditingMateri(null); }} disabled={isLoadingMateriSubmit}>
                   Batal
                 </Button>
                 <Button type="submit" disabled={isLoadingMateriSubmit}>
                   {isLoadingMateriSubmit && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Simpan Materi
+                  {currentEditingMateri ? "Simpan Perubahan" : "Simpan Materi"}
                 </Button>
               </DialogFooter>
             </form>
@@ -574,6 +681,149 @@ export default function AdminKurikulumPage() {
             <AlertDialogAction onClick={handleDeleteSKLConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isSKLSubmitting}>
               {isSKLSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Ya, Hapus SKL
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog untuk Manajemen CP */}
+      <Dialog open={isCPDialogOpen} onOpenChange={setIsCPDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Manajemen Capaian Pembelajaran (CP)</DialogTitle>
+            <DialogDescription>
+              Kelola daftar CP yang menjadi acuan pembelajaran per fase dan elemen.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <Button onClick={() => openCPForm()}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Tambah CP Baru
+            </Button>
+            {cpList.length > 0 ? (
+              <div className="overflow-x-auto border rounded-md max-h-96">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Kode</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Deskripsi</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Fase</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Elemen</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase">Tindakan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-card divide-y divide-border">
+                    {cpList.map(cp => (
+                      <tr key={cp.id}>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">{cp.kode}</td>
+                        <td className="px-4 py-2 text-sm text-muted-foreground max-w-md whitespace-pre-wrap">{cp.deskripsi}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-muted-foreground">{cp.fase}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-muted-foreground">{cp.elemen}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-right text-sm">
+                          <Button variant="ghost" size="sm" onClick={() => openCPForm(cp)} className="mr-1"><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => openDeleteCPDialog(cp)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center">Belum ada data CP.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCPDialogOpen(false)}>Tutup</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Form untuk Tambah/Edit CP */}
+      <Dialog open={isCPFormOpen} onOpenChange={(open) => { setIsCPFormOpen(open); if (!open) setEditingCP(null); }}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>{editingCP ? "Edit CP" : "Tambah CP Baru"}</DialogTitle>
+            </DialogHeader>
+            <Form {...cpForm}>
+                <form onSubmit={cpForm.handleSubmit(handleCPFormSubmit)} className="space-y-4 py-2">
+                    <FormField
+                        control={cpForm.control}
+                        name="kode"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Kode CP</FormLabel>
+                                <FormControl><Input placeholder="Contoh: MTK.F.ALG.1" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={cpForm.control}
+                        name="deskripsi"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Deskripsi CP</FormLabel>
+                                <FormControl><Textarea placeholder="Jelaskan capaian pembelajaran..." {...field} rows={4} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={cpForm.control}
+                        name="fase"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Fase</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Pilih fase" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {["A", "B", "C", "D", "E", "F", "Lainnya"].map(f => <SelectItem key={f} value={f}>Fase {f}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={cpForm.control}
+                        name="elemen"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Elemen/Domain</FormLabel>
+                                <FormControl><Input placeholder="Contoh: Bilangan, Aljabar, Geometri" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <DialogFooter className="pt-2">
+                        <Button type="button" variant="outline" onClick={() => {setIsCPFormOpen(false); setEditingCP(null);}} disabled={isCPSubmitting}>Batal</Button>
+                        <Button type="submit" disabled={isCPSubmitting}>
+                            {isCPSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {editingCP ? "Simpan Perubahan" : "Simpan CP"}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Alert Dialog untuk Konfirmasi Hapus CP */}
+      <AlertDialog open={!!cpToDelete} onOpenChange={(open) => !open && setCpToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Penghapusan CP</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus CP dengan kode "{cpToDelete?.kode}"? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCpToDelete(null)} disabled={isCPSubmitting}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCPConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isCPSubmitting}>
+              {isCPSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Ya, Hapus CP
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

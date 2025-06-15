@@ -8,12 +8,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/hooks/use-auth";
-import { CalendarDays, Clock, UserCheck, AlertTriangle, PlusCircle, Edit, Search, Printer, Settings2, Building, Loader2 } from "lucide-react";
+import { CalendarDays, Clock, UserCheck, AlertTriangle, PlusCircle, Edit, Search, Printer, Settings2, Building, Loader2, Trash2, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { Ruangan, SlotWaktu } from "@/types";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,13 +27,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface Ruangan {
-  id: string;
-  nama: string;
-  kode: string;
-  kapasitas: number;
-  fasilitas?: string;
-}
 
 const ruanganSchema = z.object({
   nama: z.string().min(3, { message: "Nama ruangan minimal 3 karakter." }),
@@ -39,8 +34,26 @@ const ruanganSchema = z.object({
   kapasitas: z.coerce.number().min(1, { message: "Kapasitas minimal 1." }),
   fasilitas: z.string().optional(),
 });
-
 type RuanganFormValues = z.infer<typeof ruanganSchema>;
+
+const slotWaktuSchema = z.object({
+  namaSlot: z.string().min(3, { message: "Nama slot minimal 3 karakter." }),
+  waktuMulai: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "Format HH:MM, contoh: 07:30"}),
+  waktuSelesai: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "Format HH:MM, contoh: 09:00"}),
+}).refine(data => data.waktuMulai < data.waktuSelesai, {
+  message: "Waktu mulai harus sebelum waktu selesai.",
+  path: ["waktuSelesai"],
+});
+type SlotWaktuFormValues = z.infer<typeof slotWaktuSchema>;
+
+const konfigurasiJadwalSchema = z.object({
+  slots: z.array(slotWaktuSchema).min(1, "Minimal ada satu slot waktu."),
+  hariEfektif: z.array(z.string()).refine(value => value.some(item => item), {
+    message: "Minimal pilih satu hari efektif.",
+  }),
+});
+type KonfigurasiJadwalFormValues = z.infer<typeof konfigurasiJadwalSchema>;
+
 
 const initialRuangan: Ruangan[] = [
   { id: "R001", nama: "Ruang Kelas X IPA 1", kode: "X-IPA-1", kapasitas: 32, fasilitas: "Proyektor, AC" },
@@ -48,19 +61,46 @@ const initialRuangan: Ruangan[] = [
   { id: "R003", nama: "Aula Serbaguna", kode: "AULA", kapasitas: 150, fasilitas: "Sound System, Panggung" },
 ];
 
+const initialSlotsWaktu: SlotWaktu[] = [
+  { id: "SW001", namaSlot: "Jam ke-1", waktuMulai: "07:30", waktuSelesai: "08:15"},
+  { id: "SW002", namaSlot: "Jam ke-2", waktuMulai: "08:15", waktuSelesai: "09:00"},
+  { id: "SW003", namaSlot: "Istirahat 1", waktuMulai: "09:00", waktuSelesai: "09:15"},
+];
+const initialHariEfektif = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
+const namaHari = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
+
+
 export default function AdminJadwalPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Ruangan State & Form
   const [ruanganList, setRuanganList] = useState<Ruangan[]>(initialRuangan);
   const [isRuanganDialogOpen, setIsRuanganDialogOpen] = useState(false);
   const [isRuanganFormOpen, setIsRuanganFormOpen] = useState(false);
   const [editingRuangan, setEditingRuangan] = useState<Ruangan | null>(null);
   const [ruanganToDelete, setRuanganToDelete] = useState<Ruangan | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [isRuanganSubmitting, setIsRuanganSubmitting] = useState(false);
   const ruanganForm = useForm<RuanganFormValues>({
     resolver: zodResolver(ruanganSchema),
     defaultValues: { nama: "", kode: "", kapasitas: 0, fasilitas: "" },
+  });
+
+  // Konfigurasi Jadwal (Jam & Hari) State & Form
+  const [isKonfigurasiOpen, setIsKonfigurasiOpen] = useState(false);
+  const [slotsWaktu, setSlotsWaktu] = useState<SlotWaktu[]>(initialSlotsWaktu);
+  const [hariEfektif, setHariEfektif] = useState<string[]>(initialHariEfektif);
+  const [isKonfigurasiSubmitting, setIsKonfigurasiSubmitting] = useState(false);
+  const konfigurasiForm = useForm<KonfigurasiJadwalFormValues>({
+    resolver: zodResolver(konfigurasiJadwalSchema),
+    defaultValues: {
+      slots: initialSlotsWaktu.map(({namaSlot, waktuMulai, waktuSelesai}) => ({namaSlot, waktuMulai, waktuSelesai})), // Remove id for form
+      hariEfektif: initialHariEfektif,
+    },
+  });
+  const { fields: slotFields, append: appendSlot, remove: removeSlot, move: moveSlot } = useFieldArray({
+    control: konfigurasiForm.control,
+    name: "slots",
   });
 
   useEffect(() => {
@@ -71,6 +111,16 @@ export default function AdminJadwalPage() {
     }
   }, [editingRuangan, ruanganForm, isRuanganFormOpen]);
 
+  useEffect(() => {
+    if (isKonfigurasiOpen) {
+      konfigurasiForm.reset({
+        slots: slotsWaktu.map(({namaSlot, waktuMulai, waktuSelesai}) => ({namaSlot, waktuMulai, waktuSelesai})),
+        hariEfektif: hariEfektif,
+      });
+    }
+  }, [isKonfigurasiOpen, slotsWaktu, hariEfektif, konfigurasiForm]);
+
+
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi admin untuk melihat halaman ini.</p>;
   }
@@ -80,8 +130,8 @@ export default function AdminJadwalPage() {
   };
 
   const handleRuanganFormSubmit = async (values: RuanganFormValues) => {
-    setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API
+    setIsRuanganSubmitting(true);
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
 
     if (editingRuangan) {
       setRuanganList(ruanganList.map(r => r.id === editingRuangan.id ? { ...editingRuangan, ...values } : r));
@@ -91,7 +141,7 @@ export default function AdminJadwalPage() {
       setRuanganList([...ruanganList, newRuangan]);
       toast({ title: "Berhasil!", description: `Ruangan ${values.nama} telah ditambahkan.` });
     }
-    setIsSubmitting(false);
+    setIsRuanganSubmitting(false);
     setIsRuanganFormOpen(false);
     setEditingRuangan(null);
   };
@@ -102,11 +152,11 @@ export default function AdminJadwalPage() {
 
   const handleDeleteRuanganConfirm = async () => {
     if (ruanganToDelete) {
-      setIsSubmitting(true);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API
+      setIsRuanganSubmitting(true);
+      await new Promise(resolve => setTimeout(resolve, 1000)); 
       setRuanganList(ruanganList.filter(r => r.id !== ruanganToDelete.id));
       toast({ title: "Dihapus!", description: `Ruangan ${ruanganToDelete.nama} telah dihapus.` });
-      setIsSubmitting(false);
+      setIsRuanganSubmitting(false);
       setRuanganToDelete(null);
     }
   };
@@ -115,6 +165,23 @@ export default function AdminJadwalPage() {
     setEditingRuangan(ruangan || null);
     setIsRuanganFormOpen(true);
   }
+
+  const handleKonfigurasiSubmit = async (values: KonfigurasiJadwalFormValues) => {
+    setIsKonfigurasiSubmitting(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const newSlotsWaktu: SlotWaktu[] = values.slots.map((s, index) => ({
+        id: `SW${Date.now() + index}`, // Generate new IDs
+        ...s
+    }));
+
+    setSlotsWaktu(newSlotsWaktu);
+    setHariEfektif(values.hariEfektif);
+    
+    toast({ title: "Berhasil!", description: "Konfigurasi jam dan hari telah disimpan."});
+    setIsKonfigurasiSubmitting(false);
+    setIsKonfigurasiOpen(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -147,7 +214,7 @@ export default function AdminJadwalPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <Button variant="outline" onClick={() => handlePlaceholderAction("Konfigurasi Jam Pelajaran")} className="justify-start text-left h-auto py-3">
+              <Button variant="outline" onClick={() => setIsKonfigurasiOpen(true)} className="justify-start text-left h-auto py-3">
                 <Settings2 className="mr-3 h-5 w-5" />
                 <div>
                   <p className="font-semibold">Konfigurasi Jam & Hari</p>
@@ -162,7 +229,7 @@ export default function AdminJadwalPage() {
                 </div>
               </Button>
                <Button variant="outline" onClick={() => handlePlaceholderAction("Impor Jadwal")} className="justify-start text-left h-auto py-3">
-                <Search className="mr-3 h-5 w-5" />
+                <Search className="mr-3 h-5 w-5" /> {/* Changed icon as Upload not fitting */}
                  <div>
                   <p className="font-semibold">Impor Jadwal</p>
                   <p className="text-xs text-muted-foreground">Unggah jadwal dari template.</p>
@@ -232,7 +299,7 @@ export default function AdminJadwalPage() {
                 </div>
               </Button>
               <Button variant="outline" onClick={() => handlePlaceholderAction("Publikasi Jadwal")} className="justify-start text-left h-auto py-3">
-                <Edit className="mr-3 h-5 w-5" />
+                <Edit className="mr-3 h-5 w-5" /> {/* Using Edit as a placeholder for publish/announce */}
                 <div>
                   <p className="font-semibold">Publikasikan Jadwal</p>
                   <p className="text-xs text-muted-foreground">Umumkan jadwal terbaru.</p>
@@ -243,7 +310,7 @@ export default function AdminJadwalPage() {
            <Card>
             <CardHeader>
               <CardTitle className="flex items-center text-xl">
-                <Clock className="mr-3 h-5 w-5 text-primary" />
+                <Clock className="mr-3 h-5 w-5 text-primary" /> {/* Changed Icon for Variety */}
                  Manajemen Perubahan Jadwal
               </CardTitle>
               <CardDescription>
@@ -304,7 +371,7 @@ export default function AdminJadwalPage() {
                         <td className="px-4 py-2 text-sm text-muted-foreground max-w-xs truncate" title={r.fasilitas}>{r.fasilitas || "-"}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-right text-sm">
                           <Button variant="ghost" size="sm" onClick={() => openRuanganForm(r)} className="mr-1"><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={() => openDeleteRuanganDialog(r)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => openDeleteRuanganDialog(r)} className="text-destructive hover:text-destructive/80"><Trash2 className="h-4 w-4" /></Button>
                         </td>
                       </tr>
                     ))}
@@ -374,9 +441,9 @@ export default function AdminJadwalPage() {
                         )}
                     />
                     <DialogFooter className="pt-2">
-                        <Button type="button" variant="outline" onClick={() => {setIsRuanganFormOpen(false); setEditingRuangan(null);}} disabled={isSubmitting}>Batal</Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button type="button" variant="outline" onClick={() => {setIsRuanganFormOpen(false); setEditingRuangan(null);}} disabled={isRuanganSubmitting}>Batal</Button>
+                        <Button type="submit" disabled={isRuanganSubmitting}>
+                            {isRuanganSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {editingRuangan ? "Simpan Perubahan" : "Simpan Ruangan"}
                         </Button>
                     </DialogFooter>
@@ -395,14 +462,131 @@ export default function AdminJadwalPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setRuanganToDelete(null)} disabled={isSubmitting}>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteRuanganConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <AlertDialogCancel onClick={() => setRuanganToDelete(null)} disabled={isRuanganSubmitting}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteRuanganConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isRuanganSubmitting}>
+              {isRuanganSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Ya, Hapus Ruangan
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog untuk Konfigurasi Jam & Hari */}
+      <Dialog open={isKonfigurasiOpen} onOpenChange={setIsKonfigurasiOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Konfigurasi Jam Pelajaran & Hari Efektif</DialogTitle>
+            <DialogDescription>
+              Atur slot waktu pelajaran dan pilih hari-hari efektif dalam seminggu.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...konfigurasiForm}>
+            <form onSubmit={konfigurasiForm.handleSubmit(handleKonfigurasiSubmit)} className="space-y-6 py-4">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Slot Waktu Pelajaran</h3>
+                <div className="space-y-3 max-h-72 overflow-y-auto pr-2">
+                  {slotFields.map((field, index) => (
+                    <Card key={field.id} className="p-3 relative">
+                       <div className="flex items-start gap-2">
+                        <Button type="button" variant="ghost" size="sm" className="cursor-grab p-1 mt-6" title="Geser urutan">
+                            <GripVertical className="h-4 w-4" />
+                        </Button>
+                        <div className="flex-grow grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <FormField
+                            control={konfigurasiForm.control}
+                            name={`slots.${index}.namaSlot`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Nama Slot</FormLabel>
+                                <FormControl><Input placeholder="Jam ke-1" {...field} /></FormControl>
+                                <FormMessage className="text-xs"/>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={konfigurasiForm.control}
+                            name={`slots.${index}.waktuMulai`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Mulai (HH:MM)</FormLabel>
+                                <FormControl><Input type="time" {...field} /></FormControl>
+                                <FormMessage className="text-xs"/>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={konfigurasiForm.control}
+                            name={`slots.${index}.waktuSelesai`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Selesai (HH:MM)</FormLabel>
+                                <FormControl><Input type="time" {...field} /></FormControl>
+                                <FormMessage className="text-xs"/>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeSlot(index)} className="text-destructive hover:text-destructive/80 absolute top-1 right-1">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                       </div>
+                    </Card>
+                  ))}
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={() => appendSlot({ namaSlot: "", waktuMulai: "00:00", waktuSelesai: "00:00"})} className="mt-2">
+                  <PlusCircle className="mr-2 h-4 w-4"/> Tambah Slot
+                </Button>
+                 <FormMessage>{konfigurasiForm.formState.errors.slots?.message || konfigurasiForm.formState.errors.slots?.root?.message}</FormMessage>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium mb-2">Hari Efektif Sekolah</h3>
+                <FormField
+                  control={konfigurasiForm.control}
+                  name="hariEfektif"
+                  render={() => (
+                    <FormItem className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {namaHari.slice(0,6).map((hari) => ( // Hanya sampai Sabtu
+                        <FormField
+                          key={hari}
+                          control={konfigurasiForm.control}
+                          name="hariEfektif"
+                          render={({ field }) => {
+                            return (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-2 border rounded-md hover:bg-muted/50">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(hari)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...field.value, hari])
+                                        : field.onChange(field.value?.filter(value => value !== hari))
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal text-sm">{hari}</FormLabel>
+                              </FormItem>
+                            )
+                          }}
+                        />
+                      ))}
+                      <FormMessage className="col-span-full">{konfigurasiForm.formState.errors.hariEfektif?.message}</FormMessage>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <DialogFooter className="pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsKonfigurasiOpen(false)} disabled={isKonfigurasiSubmitting}>Batal</Button>
+                <Button type="submit" disabled={isKonfigurasiSubmitting}>
+                  {isKonfigurasiSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Simpan Konfigurasi
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

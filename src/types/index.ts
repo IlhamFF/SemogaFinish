@@ -36,3 +36,26 @@ export interface SKL {
   deskripsi: string;
   kategori: "Sikap" | "Pengetahuan" | "Keterampilan";
 }
+
+export interface CapaianPembelajaran {
+  id: string;
+  kode: string;
+  deskripsi: string;
+  fase: "A" | "B" | "C" | "D" | "E" | "F" | "Lainnya"; // Sesuai jenjang
+  elemen: string; // Misal: "Bilangan", "Literasi Membaca", dll.
+}
+
+export interface Ruangan {
+  id: string;
+  nama: string;
+  kode: string;
+  kapasitas: number;
+  fasilitas?: string;
+}
+
+export interface SlotWaktu {
+  id: string;
+  namaSlot: string; // Misal: Jam ke-1, Istirahat 1
+  waktuMulai: string; // format HH:mm
+  waktuSelesai: string; // format HH:mm
+}
