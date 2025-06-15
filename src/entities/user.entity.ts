@@ -76,22 +76,22 @@ export class UserEntity /* implements AdapterUser */ { // Removed implements
   @Column({ type: "timestamp with time zone", nullable: true })
   resetPasswordExpires?: Date | null;
   
-  @OneToMany(() => AccountEntity, account => account.user)
+  @OneToMany("AccountEntity", account => account.user)
   accounts?: AccountEntity[];
 
-  @OneToMany(() => SessionEntity, session => session.user)
+  @OneToMany("SessionEntity", session => session.user)
   sessions?: SessionEntity[];
 
-  @OneToMany(() => StrukturKurikulumEntity, ske => ske.guruPengampu)
+  @OneToMany("StrukturKurikulumEntity", ske => ske.guruPengampu)
   strukturKurikulumDiajar?: StrukturKurikulumEntity[];
 
-  @OneToMany(() => MateriAjarEntity, materi => materi.uploader)
+  @OneToMany("MateriAjarEntity", materi => materi.uploader)
   materiAjarUploaded?: MateriAjarEntity[];
 
-  @OneToMany(() => SilabusEntity, silabus => silabus.uploader)
+  @OneToMany("SilabusEntity", silabus => silabus.uploader)
   silabusUploaded?: SilabusEntity[];
 
-  @OneToMany(() => RppEntity, rpp => rpp.uploader)
+  @OneToMany("RppEntity", rpp => rpp.uploader)
   rppUploaded?: RppEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
@@ -100,3 +100,4 @@ export class UserEntity /* implements AdapterUser */ { // Removed implements
   @UpdateDateColumn({ type: "timestamp with time zone" })
   updatedAt!: Date;
 }
+

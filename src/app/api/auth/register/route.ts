@@ -1,4 +1,5 @@
 
+import "reflect-metadata";
 import { NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     const validation = registerSchema.safeParse(body);
 
     if (!validation.success) {
-      return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.formErrors.fieldErrors }, { status: 400 });
+      return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
     const { email, password } = validation.data;

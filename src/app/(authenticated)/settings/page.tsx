@@ -86,12 +86,22 @@ export default function SettingsPage() {
     if (!user) return;
     setIsProfileSubmitting(true);
 
-    const profileDataToUpdate = {
-      ...data,
+    const profileDataToUpdate: Partial<User> = { // Use Partial<User> from types
+      fullName: data.fullName,
+      phone: data.phone,
+      address: data.address,
+      bio: data.bio,
+      avatarUrl: data.avatarUrl,
       birthDate: data.birthDate ? format(data.birthDate, 'yyyy-MM-dd') : undefined,
     };
+    
+    // Filter out undefined fields to only send what's changed or explicitly set
+    const definedProfileData = Object.fromEntries(
+      Object.entries(profileDataToUpdate).filter(([_, v]) => v !== undefined)
+    ) as Partial<User>;
 
-    await updateUserProfile(user.id, profileDataToUpdate);
+
+    await updateUserProfile(user.id, definedProfileData); // Pass user.id explicitly
     setIsProfileSubmitting(false);
   }
 
@@ -99,7 +109,7 @@ export default function SettingsPage() {
     if (!user) return;
     setIsPasswordSubmitting(true);
     
-    const success = await changePassword(user.id, data.currentPassword, data.newPassword);
+    const success = await changePassword(user.id, data.currentPassword, data.newPassword); // Pass user.id explicitly
     if (success) {
       passwordForm.reset(); // Reset form on success
     }
@@ -156,7 +166,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 pt-4 text-sm">
             {user.nis && user.role === 'siswa' && <p><span className="font-semibold">NIS:</span> {user.nis}</p>}
             {user.nip && user.role !== 'siswa' && <p><span className="font-semibold">NIP:</span> {user.nip}</p>}
-            {user.joinDate && <p><span className="font-semibold">Tanggal Bergabung:</span> {format(parseISO(user.joinDate), 'dd MMMM yyyy', { locale: localeID })}</p>}
+            {user.joinDate && isValid(parseISO(user.joinDate)) && <p><span className="font-semibold">Tanggal Bergabung:</span> {format(parseISO(user.joinDate), 'dd MMMM yyyy', { locale: localeID })}</p>}
             {user.phone && <p><span className="font-semibold">Telepon:</span> {user.phone}</p>}
             {user.address && <p className="md:col-span-2"><span className="font-semibold">Alamat:</span> {user.address}</p>}
             {user.birthDate && isValid(parseISO(user.birthDate)) && <p><span className="font-semibold">Tanggal Lahir:</span> {format(parseISO(user.birthDate), 'dd MMMM yyyy', { locale: localeID })}</p>}
