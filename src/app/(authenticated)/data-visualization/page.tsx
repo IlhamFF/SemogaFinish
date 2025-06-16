@@ -1,15 +1,17 @@
 
 "use client";
 
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
-import { BarChart, Users, BookOpen, Activity, TrendingUp, CheckCircle, PieChart } from "lucide-react";
+import { BarChart, Users, BookOpen, Activity, TrendingUp, CheckCircle, PieChart as PieChartIcon, Loader2 } from "lucide-react"; // Added Loader2
 import { Bar as RechartsBar, BarChart as RechartsBarChart, PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { ROLES } from "@/lib/constants";
-import React from "react";
+import type { User as AppUser, Role } from "@/types"; // Import User type and Role type
+import { useToast } from "@/hooks/use-toast";
 
 const mockDataGenericTable = [
   { id: "TUGAS-8782", title: "Nilai Ujian Tengah Semester Fisika", status: "Selesai", priority: "Tinggi", lastUpdated: "2024-07-15" },
@@ -26,7 +28,6 @@ const statusVariantMap: Record<string, "default" | "secondary" | "outline" | "de
   "Akan Dikerjakan": "destructive",
 };
 
-// Mock data for Admin Charts
 const mockAdminUserActivity = [
   { date: "2024-07-01", pendaftaran: 5, login: 25 },
   { date: "2024-07-02", pendaftaran: 3, login: 30 },
@@ -39,16 +40,60 @@ const adminUserActivityChartConfig = {
   login: { label: "Login Harian", color: "hsl(var(--chart-2))" },
 } satisfies ChartConfig;
 
-const mockAdminRoleDistribution = [
-  { name: ROLES.admin, value: 2, fill: "hsl(var(--chart-1))" },
-  { name: ROLES.guru, value: 15, fill: "hsl(var(--chart-2))" },
-  { name: ROLES.siswa, value: 150, fill: "hsl(var(--chart-3))" },
-  { name: ROLES.pimpinan, value: 1, fill: "hsl(var(--chart-4))" },
-];
+// Role colors for dynamic chart
+const ROLE_COLORS: Record<Role, string> = {
+    admin: "hsl(var(--chart-1))",
+    guru: "hsl(var(--chart-2))",
+    siswa: "hsl(var(--chart-3))",
+    pimpinan: "hsl(var(--chart-4))",
+    superadmin: "hsl(var(--chart-5))",
+};
 
 
 export default function DataVisualizationPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+  const fetchAllUsers = useCallback(async () => {
+    if (user && (user.role === 'admin' || user.role === 'superadmin')) {
+        setIsLoadingUsers(true);
+        try {
+            const response = await fetch('/api/users');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Gagal mengambil data pengguna.");
+            }
+            const data: AppUser[] = await response.json();
+            setAllUsers(data);
+        } catch (error: any) {
+            toast({ title: "Error Data Pengguna", description: error.message, variant: "destructive" });
+            setAllUsers([]);
+        } finally {
+            setIsLoadingUsers(false);
+        }
+    }
+  }, [user, toast]);
+
+  useEffect(() => {
+    fetchAllUsers();
+  }, [fetchAllUsers]);
+
+  const adminRoleDistributionData = useMemo(() => {
+    if (allUsers.length === 0) return [];
+    const roleCounts = allUsers.reduce((acc, currentUser) => {
+      acc[currentUser.role] = (acc[currentUser.role] || 0) + 1;
+      return acc;
+    }, {} as Record<Role, number>);
+
+    return Object.entries(roleCounts).map(([role, count]) => ({
+      name: ROLES[role as Role] || role,
+      value: count,
+      fill: ROLE_COLORS[role as Role] || "hsl(var(--muted))",
+    }));
+  }, [allUsers]);
+
 
   const renderRoleSpecificVisualizations = () => {
     if (!user) return null;
@@ -79,27 +124,33 @@ export default function DataVisualizationPage() {
             </Card>
             <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center"><PieChart className="mr-2 h-5 w-5 text-primary" /> Distribusi Peran Pengguna</CardTitle>
-                <CardDescription>Visualisasi jumlah pengguna berdasarkan peran (data mock).</CardDescription>
+                <CardTitle className="flex items-center"><PieChartIcon className="mr-2 h-5 w-5 text-primary" /> Distribusi Peran Pengguna</CardTitle>
+                <CardDescription>Visualisasi jumlah pengguna berdasarkan peran.</CardDescription>
               </CardHeader>
               <CardContent className="h-[300px] flex items-center justify-center">
-                 <ChartContainer config={{}} className="w-full h-full max-w-[250px] aspect-square">
-                    <RechartsPieChart>
-                        <Tooltip content={<ChartTooltipContent hideLabel hideIndicator nameKey="name" />} />
-                        <Pie data={mockAdminRoleDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} labelLine={false} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
-                            {mockAdminRoleDistribution.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                        </Pie>
-                        <Legend />
-                    </RechartsPieChart>
-                </ChartContainer>
+                 {isLoadingUsers && adminRoleDistributionData.length === 0 ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                 ) : adminRoleDistributionData.length > 0 ? (
+                    <ChartContainer config={{}} className="w-full h-full max-w-[250px] aspect-square">
+                        <RechartsPieChart>
+                            <Tooltip content={<ChartTooltipContent hideLabel hideIndicator nameKey="name" />} />
+                            <Pie data={adminRoleDistributionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
+                                {adminRoleDistributionData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                            </Pie>
+                            <Legend />
+                        </RechartsPieChart>
+                    </ChartContainer>
+                 ) : (
+                    <p className="text-muted-foreground">Data pengguna tidak tersedia.</p>
+                 )}
               </CardContent>
             </Card>
              <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center"><Activity className="mr-2 h-5 w-5 text-primary" /> Penggunaan Sumber Daya Sistem</CardTitle>
-                <CardDescription>Visualisasi penggunaan database, penyimpanan, dan lalu lintas jaringan.</CardDescription>
+                <CardDescription>Visualisasi penggunaan database, penyimpanan, dan lalu lintas jaringan (placeholder).</CardDescription>
               </CardHeader>
               <CardContent className="h-64 flex items-center justify-center bg-muted/50 rounded-md">
                 <p className="text-muted-foreground">[Placeholder Grafik Penggunaan Sumber Daya]</p>
@@ -113,7 +164,7 @@ export default function DataVisualizationPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center"><TrendingUp className="mr-2 h-5 w-5 text-primary" /> Performa Siswa (Mata Pelajaran Anda)</CardTitle>
-                <CardDescription>Distribusi nilai siswa, rata-rata kelas, dan tren peningkatan/penurunan.</CardDescription>
+                <CardDescription>Distribusi nilai siswa, rata-rata kelas, dan tren peningkatan/penurunan (placeholder).</CardDescription>
               </CardHeader>
               <CardContent className="h-64 flex items-center justify-center bg-muted/50 rounded-md">
                 <p className="text-muted-foreground">[Placeholder Grafik Performa Siswa untuk Guru]</p>
@@ -122,7 +173,7 @@ export default function DataVisualizationPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center"><CheckCircle className="mr-2 h-5 w-5 text-primary" /> Tingkat Penyelesaian Tugas</CardTitle>
-                <CardDescription>Persentase siswa yang mengumpulkan tugas tepat waktu, terlambat, atau belum mengumpulkan.</CardDescription>
+                <CardDescription>Persentase siswa yang mengumpulkan tugas tepat waktu, terlambat, atau belum mengumpulkan (placeholder).</CardDescription>
               </CardHeader>
               <CardContent className="h-64 flex items-center justify-center bg-muted/50 rounded-md">
                 <p className="text-muted-foreground">[Placeholder Grafik Penyelesaian Tugas untuk Guru]</p>
@@ -136,7 +187,7 @@ export default function DataVisualizationPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center"><BarChart className="mr-2 h-5 w-5 text-primary" /> Kemajuan Akademik Saya</CardTitle>
-                <CardDescription>Tren nilai saya per mata pelajaran dari waktu ke waktu.</CardDescription>
+                <CardDescription>Tren nilai saya per mata pelajaran dari waktu ke waktu (placeholder).</CardDescription>
               </CardHeader>
               <CardContent className="h-64 flex items-center justify-center bg-muted/50 rounded-md">
                 <p className="text-muted-foreground">[Placeholder Grafik Tren Nilai Saya untuk Siswa]</p>
@@ -145,7 +196,7 @@ export default function DataVisualizationPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary" /> Aktivitas Belajar Saya</CardTitle>
-                <CardDescription>Waktu yang dihabiskan untuk materi, frekuensi mengerjakan kuis (jika ada data).</CardDescription>
+                <CardDescription>Waktu yang dihabiskan untuk materi, frekuensi mengerjakan kuis (jika ada data) (placeholder).</CardDescription>
               </CardHeader>
               <CardContent className="h-64 flex items-center justify-center bg-muted/50 rounded-md">
                 <p className="text-muted-foreground">[Placeholder Grafik Aktivitas Belajar untuk Siswa]</p>
@@ -159,7 +210,7 @@ export default function DataVisualizationPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center"><TrendingUp className="mr-2 h-5 w-5 text-primary" /> Performa Akademik Sekolah</CardTitle>
-                <CardDescription>Rata-rata nilai per angkatan, perbandingan antar jurusan, tren kelulusan.</CardDescription>
+                <CardDescription>Rata-rata nilai per angkatan, perbandingan antar jurusan, tren kelulusan (placeholder).</CardDescription>
               </CardHeader>
               <CardContent className="h-64 flex items-center justify-center bg-muted/50 rounded-md">
                 <p className="text-muted-foreground">[Placeholder Grafik Performa Sekolah untuk Pimpinan]</p>
@@ -168,7 +219,7 @@ export default function DataVisualizationPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5 text-primary" /> Analisis Kehadiran Guru & Siswa</CardTitle>
-                <CardDescription>Statistik kehadiran keseluruhan, perbandingan antar kelas/guru.</CardDescription>
+                <CardDescription>Statistik kehadiran keseluruhan, perbandingan antar kelas/guru (placeholder).</CardDescription>
               </CardHeader>
               <CardContent className="h-64 flex items-center justify-center bg-muted/50 rounded-md">
                 <p className="text-muted-foreground">[Placeholder Grafik Kehadiran untuk Pimpinan]</p>
@@ -232,3 +283,4 @@ export default function DataVisualizationPage() {
     </div>
   );
 }
+
