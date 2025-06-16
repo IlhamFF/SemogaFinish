@@ -1,72 +1,120 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
-import { ClipboardCheck, FilePenLine, UploadCloud, Eye, Clock, CheckCircle2 } from "lucide-react";
-import { formatDistanceToNow } from 'date-fns';
+import { ClipboardCheck, FilePenLine, UploadCloud, Eye, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { format, formatDistanceToNow, parseISO, isPast } from 'date-fns';
 import { id as localeID } from 'date-fns/locale';
+import { useToast } from "@/hooks/use-toast";
+import type { Tugas as TugasType } from "@/types"; // Assuming Tugas type is defined in types
 
-type TugasStatus = "Belum Dikerjakan" | "Terlambat" | "Sudah Dikumpulkan" | "Dinilai";
-interface Tugas {
-  id: string;
-  judul: string;
-  mapel: string;
-  guru: string;
-  tenggat: Date;
-  status: TugasStatus;
-  deskripsi?: string;
-  fileLampiran?: string;
-  nilai?: number;
-  feedbackGuru?: string;
+// Keep this client-side status for now as backend doesn't store submission status
+type TugasSiswaStatus = "Belum Dikerjakan" | "Terlambat" | "Sudah Dikumpulkan" | "Dinilai";
+
+interface TugasDisplay extends TugasType {
+  statusFrontend: TugasSiswaStatus;
+  // nilaiFrontend?: number; // Renamed to avoid conflict with potential backend field later
+  // feedbackGuruFrontend?: string;
 }
-
-const mockTugas: Tugas[] = [
-  { id: "TGS001", judul: "Latihan Soal Bab 1: Aljabar", mapel: "Matematika", guru: "Bu Ani", tenggat: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), status: "Belum Dikerjakan", deskripsi: "Kerjakan soal 1-10 di buku paket halaman 25." },
-  { id: "TGS002", judul: "Praktikum Hukum Newton", mapel: "Fisika", guru: "Pak Eko", tenggat: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), status: "Terlambat", deskripsi: "Buat laporan praktikum sesuai format yang diberikan.", fileLampiran: "template_laporan.docx" },
-  { id: "TGS003", judul: "Membuat Puisi", mapel: "Bahasa Indonesia", guru: "Pak Budi", tenggat: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), status: "Belum Dikerjakan", deskripsi: "Buatlah puisi dengan tema 'Pahlawan'."},
-  { id: "TGS004", judul: "Presentasi Kelompok Sel", mapel: "Biologi", guru: "Bu Ida", tenggat: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), status: "Sudah Dikumpulkan", deskripsi: "Presentasi tentang organel sel." },
-  { id: "TGS005", judul: "Analisis Novel Laskar Pelangi", mapel: "Bahasa Indonesia", guru: "Pak Budi", tenggat: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), status: "Dinilai", nilai: 85, feedbackGuru: "Analisis sudah baik, perhatikan lagi tata bahasa." },
-];
 
 
 export default function SiswaTugasPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"mendatang" | "selesai">("mendatang");
+  const [tugasList, setTugasList] = useState<TugasDisplay[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Client-side status derivation logic
+  const getTugasSiswaStatus = (tugas: TugasType): TugasSiswaStatus => {
+    // This is a simplified mock. Real status would depend on actual submission data.
+    // For now, assume we don't have submission data.
+    if (tugas.nilai) return "Dinilai"; // If it has a grade, it's Dinilai
+    
+    // Example: If we had a 'submittedAt' field on TugasType
+    // if (tugas.submittedAt) {
+    //   return "Sudah Dikumpulkan"; 
+    // }
+
+    if (isPast(parseISO(tugas.tenggat))) {
+      return "Terlambat";
+    }
+    return "Belum Dikerjakan";
+  };
+
+  const fetchTugasSiswa = useCallback(async () => {
+    if (!user || !user.kelas) {
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/tugas`); // API will filter by session.user.kelas if user is siswa
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengambil data tugas.");
+      }
+      const data: TugasType[] = await response.json();
+      const processedData: TugasDisplay[] = data.map(t => ({
+        ...t,
+        statusFrontend: getTugasSiswaStatus(t),
+        // nilaiFrontend: t.nilai, // Assuming 'nilai' might come from backend later
+        // feedbackGuruFrontend: t.feedbackGuru, // Assuming 'feedbackGuru' might come from backend later
+      }));
+      setTugasList(processedData);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setTugasList([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, toast]);
+
+  useEffect(() => {
+    if (user && user.isVerified) {
+      fetchTugasSiswa();
+    } else if (user && !user.isVerified) {
+      setIsLoading(false); // Stop loading if user is not verified
+    }
+  }, [user, fetchTugasSiswa]);
+
 
   if (!user || (user.role !== 'siswa' && user.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Siswa untuk melihat halaman ini.</p>;
   }
-  if (!user.isVerified) {
+  if (user && !user.isVerified) { // Check user specifically, not isLoading
     return <p>Silakan verifikasi email Anda untuk mengakses fitur ini.</p>;
   }
 
   const handlePlaceholderAction = (action: string, tugasId?: string) => {
-    alert(`Fungsi "${action}" ${tugasId ? `untuk tugas ${tugasId} ` : ''}belum diimplementasikan.`);
+    toast({title:"Fitur Belum Tersedia", description:`Fungsi "${action}" ${tugasId ? `untuk tugas ${tugasId} ` : ''}belum diimplementasikan.`});
   };
 
-  const tugasMendatang = mockTugas.filter(t => t.status === "Belum Dikerjakan" || t.status === "Terlambat");
-  const tugasSelesai = mockTugas.filter(t => t.status === "Sudah Dikumpulkan" || t.status === "Dinilai");
+  const tugasMendatang = tugasList.filter(t => t.statusFrontend === "Belum Dikerjakan" || t.statusFrontend === "Terlambat");
+  const tugasSelesai = tugasList.filter(t => t.statusFrontend === "Sudah Dikumpulkan" || t.statusFrontend === "Dinilai");
 
-  const getStatusBadgeVariant = (status: TugasStatus): "default" | "secondary" | "destructive" | "outline" => {
-    if (status === "Dinilai") return "default"; // Green in many themes if customized
+  const getStatusBadgeVariant = (status: TugasSiswaStatus): "default" | "secondary" | "destructive" | "outline" => {
+    if (status === "Dinilai") return "default"; 
     if (status === "Sudah Dikumpulkan") return "secondary";
     if (status === "Terlambat") return "destructive";
     return "outline"; // Belum Dikerjakan
   };
   
-  const getStatusIcon = (status: TugasStatus) => {
+  const getStatusIcon = (status: TugasSiswaStatus) => {
     if (status === "Dinilai" || status === "Sudah Dikumpulkan") return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     if (status === "Terlambat") return <Clock className="h-4 w-4 text-red-500" />;
     return <FilePenLine className="h-4 w-4 text-yellow-500" />;
   }
 
-  const renderTugasList = (listTugas: Tugas[]) => (
-    listTugas.length > 0 ? (
+  const renderTugasList = (listTugas: TugasDisplay[]) => (
+    isLoading ? (
+        <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+    ) : listTugas.length > 0 ? (
       <ul className="space-y-4">
         {listTugas.map(tugas => (
           <li key={tugas.id}>
@@ -75,10 +123,10 @@ export default function SiswaTugasPage() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
                     <div>
                         <CardTitle className="text-lg text-primary">{tugas.judul}</CardTitle>
-                        <CardDescription>{tugas.mapel} - oleh {tugas.guru}</CardDescription>
+                        <CardDescription>{tugas.mapel} - oleh {tugas.uploader?.fullName || tugas.uploader?.name || "Guru"}</CardDescription>
                     </div>
-                    <Badge variant={getStatusBadgeVariant(tugas.status)} className="mt-2 sm:mt-0 flex items-center gap-1">
-                        {getStatusIcon(tugas.status)} {tugas.status}
+                    <Badge variant={getStatusBadgeVariant(tugas.statusFrontend)} className="mt-2 sm:mt-0 flex items-center gap-1">
+                        {getStatusIcon(tugas.statusFrontend)} {tugas.statusFrontend}
                     </Badge>
                 </div>
               </CardHeader>
@@ -86,12 +134,12 @@ export default function SiswaTugasPage() {
                 {tugas.deskripsi && <p className="text-sm text-muted-foreground mb-3">{tugas.deskripsi}</p>}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs text-muted-foreground">
                   <p>
-                    Tenggat: {format(tugas.tenggat, "dd MMMM yyyy, HH:mm", { locale: localeID })}
-                    ({formatDistanceToNow(tugas.tenggat, { addSuffix: true, locale: localeID })})
+                    Tenggat: {format(parseISO(tugas.tenggat), "dd MMMM yyyy, HH:mm", { locale: localeID })}
+                    ({formatDistanceToNow(parseISO(tugas.tenggat), { addSuffix: true, locale: localeID })})
                   </p>
-                  {tugas.fileLampiran && <p>Lampiran: {tugas.fileLampiran}</p>}
+                  {tugas.namaFileLampiran && <p>Lampiran Guru: {tugas.namaFileLampiran}</p>}
                 </div>
-                {(tugas.status === "Belum Dikerjakan" || tugas.status === "Terlambat") && (
+                {(tugas.statusFrontend === "Belum Dikerjakan" || tugas.statusFrontend === "Terlambat") && (
                   <Button 
                     size="sm" 
                     className="mt-3 w-full sm:w-auto" 
@@ -100,13 +148,13 @@ export default function SiswaTugasPage() {
                     <UploadCloud className="mr-2 h-4 w-4" /> Upload Jawaban
                   </Button>
                 )}
-                {tugas.status === "Sudah Dikumpulkan" && (
+                {tugas.statusFrontend === "Sudah Dikumpulkan" && (
                   <p className="mt-3 text-sm text-green-600 font-medium">Jawaban telah dikumpulkan. Menunggu penilaian.</p>
                 )}
-                {tugas.status === "Dinilai" && (
+                {tugas.statusFrontend === "Dinilai" && (
                   <div className="mt-3 p-3 bg-muted/50 rounded-md">
-                    <p className="text-sm font-semibold">Nilai: {tugas.nilai}/100</p>
-                    {tugas.feedbackGuru && <p className="text-xs text-muted-foreground mt-1">Feedback: {tugas.feedbackGuru}</p>}
+                    <p className="text-sm font-semibold">Nilai: {tugas.nilai ?? "Belum Dinilai"}{tugas.nilai ? "/100" : ""}</p>
+                    {/* {tugas.feedbackGuruFrontend && <p className="text-xs text-muted-foreground mt-1">Feedback: {tugas.feedbackGuruFrontend}</p>} */}
                      <Button 
                         variant="link" 
                         size="sm" 
@@ -136,7 +184,7 @@ export default function SiswaTugasPage() {
         <ClipboardCheck className="mr-3 h-8 w-8 text-primary" />
         Tugas Saya
       </h1>
-      <p className="text-muted-foreground">Lihat, kelola, dan kumpulkan tugas sekolah Anda.</p>
+      <p className="text-muted-foreground">Lihat, kelola, dan kumpulkan tugas sekolah Anda. Kelas: {user?.kelas || "Tidak ada"}</p>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "mendatang" | "selesai")}>
         <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
@@ -169,3 +217,4 @@ export default function SiswaTugasPage() {
     </div>
   );
 }
+

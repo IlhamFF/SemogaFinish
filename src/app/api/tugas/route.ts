@@ -7,6 +7,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { TugasEntity } from "@/entities/tugas.entity";
 import * as z from "zod";
 import { formatISO } from 'date-fns';
+import type { FindManyOptions } from "typeorm";
 
 const tugasCreateSchema = z.object({
   judul: z.string().min(5, { message: "Judul tugas minimal 5 karakter." }),
@@ -17,10 +18,11 @@ const tugasCreateSchema = z.object({
   namaFileLampiran: z.string().optional().nullable(),
 });
 
-// GET /api/tugas - Mendapatkan daftar tugas untuk guru yang login
+// GET /api/tugas - Mendapatkan daftar tugas
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || (session.user.role !== 'guru' && session.user.role !== 'superadmin')) {
+  // Siswa, Guru, Admin, Superadmin bisa melihat tugas, Pimpinan mungkin tidak perlu endpoint ini.
+  if (!session || !session.user || !['siswa', 'guru', 'admin', 'superadmin'].includes(session.user.role)) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 
@@ -28,22 +30,33 @@ export async function GET(request: NextRequest) {
     const dataSource = await getInitializedDataSource();
     const tugasRepo = dataSource.getRepository(TugasEntity);
     
-    const queryOptions = {
-      where: { uploaderId: session.user.id },
+    const { searchParams } = new URL(request.url);
+    const filterKelas = searchParams.get("kelas"); // Parameter opsional untuk admin/superadmin
+
+    const queryOptions: FindManyOptions<TugasEntity> = {
       relations: ["uploader"],
       order: { tenggat: "ASC", createdAt: "DESC" } as any,
+      where: {} as any,
     };
 
-    if (session.user.role === 'superadmin') { // Superadmin can see all
-        delete queryOptions.where.uploaderId;
+    if (session.user.role === 'guru') {
+        queryOptions.where.uploaderId = session.user.id;
+    } else if (session.user.role === 'siswa') {
+        if (!session.user.kelas) { // Jika siswa tidak punya info kelas di sesi
+            return NextResponse.json({ message: "Informasi kelas siswa tidak ditemukan." }, { status: 400 });
+        }
+        queryOptions.where.kelas = session.user.kelas;
+    } else if ((session.user.role === 'admin' || session.user.role === 'superadmin') && filterKelas) {
+        queryOptions.where.kelas = filterKelas;
     }
+    // Jika superadmin/admin dan tidak ada filterKelas, 'where' tetap kosong, mengembalikan semua.
 
     const tugasList = await tugasRepo.find(queryOptions);
 
     return NextResponse.json(tugasList.map(t => ({
         ...t,
         tenggat: formatISO(new Date(t.tenggat)), // Ensure tenggat is ISO string
-        uploader: t.uploader ? { id: t.uploader.id, name: t.uploader.name, fullName: t.uploader.fullName } : undefined
+        uploader: t.uploader ? { id: t.uploader.id, name: t.uploader.name, fullName: t.uploader.fullName, email: t.uploader.email } : undefined
     })));
   } catch (error) {
     console.error("Error fetching tugas:", error);
