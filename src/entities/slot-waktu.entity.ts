@@ -1,6 +1,7 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, OneToMany } from "typeorm";
+import type { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
 
 @Entity({ name: "slot_waktu" })
 export class SlotWaktuEntity {
@@ -19,6 +20,9 @@ export class SlotWaktuEntity {
 
   @Column({ type: "int", nullable: true }) // Untuk pengurutan custom jika diperlukan
   urutan?: number | null;
+
+  @OneToMany("JadwalPelajaranEntity", (jadwal) => jadwal.slotWaktu)
+  jadwalPelajaranEntries?: JadwalPelajaranEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;

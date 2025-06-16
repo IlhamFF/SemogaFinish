@@ -9,6 +9,7 @@ import type { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
 import type { MateriAjarEntity } from "./materi-ajar.entity";
 import type { SilabusEntity } from "./silabus.entity";
 import type { RppEntity } from "./rpp.entity";
+import type { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
 
 @Entity({ name: "users" })
 export class UserEntity /* implements AdapterUser */ { // Removed implements
@@ -65,7 +66,7 @@ export class UserEntity /* implements AdapterUser */ { // Removed implements
   joinDate?: string | null; 
 
   @Column({ type: "varchar", nullable: true })
-  kelasId?: string | null; 
+  kelasId?: string | null; // This stores the class name string for Siswa
 
   @Column("simple-array", { nullable: true })
   mataPelajaran?: string[] | null; // Nama mata pelajaran yang diampu guru
@@ -94,10 +95,12 @@ export class UserEntity /* implements AdapterUser */ { // Removed implements
   @OneToMany("RppEntity", rpp => rpp.uploader)
   rppUploaded?: RppEntity[];
 
+  @OneToMany("JadwalPelajaranEntity", jadwal => jadwal.guru)
+  jadwalMengajar?: JadwalPelajaranEntity[];
+
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;
 
   @UpdateDateColumn({ type: "timestamp with time zone" })
   updatedAt!: Date;
 }
-

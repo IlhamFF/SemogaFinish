@@ -1,7 +1,11 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
-// KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR moved to constants.ts
 import { KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR as JENIS_MATERI_AJAR_CONST_FROM_LIB } from "@/lib/constants";
+import type { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
+import type { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
+import type { UserEntity } from "@/entities/user.entity";
+import type { RuanganEntity } from "@/entities/ruangan.entity";
+
 
 export type Role = 'admin' | 'guru' | 'siswa' | 'pimpinan' | 'superadmin';
 
@@ -21,11 +25,11 @@ export interface User {
   nis?: string | null; 
   nip?: string | null; 
   joinDate?: string | null; 
-  kelas?: string | null; 
-  mataPelajaran?: string | null; 
+  kelas?: string | null; // For Siswa, this is their class name. For Admin User Form, it's string input.
+  mataPelajaran?: string | null; // For Guru, single string of subject names. For Admin User Form, string input.
 }
 
-export interface NavItem { // This might be used internally by AppSidebarContent
+export interface NavItem { 
   href: string;
   label: string;
   icon: React.ElementType;
@@ -156,9 +160,26 @@ export interface MateriAjar {
   updatedAt?: Date | string;
 }
 
-// Re-exporting constants from constants.ts for convenience if some files were importing them from types/index.ts
+export interface JadwalPelajaran {
+  id: string;
+  hari: string;
+  kelas: string;
+  slotWaktuId: string;
+  slotWaktu?: Pick<SlotWaktuEntity, 'id' | 'namaSlot' | 'waktuMulai' | 'waktuSelesai'>;
+  mapelId: string;
+  mapel?: Pick<MataPelajaranEntity, 'id' | 'nama' | 'kode'>;
+  guruId: string;
+  guru?: Pick<UserEntity, 'id' | 'name' | 'fullName'>;
+  ruanganId: string;
+  ruangan?: Pick<RuanganEntity, 'id' | 'nama' | 'kode'>;
+  catatan?: string | null;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+
 export { 
     KATEGORI_SKL_CONST as KATEGORI_SKL, 
     FASE_CP_CONST as FASE_CP,
-    JENIS_MATERI_AJAR_CONST_FROM_LIB as JENIS_MATERI_AJAR // Re-exporting JENIS_MATERI_AJAR
+    JENIS_MATERI_AJAR_CONST_FROM_LIB as JENIS_MATERI_AJAR
 };

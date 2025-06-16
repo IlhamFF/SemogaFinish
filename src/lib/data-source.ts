@@ -15,10 +15,8 @@ import { SilabusEntity } from "@/entities/silabus.entity";
 import { RppEntity } from "@/entities/rpp.entity";
 import { RuanganEntity } from "@/entities/ruangan.entity";
 import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
+import { JadwalPelajaranEntity } from "@/entities/jadwal-pelajaran.entity";
 
-
-// Import other application-specific entities here as they are created
-// e.g., import { KelasEntity } from "@/entities/kelas.entity";
 
 export const dataSourceOptions: DataSourceOptions = {
   type: "postgres",
@@ -27,7 +25,7 @@ export const dataSourceOptions: DataSourceOptions = {
   username: process.env.POSTGRES_USER || "postgres",
   password: process.env.POSTGRES_PASSWORD || "password",
   database: process.env.POSTGRES_DB || "educentral",
-  synchronize: process.env.NODE_ENV === "development", // true for dev, false for prod (use migrations)
+  synchronize: process.env.NODE_ENV === "development", 
   logging: process.env.NODE_ENV === "development" ? ["query", "error"] : ["error"],
   entities: [
     UserEntity,
@@ -44,10 +42,9 @@ export const dataSourceOptions: DataSourceOptions = {
     RppEntity,
     RuanganEntity,
     SlotWaktuEntity,
-    // Add other entities here:
-    // KelasEntity,
+    JadwalPelajaranEntity,
   ],
-  migrations: [], // Add path to migration files for production
+  migrations: [], 
   subscribers: [],
 };
 

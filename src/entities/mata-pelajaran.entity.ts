@@ -2,12 +2,13 @@
 import "reflect-metadata"; // Ensure this is the very first import
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, OneToMany } from "typeorm";
 import { KATEGORI_MAPEL } from "@/lib/constants";
-// Removed self-reference for type: import type { KategoriMapelType } from "@/entities/mata-pelajaran.entity"; 
+import type { KategoriMapelType } from "@/entities/mata-pelajaran.entity"; 
 import type { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
 import type { SilabusEntity } from "./silabus.entity";
 import type { RppEntity } from "./rpp.entity";
+import type { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
 
-export type KategoriMapelType = typeof KATEGORI_MAPEL[number];
+// export type KategoriMapelType = typeof KATEGORI_MAPEL[number]; // Already defined
 
 @Entity({ name: "mata_pelajaran" })
 export class MataPelajaranEntity {
@@ -38,6 +39,9 @@ export class MataPelajaranEntity {
 
   @OneToMany("RppEntity", (rpp: RppEntity) => rpp.mapel)
   rppList?: RppEntity[];
+
+  @OneToMany("JadwalPelajaranEntity", (jadwal) => jadwal.mapel)
+  jadwalPelajaranEntries?: JadwalPelajaranEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;
