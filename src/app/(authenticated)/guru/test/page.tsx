@@ -22,7 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { MOCK_SUBJECTS, SCHOOL_CLASSES_PER_MAJOR_GRADE, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS } from "@/lib/constants";
-import type { Test, TestStatus, TestTipe } from "@/types"; // Import Test, TestStatus, TestTipe from global types
+import type { Test, TestStatus, TestTipe } from "@/types"; 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -36,7 +36,7 @@ const testSchema = z.object({
   tipe: z.enum(["Kuis", "Ulangan Harian", "UTS", "UAS", "Lainnya"], { required_error: "Tipe test wajib dipilih."}),
   jumlahSoal: z.coerce.number().min(1, { message: "Jumlah soal minimal 1."}).optional().nullable(),
   deskripsi: z.string().optional().nullable(),
-  // Status will be handled by API, default to 'Draf' or 'Terjadwal' on creation
+  // Status akan dihandle oleh API, default ke 'Draf' atau 'Terjadwal' saat pembuatan
 });
 
 type TestFormValues = z.infer<typeof testSchema>;
@@ -65,7 +65,7 @@ export default function GuruTestPage() {
         }
       });
     });
-    return kls;
+    return kls.sort();
   }, []);
 
   const testForm = useForm<TestFormValues>({
@@ -83,9 +83,12 @@ export default function GuruTestPage() {
         throw new Error(errorData.message || "Gagal mengambil data test.");
       }
       const data: Test[] = await response.json();
-      setTestList(data.map(t => ({...t, tanggal: t.tanggal ? parseISO(t.tanggal).toISOString() : new Date().toISOString() }))); // Keep as ISO string for consistency
+      // API mengembalikan tanggal sebagai ISO string, frontend form menggunakan Date object.
+      // Daftar yang ditampilkan juga menggunakan ISO string, jadi tidak perlu konversi saat fetch.
+      setTestList(data); 
     } catch (error: any) {
-      toast({ title: "Error Test", description: error.message, variant: "destructive" });
+      toast({ title: "Error Mengambil Test", description: error.message, variant: "destructive" });
+      setTestList([]);
     } finally {
       setIsLoadingTest(false);
     }
@@ -111,7 +114,11 @@ export default function GuruTestPage() {
           deskripsi: editingTest.deskripsi || "",
         });
       } else {
-        testForm.reset({ judul: "", mapel: undefined, kelas: undefined, tanggal: new Date(new Date().setDate(new Date().getDate() + 7)), durasi: 60, tipe: undefined, jumlahSoal: undefined, deskripsi: "" });
+        // Default tanggal 7 hari dari sekarang, pukul 08:00
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 7);
+        defaultDate.setHours(8, 0, 0, 0);
+        testForm.reset({ judul: "", mapel: undefined, kelas: undefined, tanggal: defaultDate, durasi: 60, tipe: undefined, jumlahSoal: undefined, deskripsi: "" });
       }
     }
   }, [editingTest, testForm, isFormOpen]);
@@ -124,8 +131,8 @@ export default function GuruTestPage() {
     setIsSubmitting(true);
     const payload = {
       ...values,
-      tanggal: formatISO(values.tanggal), // Convert Date to ISO string for API
-      status: editingTest ? editingTest.status : "Draf", // Preserve status on edit, default Draf on create
+      tanggal: formatISO(values.tanggal), // Konversi Date ke ISO string untuk API
+      status: editingTest ? editingTest.status : "Draf", // Pertahankan status saat edit, default Draf saat buat
     };
 
     const url = editingTest ? `/api/test/${editingTest.id}` : '/api/test';
@@ -146,7 +153,7 @@ export default function GuruTestPage() {
       setEditingTest(null);
       fetchTests();
     } catch (error: any) {
-      toast({ title: "Error Test", description: error.message, variant: "destructive" });
+      toast({ title: "Error Menyimpan Test", description: error.message, variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -181,27 +188,30 @@ export default function GuruTestPage() {
     }
   };
 
-  const filteredTests = testList.filter(t => 
+  const filteredTests = useMemo(() => testList.filter(t => 
     (t.judul.toLowerCase().includes(searchTerm.toLowerCase()) || t.mapel.toLowerCase().includes(searchTerm.toLowerCase())) &&
     (filterStatus === "semua" || t.status === filterStatus)
-  );
+  ), [testList, searchTerm, filterStatus]);
 
   const getStatusBadgeClass = (status: TestStatus) => {
     switch(status) {
-      case "Terjadwal": return "bg-blue-100 text-blue-800 border-blue-300";
-      case "Berlangsung": return "bg-yellow-100 text-yellow-800 border-yellow-300 animate-pulse";
-      case "Selesai": return "bg-green-100 text-green-800 border-green-300";
-      case "Dinilai": return "bg-purple-100 text-purple-800 border-purple-300";
-      case "Draf": return "bg-gray-100 text-gray-800 border-gray-300";
-      default: return "bg-gray-100 text-gray-800 border-gray-300";
+      case "Terjadwal": return "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700";
+      case "Berlangsung": return "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700 animate-pulse";
+      case "Selesai": return "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700";
+      case "Dinilai": return "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700";
+      case "Draf": 
+      default: return "bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-700/30 dark:text-gray-300 dark:border-gray-600";
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-headline font-semibold">Manajemen Test & Ujian</h1>
-        <Button onClick={() => openFormDialog()}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+            <h1 className="text-3xl font-headline font-semibold">Manajemen Test & Ujian</h1>
+            <p className="text-muted-foreground mt-1">Rancang, jadwalkan, dan kelola berbagai jenis tes untuk siswa.</p>
+        </div>
+        <Button onClick={() => openFormDialog()} disabled={isLoadingTest}>
           <PlusCircle className="mr-2 h-4 w-4" /> Buat Test Baru
         </Button>
       </div>
@@ -210,144 +220,123 @@ export default function GuruTestPage() {
         <CardHeader>
           <CardTitle className="flex items-center">
             <ScrollText className="mr-2 h-6 w-6 text-primary" />
-            Pembuatan dan Pelaksanaan Test/Ujian
+            Daftar Test & Ujian
           </CardTitle>
-          <CardDescription>
-            Rancang, jadwalkan, dan kelola berbagai jenis tes, kuis, atau ujian untuk siswa secara online.
-          </CardDescription>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
+                <CardDescription>
+                    Total: {filteredTests.length} test/ujian.
+                </CardDescription>
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <div className="relative flex-grow sm:flex-grow-0">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            placeholder="Cari judul, mapel..." 
+                            className="pl-8 w-full sm:w-[200px] lg:w-[250px]" 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <Select value={filterStatus} onValueChange={(val) => setFilterStatus(val as TestStatus | "semua")}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Filter Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="semua">Semua Status</SelectItem>
+                            {(["Draf", "Terjadwal", "Berlangsung", "Selesai", "Dinilai"] as TestStatus[]).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <Card>
-            <CardHeader>
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div>
-                        <CardTitle className="text-xl">Daftar Test & Ujian</CardTitle>
-                        <CardDescription>Total: {filteredTests.length} test/ujian.</CardDescription>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        <div className="relative flex-grow sm:flex-grow-0">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                                placeholder="Cari judul, mapel..." 
-                                className="pl-8 w-full sm:w-[200px]" 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <Select value={filterStatus} onValueChange={(val) => setFilterStatus(val as TestStatus | "semua")}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder="Filter Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="semua">Semua Status</SelectItem>
-                                <SelectItem value="Draf">Draf</SelectItem>
-                                <SelectItem value="Terjadwal">Terjadwal</SelectItem>
-                                <SelectItem value="Berlangsung">Berlangsung</SelectItem>
-                                <SelectItem value="Selesai">Selesai</SelectItem>
-                                <SelectItem value="Dinilai">Dinilai</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent>
-              {isLoadingTest ? (
-                 <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-              ) : filteredTests.length > 0 ? (
-                <ScrollArea className="h-[60vh] border rounded-md">
-                  <Table>
-                    <TableHeader className="bg-muted/50 sticky top-0">
-                      <TableRow>
-                        <TableHead>Judul Test/Ujian</TableHead>
-                        <TableHead>Mapel & Kelas</TableHead>
-                        <TableHead>Tanggal & Durasi</TableHead>
-                        <TableHead>Tipe</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Tindakan</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredTests.map((test) => (
-                        <TableRow key={test.id}>
-                          <TableCell className="max-w-xs">
-                            <div className="font-medium truncate" title={test.judul}>{test.judul}</div>
-                            {test.deskripsi && <p className="text-xs text-muted-foreground truncate" title={test.deskripsi}>{test.deskripsi}</p>}
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">{test.mapel}</div>
-                            <div className="text-xs text-muted-foreground">{test.kelas}</div>
-                          </TableCell>
-                           <TableCell>
-                            <div className="text-sm text-muted-foreground">{format(parseISO(test.tanggal), "dd MMM yyyy, HH:mm", { locale: localeID })}</div>
-                            <div className="text-xs text-muted-foreground">{test.durasi} Menit</div>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{test.tipe}</TableCell>
-                          <TableCell>
-                             <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusBadgeClass(test.status)}`}>
-                              {test.status}
-                            </span>
-                          </TableCell>
-                          <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                             {test.status === "Terjadwal" && <Button variant="ghost" size="sm" onClick={() => toast({title:"Placeholder", description:"Mulai Test belum diimplementasikan."})} className="mr-1 text-green-600 hover:text-green-700"><PlayCircle className="h-4 w-4 mr-1"/> Mulai</Button>}
-                             <Button variant="ghost" size="icon" onClick={() => openFormDialog(test)} className="mr-1 h-8 w-8"><Edit3 className="h-4 w-4" /></Button>
-                             <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(test)} className="text-destructive hover:text-destructive/80 h-8 w-8"><Trash2 className="h-4 w-4" /></Button>
-                          </td>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-              ) : (
-                 <div className="text-center py-8 text-muted-foreground">
-                  <FileQuestion className="mx-auto h-12 w-12" />
-                  <p className="mt-2">Belum ada test/ujian yang dibuat atau filter tidak menemukan hasil.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl">
-                <FileQuestion className="mr-3 h-5 w-5 text-primary" />
-                Fitur Pembuatan Soal & Pengaturan Test
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <Button variant="outline" onClick={() => toast({title:"Placeholder", description:"Bank Soal belum diimplementasikan."})} className="justify-start text-left h-auto py-3">
-                <FileQuestion className="mr-3 h-5 w-5" />
-                <div>
-                  <p className="font-semibold">Bank Soal</p>
-                  <p className="text-xs text-muted-foreground">Kelola dan gunakan soal tersimpan.</p>
-                </div>
-              </Button>
-              <Button variant="outline" onClick={() => toast({title:"Placeholder", description:"Pengaturan Acak Soal belum diimplementasikan."})} className="justify-start text-left h-auto py-3">
-                <CheckSquare className="mr-3 h-5 w-5" />
-                 <div>
-                  <p className="font-semibold">Acak Soal & Opsi</p>
-                  <p className="text-xs text-muted-foreground">Konfigurasi pengacakan.</p>
-                </div>
-              </Button>
-               <Button variant="outline" onClick={() => toast({title:"Placeholder", description:"Pengaturan Waktu & Pembatasan belum diimplementasikan."})} className="justify-start text-left h-auto py-3">
-                <Clock className="mr-3 h-5 w-5" />
-                 <div>
-                  <p className="font-semibold">Timer & Pembatasan Akses</p>
-                  <p className="text-xs text-muted-foreground">Atur durasi dan jadwal.</p>
-                </div>
-              </Button>
-               <Button variant="outline" onClick={() => toast({title:"Placeholder", description:"Pantau Pelaksanaan Test belum diimplementasikan."})} className="justify-start text-left h-auto py-3">
-                <BarChartHorizontalBig className="mr-3 h-5 w-5" />
-                 <div>
-                  <p className="font-semibold">Monitoring Real-time</p>
-                  <p className="text-xs text-muted-foreground">Pantau siswa saat ujian.</p>
-                </div>
-              </Button>
-            </CardContent>
-          </Card>
+        <CardContent>
+          {isLoadingTest ? (
+             <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <p className="ml-2">Memuat data test...</p></div>
+          ) : filteredTests.length > 0 ? (
+            <ScrollArea className="h-[60vh] border rounded-md">
+              <Table>
+                <TableHeader className="bg-muted/50 sticky top-0">
+                  <TableRow>
+                    <TableHead className="min-w-[200px]">Judul Test/Ujian</TableHead>
+                    <TableHead>Mapel & Kelas</TableHead>
+                    <TableHead>Tanggal & Durasi</TableHead>
+                    <TableHead>Tipe</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Tindakan</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTests.map((test) => (
+                    <TableRow key={test.id}>
+                      <TableCell className="max-w-xs">
+                        <div className="font-medium truncate" title={test.judul}>{test.judul}</div>
+                        {test.deskripsi && <p className="text-xs text-muted-foreground truncate" title={test.deskripsi}>{test.deskripsi}</p>}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{test.mapel}</div>
+                        <div className="text-xs text-muted-foreground">{test.kelas}</div>
+                      </TableCell>
+                       <TableCell>
+                        <div className="text-sm">{format(parseISO(test.tanggal), "dd MMM yyyy, HH:mm", { locale: localeID })}</div>
+                        <div className="text-xs text-muted-foreground">{test.durasi} Menit</div>
+                      </TableCell>
+                      <TableCell className="text-sm">{test.tipe}</TableCell>
+                      <TableCell>
+                         <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusBadgeClass(test.status)}`}>
+                          {test.status}
+                        </span>
+                      </TableCell>
+                      <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                         {test.status === "Terjadwal" && <Button variant="ghost" size="sm" onClick={() => toast({title:"Placeholder", description:"Mulai Test belum diimplementasikan."})} className="mr-1 text-green-600 hover:text-green-700"><PlayCircle className="h-4 w-4 mr-1"/> Mulai</Button>}
+                         <Button variant="ghost" size="icon" onClick={() => openFormDialog(test)} className="mr-1 h-8 w-8"><Edit3 className="h-4 w-4" /></Button>
+                         <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(test)} className="text-destructive hover:text-destructive/80 h-8 w-8"><Trash2 className="h-4 w-4" /></Button>
+                      </td>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          ) : (
+             <div className="text-center py-8 text-muted-foreground">
+              <FileQuestion className="mx-auto h-12 w-12" />
+              <p className="mt-2">Belum ada test/ujian yang dibuat atau filter tidak menemukan hasil.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Dialog Form Tambah/Edit Test */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center text-xl">
+            <FileQuestion className="mr-3 h-5 w-5 text-primary" />
+            Fitur Tambahan
+          </CardTitle>
+          <CardDescription>Alat bantu untuk pengelolaan test yang lebih komprehensif.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <Button variant="outline" onClick={() => toast({title:"Placeholder", description:"Bank Soal belum diimplementasikan."})} className="justify-start text-left h-auto py-3">
+            <FileQuestion className="mr-3 h-5 w-5" />
+            <div>
+              <p className="font-semibold">Bank Soal</p>
+              <p className="text-xs text-muted-foreground">Kelola dan gunakan soal tersimpan.</p>
+            </div>
+          </Button>
+          <Button variant="outline" onClick={() => toast({title:"Placeholder", description:"Pengaturan Acak Soal belum diimplementasikan."})} className="justify-start text-left h-auto py-3">
+            <CheckSquare className="mr-3 h-5 w-5" />
+             <div>
+              <p className="font-semibold">Acak Soal & Opsi</p>
+              <p className="text-xs text-muted-foreground">Konfigurasi pengacakan.</p>
+            </div>
+          </Button>
+           <Button variant="outline" onClick={() => toast({title:"Placeholder", description:"Pantau Pelaksanaan Test belum diimplementasikan."})} className="justify-start text-left h-auto py-3">
+            <BarChartHorizontalBig className="mr-3 h-5 w-5" />
+             <div>
+              <p className="font-semibold">Monitoring Real-time</p>
+              <p className="text-xs text-muted-foreground">Pantau siswa saat ujian.</p>
+            </div>
+          </Button>
+        </CardContent>
+      </Card>
+
       <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingTest(null); }}>
         <DialogContent className="sm:max-w-lg">
             <DialogHeader>
@@ -359,7 +348,7 @@ export default function GuruTestPage() {
                     <FormField control={testForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Test/Ujian</FormLabel><FormControl><Input placeholder="Contoh: Ujian Tengah Semester Gasal" {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FormField control={testForm.control} name="mapel" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih mapel" /></SelectTrigger></FormControl><SelectContent>{MOCK_SUBJECTS.map(subject => (<SelectItem key={subject} value={subject}>{subject}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-                        <FormField control={testForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas Ditugaskan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kelas" /></SelectTrigger></FormControl><SelectContent>{mockKelasList.map(kls => (<SelectItem key={kls} value={kls}>{kls}</SelectItem>))}</SelectContent></Select><FormDescription className="text-xs">Bisa "Semua Kelas X", atau spesifik.</FormDescription><FormMessage /></FormItem>)} />
+                        <FormField control={testForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas Ditugaskan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kelas" /></SelectTrigger></FormControl><SelectContent><ScrollArea className="h-60">{mockKelasList.map(kls => (<SelectItem key={kls} value={kls}>{kls}</SelectItem>))}</ScrollArea></SelectContent></Select><FormDescription className="text-xs">Bisa "Semua Kelas X", atau spesifik.</FormDescription><FormMessage /></FormItem>)} />
                     </div>
                     <FormField control={testForm.control} name="tanggal" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Tanggal & Waktu Pelaksanaan</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP HH:mm", { locale: localeID }) : <span>Pilih tanggal & waktu</span>}<CalendarClock className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /><div className="p-3 border-t border-border"><Input type="time" defaultValue={field.value ? format(field.value, "HH:mm") : "08:00"} onChange={(e) => { const time = e.target.value.split(':'); const newDate = new Date(field.value || new Date()); newDate.setHours(parseInt(time[0]), parseInt(time[1])); field.onChange(newDate); }} className="w-full"/></div></PopoverContent></Popover><FormMessage /></FormItem>)} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -368,6 +357,31 @@ export default function GuruTestPage() {
                     </div>
                     <FormField control={testForm.control} name="jumlahSoal" render={({ field }) => (<FormItem><FormLabel>Jumlah Soal (Opsional)</FormLabel><FormControl><Input type="number" placeholder="Contoh: 25" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>)} />
                     <FormField control={testForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi/Instruksi (Opsional)</FormLabel><FormControl><Textarea placeholder="Instruksi tambahan untuk siswa..." {...field} value={field.value ?? ""} rows={3} /></FormControl><FormMessage /></FormItem>)} />
+                    {editingTest && (
+                         <FormField
+                            control={testForm.control}
+                            name="status" 
+                            render={({ field: {value: formValue, onChange, ...restField }}) => {
+                                // formValue for status won't be directly in testFormValues, it's from editingTest.status
+                                const currentStatus = editingTest.status;
+                                return (
+                                <FormItem>
+                                <FormLabel>Status Test</FormLabel>
+                                <Select onValueChange={onChange} value={currentStatus}>
+                                    <FormControl>
+                                        <SelectTrigger><SelectValue placeholder="Pilih status test" /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {(["Draf", "Terjadwal", "Berlangsung", "Selesai", "Dinilai"] as TestStatus[]).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormDescription>Ubah status test jika diperlukan.</FormDescription>
+                                <FormMessage />
+                                </FormItem>
+                                )
+                            }}
+                        />
+                    )}
                     <DialogFooter className="pt-4"><Button type="button" variant="outline" onClick={() => {setIsFormOpen(false); setEditingTest(null);}} disabled={isSubmitting}>Batal</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingTest ? "Simpan Perubahan" : "Simpan Test"}</Button></DialogFooter>
                 </form>
             </Form>
@@ -394,3 +408,6 @@ export default function GuruTestPage() {
     </div>
   );
 }
+
+
+    
