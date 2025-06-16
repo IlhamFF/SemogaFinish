@@ -1,6 +1,9 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
 import { KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR as JENIS_MATERI_AJAR_CONST_FROM_LIB } from "@/lib/constants";
+// It's generally better to import the specific entity types if they are simple and don't cause circular dependencies
+// or if you need to strictly type the shape of related data.
+// However, for Pick utility, importing the full entity and picking fields is also common.
 import type { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import type { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import type { UserEntity } from "@/entities/user.entity";
@@ -97,13 +100,13 @@ export interface Silabus {
   id: string;
   judul: string;
   mapelId: string;
-  mapel?: Pick<MataPelajaran, 'id' | 'nama' | 'kode'>;
+  mapel?: Pick<MataPelajaranEntity, 'id' | 'nama' | 'kode'>;
   kelas: string;
   deskripsiSingkat?: string | null;
   namaFileOriginal?: string | null;
   fileUrl?: string | null;
   uploaderId: string;
-  uploader?: Pick<User, 'id' | 'name' | 'fullName' | 'email'>;
+  uploader?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
@@ -112,7 +115,7 @@ export interface RPP {
   id: string;
   judul: string;
   mapelId: string;
-  mapel?: Pick<MataPelajaran, 'id' | 'nama' | 'kode'>;
+  mapel?: Pick<MataPelajaranEntity, 'id' | 'nama' | 'kode'>;
   kelas: string;
   pertemuanKe: number;
   materiPokok?: string | null;
@@ -121,7 +124,7 @@ export interface RPP {
   namaFileOriginal?: string | null;
   fileUrl?: string | null;
   uploaderId: string;
-  uploader?: Pick<User, 'id' | 'name' | 'fullName' | 'email'>;
+  uploader?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
@@ -155,7 +158,7 @@ export interface MateriAjar {
   fileUrl?: string | null; 
   tanggalUpload: string; // YYYY-MM-DD
   uploaderId: string; 
-  uploader?: Pick<User, 'id' | 'name' | 'fullName' | 'email'>; 
+  uploader?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>; 
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
@@ -169,7 +172,7 @@ export interface JadwalPelajaran {
   mapelId: string;
   mapel?: Pick<MataPelajaranEntity, 'id' | 'nama' | 'kode'>;
   guruId: string;
-  guru?: Pick<UserEntity, 'id' | 'name' | 'fullName'>;
+  guru?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>; // Added email for display
   ruanganId: string;
   ruangan?: Pick<RuanganEntity, 'id' | 'nama' | 'kode'>;
   catatan?: string | null;
@@ -183,3 +186,4 @@ export {
     FASE_CP_CONST as FASE_CP,
     JENIS_MATERI_AJAR_CONST_FROM_LIB as JENIS_MATERI_AJAR
 };
+
