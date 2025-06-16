@@ -1,61 +1,77 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
-import { FileText, PlayCircle, ListChecks, CheckCircle, AlertCircle, Clock } from "lucide-react";
-import { format } from "date-fns";
+import { FileText, PlayCircle, ListChecks, CheckCircle, AlertCircle, Clock, Loader2 } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { id as localeID } from 'date-fns/locale';
-
-type TestStatus = "Terjadwal" | "Berlangsung" | "Selesai" | "Menunggu Hasil" | "Dinilai";
-interface Test {
-  id: string;
-  judul: string;
-  mapel: string;
-  guru: string;
-  tanggal: Date;
-  durasi: string; // e.g., "90 Menit"
-  status: TestStatus;
-  tipe: "Kuis" | "UTS" | "UAS" | "Ulangan Harian";
-  nilai?: number;
-  jumlahSoal?: number;
-}
-
-const mockTests: Test[] = [
-  { id: "TEST001", judul: "Ujian Tengah Semester Gasal", mapel: "Matematika", guru: "Bu Ani", tanggal: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), durasi: "90 Menit", status: "Terjadwal", tipe: "UTS", jumlahSoal: 25 },
-  { id: "TEST002", judul: "Kuis Bab Termodinamika", mapel: "Fisika", guru: "Pak Eko", tanggal: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), durasi: "45 Menit", status: "Berlangsung", tipe: "Kuis", jumlahSoal: 10 },
-  { id: "TEST003", judul: "Ulangan Harian Struktur Atom", mapel: "Kimia", guru: "Bu Rina", tanggal: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), durasi: "60 Menit", status: "Menunggu Hasil", tipe: "Ulangan Harian", jumlahSoal: 15 },
-  { id: "TEST004", judul: "Ujian Akhir Semester Genap", mapel: "Bahasa Indonesia", guru: "Pak Budi", tanggal: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), durasi: "120 Menit", status: "Dinilai", tipe: "UAS", nilai: 88, jumlahSoal: 40 },
-];
+import type { Test as TestType, TestStatus } from "@/types"; // TestStatus also from types
+import { useToast } from "@/hooks/use-toast";
 
 
 export default function SiswaTestPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"mendatang" | "riwayat">("mendatang");
+  const [testListSiswa, setTestListSiswa] = useState<TestType[]>([]);
+  const [isLoadingSiswaTest, setIsLoadingSiswaTest] = useState(true);
+
+
+  const fetchSiswaTests = useCallback(async () => {
+    if (!user || !user.isVerified || !user.kelas) {
+        setIsLoadingSiswaTest(false);
+        return;
+    }
+    setIsLoadingSiswaTest(true);
+    try {
+        const response = await fetch('/api/test'); // API will filter by class for siswa
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Gagal mengambil data test.");
+        }
+        const data: TestType[] = await response.json();
+        setTestListSiswa(data);
+    } catch (error: any) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        setTestListSiswa([]);
+    } finally {
+        setIsLoadingSiswaTest(false);
+    }
+  }, [user, toast]);
+
+  useEffect(() => {
+    if (user && user.isVerified) {
+        fetchSiswaTests();
+    } else if (user && !user.isVerified) {
+        setIsLoadingSiswaTest(false);
+    }
+  }, [user, fetchSiswaTests]);
+
 
   if (!user || (user.role !== 'siswa' && user.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Siswa untuk melihat halaman ini.</p>;
   }
-  if (!user.isVerified) {
+  if (user && !user.isVerified) {
     return <p>Silakan verifikasi email Anda untuk mengakses fitur ini.</p>;
   }
 
   const handlePlaceholderAction = (action: string, testId?: string) => {
-    alert(`Fungsi "${action}" ${testId ? `untuk test ${testId} ` : ''}belum diimplementasikan.`);
+    toast({title:"Fitur Belum Tersedia", description:`Fungsi "${action}" ${testId ? `untuk test ${testId} ` : ''}belum diimplementasikan.`});
   };
 
-  const testMendatang = mockTests.filter(t => t.status === "Terjadwal" || t.status === "Berlangsung");
-  const testRiwayat = mockTests.filter(t => t.status === "Selesai" || t.status === "Menunggu Hasil" || t.status === "Dinilai");
+  const testMendatang = testListSiswa.filter(t => t.status === "Terjadwal" || t.status === "Berlangsung");
+  const testRiwayat = testListSiswa.filter(t => t.status === "Selesai" || t.status === "Menunggu Hasil" || t.status === "Dinilai");
 
   const getStatusBadgeVariant = (status: TestStatus): "default" | "secondary" | "destructive" | "outline" => {
-    if (status === "Dinilai" || status === "Berlangsung") return "default"; // Green/Blue for active/done
+    if (status === "Dinilai" || status === "Berlangsung") return "default"; 
     if (status === "Terjadwal") return "secondary";
-    if (status === "Menunggu Hasil") return "outline";
-    return "outline"; // Selesai (generic)
+    if (status === "Menunggu Hasil" || status === "Selesai") return "outline";
+    return "outline"; 
   };
 
   const getStatusIcon = (status: TestStatus) => {
@@ -66,8 +82,10 @@ export default function SiswaTestPage() {
     return <ListChecks className="h-4 w-4" />;
   };
 
-  const renderTestList = (listTests: Test[]) => (
-    listTests.length > 0 ? (
+  const renderTestList = (listTests: TestType[]) => (
+    isLoadingSiswaTest ? (
+        <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+    ) : listTests.length > 0 ? (
       <ul className="space-y-4">
         {listTests.map(test => (
           <li key={test.id}>
@@ -76,7 +94,7 @@ export default function SiswaTestPage() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
                     <div>
                         <CardTitle className="text-lg text-primary">{test.judul} <span className="text-sm font-normal text-muted-foreground">({test.tipe})</span></CardTitle>
-                        <CardDescription>{test.mapel} - oleh {test.guru}</CardDescription>
+                        <CardDescription>{test.mapel} - oleh {test.uploader?.fullName || test.uploader?.name || "Guru"}</CardDescription>
                     </div>
                      <Badge variant={getStatusBadgeVariant(test.status)} className="mt-2 sm:mt-0 flex items-center gap-1">
                         {getStatusIcon(test.status)} {test.status}
@@ -87,22 +105,22 @@ export default function SiswaTestPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm mb-3">
                     <div>
                         <p className="font-semibold">Tanggal:</p>
-                        <p className="text-muted-foreground">{format(test.tanggal, "dd MMM yyyy, HH:mm", { locale: localeID })}</p>
+                        <p className="text-muted-foreground">{format(parseISO(test.tanggal), "dd MMM yyyy, HH:mm", { locale: localeID })}</p>
                     </div>
                     <div>
                         <p className="font-semibold">Durasi:</p>
-                        <p className="text-muted-foreground">{test.durasi}</p>
+                        <p className="text-muted-foreground">{test.durasi} Menit</p>
                     </div>
                     <div>
                         <p className="font-semibold">Jumlah Soal:</p>
                         <p className="text-muted-foreground">{test.jumlahSoal || '-'}</p>
                     </div>
-                    {test.status === "Dinilai" && test.nilai !== undefined && (
+                    {/* {test.status === "Dinilai" && test.nilai !== undefined && ( // 'nilai' field not in TestType yet
                          <div>
                             <p className="font-semibold">Nilai:</p>
                             <p className="text-foreground font-bold text-lg">{test.nilai}</p>
                         </div>
-                    )}
+                    )} */}
                 </div>
                 
                 {test.status === "Berlangsung" && (
@@ -113,10 +131,10 @@ export default function SiswaTestPage() {
                     <PlayCircle className="mr-2 h-4 w-4" /> Mulai Test
                   </Button>
                 )}
-                {test.status === "Terjadwal" && new Date() > test.tanggal && ( // If current time is past test time but still scheduled (e.g., admin hasn't started it)
+                {test.status === "Terjadwal" && new Date() > parseISO(test.tanggal) && ( 
                      <p className="text-sm text-yellow-600">Menunggu test dimulai oleh pengawas/sistem.</p>
                 )}
-                 {test.status === "Terjadwal" && new Date() < test.tanggal && (
+                 {test.status === "Terjadwal" && new Date() < parseISO(test.tanggal) && (
                      <p className="text-sm text-muted-foreground">Test akan tersedia pada waktunya.</p>
                 )}
                 {test.status === "Dinilai" && (
@@ -129,8 +147,8 @@ export default function SiswaTestPage() {
                     Lihat Detail Hasil
                   </Button>
                 )}
-                 {test.status === "Menunggu Hasil" && (
-                     <p className="text-sm text-yellow-600">Hasil sedang diproses. Mohon tunggu.</p>
+                 {(test.status === "Menunggu Hasil" || test.status === "Selesai") && (
+                     <p className="text-sm text-yellow-600">Hasil sedang diproses atau menunggu penilaian. Mohon tunggu.</p>
                 )}
               </CardContent>
             </Card>
@@ -151,7 +169,7 @@ export default function SiswaTestPage() {
         <FileText className="mr-3 h-8 w-8 text-primary" />
         Test & Ujian Saya
       </h1>
-      <p className="text-muted-foreground">Lihat jadwal test/ujian, kerjakan, dan lihat hasilnya.</p>
+      <p className="text-muted-foreground">Lihat jadwal test/ujian, kerjakan, dan lihat hasilnya. Kelas: {user?.kelas || "Tidak ada"}</p>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "mendatang" | "riwayat")}>
         <TabsList className="grid w-full grid-cols-2 md:w-[400px]">

@@ -7,6 +7,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { TestEntity, type TestTipe, type TestStatus } from "@/entities/test.entity";
 import * as z from "zod";
 import { formatISO } from 'date-fns';
+import type { FindManyOptions } from "typeorm";
 
 const testCreateSchema = z.object({
   judul: z.string().min(5, { message: "Judul test minimal 5 karakter." }),
@@ -23,7 +24,7 @@ const testCreateSchema = z.object({
 // GET /api/test - Mendapatkan daftar test
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || (session.user.role !== 'guru' && session.user.role !== 'superadmin')) {
+  if (!session || !session.user || !['guru', 'superadmin', 'siswa', 'admin'].includes(session.user.role)) { // Added 'siswa' and 'admin'
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 
@@ -31,22 +32,33 @@ export async function GET(request: NextRequest) {
     const dataSource = await getInitializedDataSource();
     const testRepo = dataSource.getRepository(TestEntity);
     
-    const queryOptions = {
-      where: {} as any,
+    const { searchParams } = new URL(request.url);
+    const filterKelas = searchParams.get("kelas"); 
+
+    const queryOptions: FindManyOptions<TestEntity> = {
       relations: ["uploader"],
       order: { tanggal: "DESC", createdAt: "DESC" } as any,
+      where: {} as any,
     };
 
     if (session.user.role === 'guru') {
         queryOptions.where.uploaderId = session.user.id;
+    } else if (session.user.role === 'siswa') {
+        if (!session.user.kelasId) {
+            return NextResponse.json({ message: "Informasi kelas siswa tidak ditemukan." }, { status: 400 });
+        }
+        queryOptions.where.kelas = session.user.kelasId;
+    } else if ((session.user.role === 'admin' || session.user.role === 'superadmin') && filterKelas) {
+        queryOptions.where.kelas = filterKelas;
     }
+    // If superadmin/admin and no filterKelas, 'where' remains empty, returning all tests.
 
     const testList = await testRepo.find(queryOptions);
 
     return NextResponse.json(testList.map(t => ({
         ...t,
         tanggal: formatISO(new Date(t.tanggal)), 
-        uploader: t.uploader ? { id: t.uploader.id, name: t.uploader.name, fullName: t.uploader.fullName } : undefined
+        uploader: t.uploader ? { id: t.uploader.id, name: t.uploader.name, fullName: t.uploader.fullName, email: t.uploader.email } : undefined
     })));
   } catch (error) {
     console.error("Error fetching tests:", error);
@@ -98,7 +110,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
         ...responseTest,
         tanggal: responseTest ? formatISO(new Date(responseTest.tanggal)) : null,
-        uploader: responseTest?.uploader ? { id: responseTest.uploader.id, name: responseTest.uploader.name, fullName: responseTest.uploader.fullName } : undefined
+        uploader: responseTest?.uploader ? { id: responseTest.uploader.id, name: responseTest.uploader.name, fullName: responseTest.uploader.fullName, email: responseTest.uploader.email } : undefined
     }, { status: 201 });
 
   } catch (error: any) {
@@ -106,3 +118,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Terjadi kesalahan internal server.", details: error.message }, { status: 500 });
   }
 }
+
