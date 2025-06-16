@@ -3,13 +3,14 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Users, TrendingUp, BookOpenCheck, BarChartHorizontalBig, Star, CheckCircle } from "lucide-react";
+import { Users, TrendingUp, BookOpenCheck, BarChartHorizontalBig, Star, CheckCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
-import { MOCK_SUBJECTS, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, SCHOOL_CLASSES_PER_MAJOR_GRADE } from "@/lib/constants";
-import React, { useMemo } from "react";
+import { MOCK_SUBJECTS } from "@/lib/constants"; // SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, SCHOOL_CLASSES_PER_MAJOR_GRADE (not used directly for grades here)
+import React, { useMemo, useEffect, useState, useCallback } from "react";
+import type { User as AppUser } from "@/types"; // Renamed to AppUser to avoid conflict
+import { useToast } from "@/hooks/use-toast";
 
 interface StudentMockGrade {
   studentId: string;
@@ -19,7 +20,7 @@ interface StudentMockGrade {
   average: number;
 }
 
-const generateMockStudentGrades = (allAppUsers: ReturnType<typeof useAuth>['users']): StudentMockGrade[] => {
+const generateMockStudentGrades = (allAppUsers: AppUser[]): StudentMockGrade[] => {
   const siswaUsers = allAppUsers.filter(u => u.role === 'siswa' && u.isVerified && u.kelas);
   
   return siswaUsers.map(siswa => {
@@ -28,10 +29,10 @@ const generateMockStudentGrades = (allAppUsers: ReturnType<typeof useAuth>['user
       subject,
       score: Math.floor(Math.random() * 41) + 60, // Score between 60 and 100
     }));
-    const average = grades.reduce((sum, g) => sum + g.score, 0) / grades.length;
+    const average = grades.length > 0 ? grades.reduce((sum, g) => sum + g.score, 0) / grades.length : 0;
     return {
       studentId: siswa.id,
-      studentName: siswa.fullName || siswa.name || siswa.email,
+      studentName: siswa.fullName || siswa.name || siswa.email || "Siswa Tanpa Nama",
       studentClass: siswa.kelas!,
       grades,
       average: parseFloat(average.toFixed(2)),
@@ -41,19 +42,48 @@ const generateMockStudentGrades = (allAppUsers: ReturnType<typeof useAuth>['user
 
 
 export default function PimpinanDashboardPage() {
-  const { user, users: allAppUsers } = useAuth();
+  const { user: currentUserAuth } = useAuth(); // Renamed to avoid conflict with 'user' from fetched users
+  const { toast } = useToast();
+  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+
+  const fetchAllUsers = useCallback(async () => {
+    setIsLoadingUsers(true);
+    try {
+      const response = await fetch('/api/users');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengambil data pengguna.");
+      }
+      const data = await response.json();
+      setAllUsers(data);
+    } catch (error: any) {
+      toast({ title: "Error Data Pengguna", description: error.message, variant: "destructive" });
+      setAllUsers([]);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (currentUserAuth && (currentUserAuth.role === 'pimpinan' || currentUserAuth.role === 'superadmin')) {
+      fetchAllUsers();
+    }
+  }, [currentUserAuth, fetchAllUsers]);
+
 
   const mockStudentGradesData: StudentMockGrade[] = useMemo(() => {
-      if(allAppUsers.length > 0) {
-          return generateMockStudentGrades(allAppUsers);
+      if(allUsers.length > 0) {
+          return generateMockStudentGrades(allUsers);
       }
       return [];
-  }, [allAppUsers]);
+  }, [allUsers]);
 
   const classAverages = useMemo(() => {
     if (mockStudentGradesData.length === 0) return [];
     const classData: { [key: string]: { totalScore: number; count: number } } = {};
     mockStudentGradesData.forEach(student => {
+      if (!student.studentClass) return; // Skip if studentClass is not defined
       if (!classData[student.studentClass]) {
         classData[student.studentClass] = { totalScore: 0, count: 0 };
       }
@@ -63,7 +93,7 @@ export default function PimpinanDashboardPage() {
     return Object.entries(classData)
       .map(([className, data]) => ({
         name: className,
-        rataRata: parseFloat((data.totalScore / data.count).toFixed(2)),
+        rataRata: data.count > 0 ? parseFloat((data.totalScore / data.count).toFixed(2)) : 0,
       }))
       .sort((a, b) => b.rataRata - a.rataRata); // Sort by average desc
   }, [mockStudentGradesData]);
@@ -85,41 +115,39 @@ export default function PimpinanDashboardPage() {
       .sort((a, b) => b.average - a.average);
   };
 
-  // Pick some example classes for detailed ranking display
   const exampleClassesForRanking = useMemo(() => {
-    const allClasses = [...new Set(mockStudentGradesData.map(s => s.studentClass))];
-    return allClasses.slice(0, 2); // Show rankings for first 2 classes
+    const allClasses = [...new Set(mockStudentGradesData.map(s => s.studentClass).filter(Boolean))];
+    return allClasses.slice(0, 2); 
   }, [mockStudentGradesData]);
 
 
   const pimpinanStats = useMemo(() => {
-    const totalSiswa = allAppUsers.filter(u => u.role === 'siswa').length;
-    const totalGuru = allAppUsers.filter(u => u.role === 'guru').length;
-    const totalKelas = new Set(allAppUsers.filter(u => u.role === 'siswa' && u.kelas).map(u => u.kelas)).size;
+    const totalSiswa = allUsers.filter(u => u.role === 'siswa').length;
+    const totalGuru = allUsers.filter(u => u.role === 'guru').length;
+    const totalKelas = new Set(allUsers.filter(u => u.role === 'siswa' && u.kelas).map(u => u.kelas)).size;
     
     return [
-      { title: "Total Siswa", value: totalSiswa.toString(), icon: Users, color: "text-primary", change: `SMA Az-Bail` },
-      { title: "Total Guru", value: totalGuru.toString(), icon: Users, color: "text-green-500", change: "Tenaga Pengajar" },
-      { title: "Jumlah Kelas", value: totalKelas.toString(), icon: BookOpenCheck, color: "text-yellow-500", change: "IPA & IPS" },
+      { title: "Total Siswa", value: isLoadingUsers ? <Loader2 className="h-5 w-5 animate-spin" /> : totalSiswa.toString(), icon: Users, color: "text-primary", change: `SMA Az-Bail` },
+      { title: "Total Guru", value: isLoadingUsers ? <Loader2 className="h-5 w-5 animate-spin" /> : totalGuru.toString(), icon: Users, color: "text-green-500", change: "Tenaga Pengajar" },
+      { title: "Jumlah Kelas", value: isLoadingUsers ? <Loader2 className="h-5 w-5 animate-spin" /> : totalKelas.toString(), icon: BookOpenCheck, color: "text-yellow-500", change: "IPA & IPS" },
       { title: "Tingkat Kelulusan (Simulasi)", value: "95%", icon: CheckCircle, color: "text-indigo-500", change: "Target: 90%" },
     ];
-  }, [allAppUsers]);
+  }, [allUsers, isLoadingUsers]);
 
 
-  if (!user || (user.role !== 'pimpinan' && user.role !== 'superadmin')) {
+  if (!currentUserAuth || (currentUserAuth.role !== 'pimpinan' && currentUserAuth.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Pimpinan untuk melihat halaman ini.</p>;
   }
   
-  if (mockStudentGradesData.length === 0 && allAppUsers.length > 0) {
-    // Still waiting for mockStudentGradesData to be populated if allAppUsers exists
-    return <p>Memuat data siswa...</p>;
+  if (isLoadingUsers && allUsers.length === 0) {
+    return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /> <span className="ml-3">Memuat data pengguna...</span></div>;
   }
 
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-headline font-semibold">Dasbor Pimpinan SMA Az-Bail</h1>
-      <p className="text-muted-foreground">Selamat datang, {user.fullName || user.name || user.email}! Gambaran umum kinerja institusi dan metrik utama.</p>
+      <p className="text-muted-foreground">Selamat datang, {currentUserAuth.fullName || currentUserAuth.name || currentUserAuth.email}! Gambaran umum kinerja institusi dan metrik utama.</p>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {pimpinanStats.map((card) => (
@@ -141,12 +169,14 @@ export default function PimpinanDashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <BarChartHorizontalBig className="mr-2 h-5 w-5 text-primary" />
-              Rata-rata Nilai per Kelas
+              Rata-rata Nilai per Kelas (Simulasi)
             </CardTitle>
             <CardDescription>Visualisasi dan tabel rata-rata nilai akhir siswa per kelas.</CardDescription>
           </CardHeader>
           <CardContent>
-            {classAverages.length > 0 ? (
+            {isLoadingUsers && classAverages.length === 0 ? (
+                 <div className="flex justify-center items-center h-[300px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /><span className="ml-2">Menghitung rata-rata...</span></div>
+            ) : classAverages.length > 0 ? (
               <>
                 <div className="h-[300px] mb-6">
                   <ChartContainer config={chartConfigClassAvg} className="w-full h-full">
@@ -180,7 +210,7 @@ export default function PimpinanDashboardPage() {
                 </div>
               </>
             ) : (
-              <p className="text-muted-foreground text-center py-4">Data rata-rata kelas belum tersedia.</p>
+              <p className="text-muted-foreground text-center py-4">Data rata-rata kelas belum tersedia atau tidak ada siswa.</p>
             )}
           </CardContent>
         </Card>
@@ -189,12 +219,14 @@ export default function PimpinanDashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Star className="mr-2 h-5 w-5 text-yellow-500" />
-              Peringkat Siswa Terbaik (Keseluruhan)
+              Peringkat Siswa Terbaik (Keseluruhan - Simulasi)
             </CardTitle>
             <CardDescription>10 siswa dengan rata-rata nilai tertinggi di seluruh sekolah.</CardDescription>
           </CardHeader>
           <CardContent>
-            {overallRankedStudents.length > 0 ? (
+             {isLoadingUsers && overallRankedStudents.length === 0 ? (
+                <div className="flex justify-center items-center h-[300px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /><span className="ml-2">Memuat peringkat...</span></div>
+            ) : overallRankedStudents.length > 0 ? (
               <div className="max-h-[500px] overflow-y-auto">
                 <Table>
                   <TableHeader>
@@ -218,7 +250,7 @@ export default function PimpinanDashboardPage() {
                 </Table>
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-4">Data peringkat siswa belum tersedia.</p>
+              <p className="text-muted-foreground text-center py-4">Data peringkat siswa belum tersedia atau tidak ada siswa.</p>
             )}
           </CardContent>
         </Card>
@@ -227,7 +259,7 @@ export default function PimpinanDashboardPage() {
       {exampleClassesForRanking.map(className => (
         <Card key={className} className="shadow-lg">
           <CardHeader>
-            <CardTitle>Peringkat Siswa Kelas: {className}</CardTitle>
+            <CardTitle>Peringkat Siswa Kelas: {className} (Simulasi)</CardTitle>
             <CardDescription>Siswa dengan rata-rata nilai tertinggi di kelas {className}.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -262,3 +294,5 @@ export default function PimpinanDashboardPage() {
   );
 }
 
+
+    
