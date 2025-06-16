@@ -16,7 +16,8 @@ import { RppEntity } from "@/entities/rpp.entity";
 import { RuanganEntity } from "@/entities/ruangan.entity";
 import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import { JadwalPelajaranEntity } from "@/entities/jadwal-pelajaran.entity";
-import { TugasEntity } from "@/entities/tugas.entity"; // Added TugasEntity
+import { TugasEntity } from "@/entities/tugas.entity";
+import { TestEntity } from "@/entities/test.entity"; // Added TestEntity
 
 export const dataSourceOptions: DataSourceOptions = {
   type: "postgres",
@@ -43,7 +44,8 @@ export const dataSourceOptions: DataSourceOptions = {
     RuanganEntity,
     SlotWaktuEntity,
     JadwalPelajaranEntity,
-    TugasEntity, // Added TugasEntity
+    TugasEntity,
+    TestEntity, // Added TestEntity
   ],
   migrations: [], 
   subscribers: [],

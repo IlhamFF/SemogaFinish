@@ -1,6 +1,6 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
-import { KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR as JENIS_MATERI_AJAR_CONST_FROM_LIB } from "@/lib/constants";
+import { KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR } from "@/lib/constants";
 // It's generally better to import the specific entity types if they are simple and don't cause circular dependencies
 // or if you need to strictly type the shape of related data.
 // However, for Pick utility, importing the full entity and picking fields is also common.
@@ -8,6 +8,7 @@ import type { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import type { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import type { UserEntity } from "@/entities/user.entity";
 import type { RuanganEntity } from "@/entities/ruangan.entity";
+import type { TestTipe as TestEntityType, TestStatus as TestStatusType } from "@/entities/test.entity";
 
 
 export type Role = 'admin' | 'guru' | 'siswa' | 'pimpinan' | 'superadmin';
@@ -15,24 +16,24 @@ export type Role = 'admin' | 'guru' | 'siswa' | 'pimpinan' | 'superadmin';
 export interface User {
   id: string;
   email: string;
-  name?: string | null; 
+  name?: string | null;
   role: Role;
   isVerified: boolean;
-  avatarUrl?: string | null; 
+  avatarUrl?: string | null;
 
-  fullName?: string | null; 
+  fullName?: string | null;
   phone?: string | null;
   address?: string | null;
-  birthDate?: string | null; 
+  birthDate?: string | null;
   bio?: string | null;
-  nis?: string | null; 
-  nip?: string | null; 
-  joinDate?: string | null; 
+  nis?: string | null;
+  nip?: string | null;
+  joinDate?: string | null;
   kelas?: string | null; // For Siswa, this is their class name. For Admin User Form, it's string input.
   mataPelajaran?: string | null; // For Guru, single string of subject names. For Admin User Form, string input.
 }
 
-export interface NavItem { 
+export interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
@@ -84,14 +85,14 @@ export interface SlotWaktu {
 }
 
 export interface StrukturKurikulumItem {
-  id: string; 
+  id: string;
   tingkat: string;
   jurusan: string;
-  mapelId: string; 
-  namaMapel: string; 
+  mapelId: string;
+  namaMapel: string;
   alokasiJam: number;
-  guruPengampuId?: string | null; 
-  guruPengampuNama?: string | null; 
+  guruPengampuId?: string | null;
+  guruPengampuNama?: string | null;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
@@ -146,19 +147,19 @@ export interface MataPelajaran {
   updatedAt?: Date | string;
 }
 
-export type JenisMateriAjarType = typeof JENIS_MATERI_AJAR_CONST_FROM_LIB[number];
+export type JenisMateriAjarType = typeof JENIS_MATERI_AJAR[number];
 
 export interface MateriAjar {
   id: string;
   judul: string;
   deskripsi?: string | null;
-  mapelNama: string; 
+  mapelNama: string;
   jenisMateri: JenisMateriAjarType;
-  namaFileOriginal?: string | null; 
-  fileUrl?: string | null; 
+  namaFileOriginal?: string | null;
+  fileUrl?: string | null;
   tanggalUpload: string; // YYYY-MM-DD
-  uploaderId: string; 
-  uploader?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>; 
+  uploaderId: string;
+  uploader?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
@@ -199,9 +200,31 @@ export interface Tugas {
   status?: "Aktif" | "Ditutup" | "Draf";
 }
 
+// Re-exporting TestTipe and TestStatus from entity types for use in frontend
+export type TestTipe = TestEntityType;
+export type TestStatus = TestStatusType;
 
-export { 
-    KATEGORI_SKL_CONST as KATEGORI_SKL, 
+export interface Test {
+  id: string;
+  judul: string;
+  mapel: string;
+  kelas: string;
+  tanggal: string; // ISO string from API (Date object in entity)
+  durasi: number; // dalam menit
+  tipe: TestTipe;
+  status: TestStatus;
+  deskripsi?: string | null;
+  jumlahSoal?: number | null;
+  uploaderId: string;
+  uploader?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+
+export {
+    KATEGORI_SKL_CONST as KATEGORI_SKL,
     FASE_CP_CONST as FASE_CP,
-    JENIS_MATERI_AJAR_CONST_FROM_LIB as JENIS_MATERI_AJAR
+    JENIS_MATERI_AJAR // Now correctly re-exporting the imported constant
 };
+
