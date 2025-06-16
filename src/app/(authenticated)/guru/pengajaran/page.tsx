@@ -1,40 +1,43 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/use-auth";
-import type { RPP } from "@/types";
-import { Presentation, BookOpen, Video, MessageSquare, CalendarCheck2, PlusCircle, Loader2 } from "lucide-react";
+import type { RPP, JadwalPelajaran } from "@/types";
+import { Presentation, BookOpen, Video, MessageSquare, CalendarCheck2, PlusCircle, Loader2, BookHeart, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
+
+interface TeachingAssignment {
+  kelas: string;
+  mapel: string;
+}
 
 export default function GuruPengajaranPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [myRpps, setMyRpps] = useState<RPP[]>([]);
   const [isLoadingRpps, setIsLoadingRpps] = useState(true);
+  const [teachingAssignments, setTeachingAssignments] = useState<TeachingAssignment[]>([]);
+  const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
 
   const fetchMyRpps = useCallback(async () => {
     if (!user) return;
     setIsLoadingRpps(true);
     try {
-      const response = await fetch('/api/kurikulum/rpp'); // API should filter by uploaderId if user is 'guru'
+      const response = await fetch('/api/kurikulum/rpp'); 
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Gagal mengambil data RPP.");
       }
       const data: RPP[] = await response.json();
-      // Jika API tidak otomatis filter untuk guru, filter di sini (meski idealnya di backend)
-      if (user.role === 'guru') {
-        setMyRpps(data.filter(rpp => rpp.uploaderId === user.id));
-      } else { // Superadmin sees all
-        setMyRpps(data);
-      }
+      // API sudah filter by uploaderId jika user adalah 'guru'
+      setMyRpps(data);
     } catch (error: any) {
       toast({ title: "Error RPP", description: error.message, variant: "destructive" });
       setMyRpps([]);
@@ -43,11 +46,43 @@ export default function GuruPengajaranPage() {
     }
   }, [user, toast]);
 
+  const fetchTeachingAssignments = useCallback(async () => {
+    if (!user || !user.id) return;
+    setIsLoadingAssignments(true);
+    try {
+      const response = await fetch(`/api/jadwal/pelajaran?guruId=${user.id}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengambil data jadwal mengajar.");
+      }
+      const jadwalList: JadwalPelajaran[] = await response.json();
+      
+      const assignmentsMap = new Map<string, TeachingAssignment>();
+      jadwalList.forEach(jadwal => {
+        if (jadwal.kelas && jadwal.mapel?.nama) {
+          const key = `${jadwal.kelas}-${jadwal.mapel.nama}`;
+          if (!assignmentsMap.has(key)) {
+            assignmentsMap.set(key, { kelas: jadwal.kelas, mapel: jadwal.mapel.nama });
+          }
+        }
+      });
+      setTeachingAssignments(Array.from(assignmentsMap.values()).sort((a,b) => a.kelas.localeCompare(b.kelas) || a.mapel.localeCompare(b.mapel)));
+
+    } catch (error: any) {
+      toast({ title: "Error Jadwal Mengajar", description: error.message, variant: "destructive" });
+      setTeachingAssignments([]);
+    } finally {
+      setIsLoadingAssignments(false);
+    }
+  }, [user, toast]);
+
+
   useEffect(() => {
     if (user && (user.role === 'guru' || user.role === 'superadmin')) {
       fetchMyRpps();
+      fetchTeachingAssignments();
     }
-  }, [user, fetchMyRpps]);
+  }, [user, fetchMyRpps, fetchTeachingAssignments]);
 
   if (!user || (user.role !== 'guru' && user.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Guru untuk melihat halaman ini.</p>;
@@ -79,28 +114,46 @@ export default function GuruPengajaranPage() {
         <CardContent className="space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Daftar Kelas & Mata Pelajaran Saya</CardTitle>
-              <CardDescription>Lihat kelas dan mata pelajaran yang Anda ampu.</CardDescription>
+              <CardTitle className="flex items-center text-xl"><Users className="mr-3 h-5 w-5 text-primary"/>Kelas & Mata Pelajaran Saya</CardTitle>
+              <CardDescription>Daftar kelas dan mata pelajaran yang Anda ampu berdasarkan jadwal.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="p-4 bg-muted/50 rounded-md text-center">
-                <p className="text-muted-foreground">Daftar kelas dan mata pelajaran akan ditampilkan di sini. (Data mock/placeholder)</p>
-                <p className="text-sm text-muted-foreground">Mata Pelajaran Diampu: {user.mataPelajaran || "Belum ditentukan"}</p>
-                {/* <Button variant="link" onClick={() => handlePlaceholderAction("Lihat Jadwal Mengajar")}>Lihat Jadwal Mengajar Lengkap</Button> */}
-                 <Button variant="link" asChild><Link href={ROUTES.SISWA_JADWAL}>Lihat Jadwal Mengajar</Link></Button>
-
-              </div>
+              {isLoadingAssignments ? (
+                <div className="flex justify-center items-center h-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : teachingAssignments.length > 0 ? (
+                <ScrollArea className="max-h-52 border rounded-md">
+                  <Table size="sm">
+                    <TableHeader className="bg-muted/30">
+                      <TableRow><TableHead>Kelas</TableHead><TableHead>Mata Pelajaran</TableHead></TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {teachingAssignments.map((assignment, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{assignment.kelas}</TableCell>
+                          <TableCell>{assignment.mapel}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              ) : (
+                <p className="text-muted-foreground text-center py-4">Belum ada data kelas dan mata pelajaran yang diajarkan sesuai jadwal.</p>
+              )}
+              <p className="text-xs text-muted-foreground mt-2">Bidang Studi Utama (Profil): {user.mataPelajaran || "Belum ditentukan"}</p>
+              <Button variant="link" asChild className="px-0 h-auto mt-1 text-sm">
+                <Link href={ROUTES.SISWA_JADWAL}>Lihat Jadwal Mengajar Lengkap</Link>
+              </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center text-xl">
-                <BookOpen className="mr-3 h-5 w-5 text-primary" />
+                <BookHeart className="mr-3 h-5 w-5 text-primary" />
                 Rencana Pembelajaran (RPP) Saya
               </CardTitle>
               <CardDescription>
-                Akses Rencana Pelaksanaan Pembelajaran (RPP) yang telah Anda buat.
+                Akses Rencana Pelaksanaan Pembelajaran (RPP) yang telah Anda buat atau yang relevan.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -109,17 +162,16 @@ export default function GuruPengajaranPage() {
                   <CalendarCheck2 className="mr-3 h-5 w-5" />
                   <div>
                     <p className="font-semibold">RPP Minggu Ini</p>
-                    <p className="text-xs text-muted-foreground">Lihat rencana untuk minggu berjalan.</p>
+                    <p className="text-xs text-muted-foreground">Rencana untuk minggu berjalan.</p>
                   </div>
                 </Button>
-                {/* Superadmin bisa diarahkan ke halaman admin kurikulum untuk buat RPP */}
                 {user.role === 'superadmin' ? (
                     <Button variant="outline" asChild className="justify-start text-left h-auto py-3">
                         <Link href={ROUTES.ADMIN_KURIKULUM}>
                         <PlusCircle className="mr-3 h-5 w-5" />
                         <div>
                             <p className="font-semibold">Buat/Kelola RPP (Admin)</p>
-                            <p className="text-xs text-muted-foreground">Akses manajemen RPP lengkap.</p>
+                            <p className="text-xs text-muted-foreground">Akses manajemen RPP.</p>
                         </div>
                         </Link>
                     </Button>
@@ -171,7 +223,7 @@ export default function GuruPengajaranPage() {
                   </Table>
                 </ScrollArea>
               ) : (
-                <p className="text-muted-foreground text-center py-4">Anda belum membuat RPP.</p>
+                <p className="text-muted-foreground text-center py-4">Anda belum membuat atau tidak ada RPP yang relevan.</p>
               )}
             </CardContent>
           </Card>
@@ -208,4 +260,3 @@ export default function GuruPengajaranPage() {
     </div>
   );
 }
-
