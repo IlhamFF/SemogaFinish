@@ -1,20 +1,55 @@
 
 "use client";
 
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { UserCheck, CalendarDays, ListChecks, PieChart, Printer, PlusCircle } from "lucide-react";
+import { UserCheck, CalendarDays, ListChecks, PieChart, Printer, PlusCircle, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import React from "react";
 import { format } from "date-fns";
+import type { JadwalPelajaran } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
 export default function GuruAbsensiPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date());
   const [selectedClass, setSelectedClass] = React.useState<string | undefined>();
+  
+  const [teachingClasses, setTeachingClasses] = useState<string[]>([]);
+  const [isLoadingClasses, setIsLoadingClasses] = useState(true);
+
+  const fetchTeachingAssignments = useCallback(async () => {
+    if (!user || !user.id) return;
+    setIsLoadingClasses(true);
+    try {
+      const response = await fetch(`/api/jadwal/pelajaran?guruId=${user.id}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengambil data jadwal mengajar.");
+      }
+      const jadwalList: JadwalPelajaran[] = await response.json();
+      
+      const uniqueClasses = [...new Set(jadwalList.map(jadwal => jadwal.kelas).filter(Boolean))].sort();
+      setTeachingClasses(uniqueClasses as string[]);
+
+    } catch (error: any) {
+      toast({ title: "Error Data Kelas", description: error.message, variant: "destructive" });
+      setTeachingClasses([]);
+    } finally {
+      setIsLoadingClasses(false);
+    }
+  }, [user, toast]);
+
+  useEffect(() => {
+    if (user && (user.role === 'guru' || user.role === 'superadmin')) {
+        fetchTeachingAssignments();
+    }
+  }, [user, fetchTeachingAssignments]);
+
 
   if (!user || (user.role !== 'guru' && user.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Guru untuk melihat halaman ini.</p>;
@@ -24,7 +59,6 @@ export default function GuruAbsensiPage() {
     alert(`Fungsi "${action}" belum diimplementasikan.`);
   };
   
-  const mockClasses = ["Kelas X-A", "Kelas X-B", "Kelas XI-IPA", "Kelas XII-IPS"];
   const mockAttendance = [
     { id: "S001", name: "Ahmad Subarjo", status: "Hadir" },
     { id: "S002", name: "Budi Santoso", status: "Sakit" },
@@ -53,14 +87,20 @@ export default function GuruAbsensiPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
               <label htmlFor="kelas-select" className="block text-sm font-medium text-muted-foreground mb-1">Pilih Kelas</label>
-              <Select value={selectedClass} onValueChange={setSelectedClass}>
-                <SelectTrigger id="kelas-select">
-                  <SelectValue placeholder="Pilih Kelas" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockClasses.map(cls => <SelectItem key={cls} value={cls}>{cls}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {isLoadingClasses ? (
+                <div className="flex items-center h-10">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" /> Memuat kelas...
+                </div>
+              ) : (
+                <Select value={selectedClass} onValueChange={setSelectedClass} disabled={teachingClasses.length === 0}>
+                    <SelectTrigger id="kelas-select">
+                    <SelectValue placeholder={teachingClasses.length === 0 ? "Tidak ada kelas diajar" : "Pilih Kelas"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {teachingClasses.map(cls => <SelectItem key={cls} value={cls}>{cls}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-1">Pilih Tanggal</label>
@@ -75,7 +115,7 @@ export default function GuruAbsensiPage() {
                 </PopoverContent>
               </Popover>
             </div>
-            <Button onClick={() => handlePlaceholderAction(`Ambil Absensi untuk ${selectedClass} pada ${selectedDate ? format(selectedDate, "PPP") : ""}`)} disabled={!selectedClass || !selectedDate}>
+            <Button onClick={() => handlePlaceholderAction(`Ambil Absensi untuk ${selectedClass} pada ${selectedDate ? format(selectedDate, "PPP") : ""}`)} disabled={!selectedClass || !selectedDate || isLoadingClasses}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Ambil Absensi
             </Button>
           </div>
@@ -84,7 +124,7 @@ export default function GuruAbsensiPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Absensi: {selectedClass} - {format(selectedDate, "dd MMMM yyyy")}</CardTitle>
-                <CardDescription>Daftar kehadiran siswa.</CardDescription>
+                <CardDescription>Daftar kehadiran siswa (data mock).</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -164,3 +204,4 @@ export default function GuruAbsensiPage() {
     </div>
   );
 }
+

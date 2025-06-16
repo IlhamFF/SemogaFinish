@@ -1,18 +1,59 @@
 
 "use client";
 
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
-import { GraduationCap, BookOpenCheck, Edit, Percent, FileText, BarChart, Search, Eye, MessageSquare } from "lucide-react";
-import React from "react";
+import { GraduationCap, BookOpenCheck, Edit, Percent, FileText, BarChart, Search, Eye, MessageSquare, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { JadwalPelajaran } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
 export default function GuruPenilaianPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [selectedClass, setSelectedClass] = React.useState<string | undefined>();
   const [selectedSubject, setSelectedSubject] = React.useState<string | undefined>();
+
+  const [uniqueTeachingClasses, setUniqueTeachingClasses] = useState<string[]>([]);
+  const [uniqueTeachingSubjects, setUniqueTeachingSubjects] = useState<string[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+
+  const fetchTeachingData = useCallback(async () => {
+    if (!user || !user.id) return;
+    setIsLoadingData(true);
+    try {
+      const response = await fetch(`/api/jadwal/pelajaran?guruId=${user.id}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengambil data jadwal mengajar.");
+      }
+      const jadwalList: JadwalPelajaran[] = await response.json();
+      
+      const classes = [...new Set(jadwalList.map(j => j.kelas).filter(Boolean))].sort();
+      const subjects = [...new Set(jadwalList.map(j => j.mapel?.nama).filter(Boolean))].sort();
+      
+      setUniqueTeachingClasses(classes as string[]);
+      setUniqueTeachingSubjects(subjects as string[]);
+
+    } catch (error: any) {
+      toast({ title: "Error Data Pengajaran", description: error.message, variant: "destructive" });
+      setUniqueTeachingClasses([]);
+      setUniqueTeachingSubjects([]);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [user, toast]);
+
+  useEffect(() => {
+    if (user && (user.role === 'guru' || user.role === 'superadmin')) {
+      fetchTeachingData();
+    }
+  }, [user, fetchTeachingData]);
+
 
   if (!user || (user.role !== 'guru' && user.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Guru untuk melihat halaman ini.</p>;
@@ -22,8 +63,6 @@ export default function GuruPenilaianPage() {
     alert(`Fungsi "${action}" belum diimplementasikan.`);
   };
 
-  const mockClasses = ["Kelas X-A", "Kelas X-B", "Kelas XI-IPA", "Kelas XII-IPS"];
-  const mockSubjects = ["Matematika", "Fisika", "Kimia", "Bahasa Indonesia", "Bahasa Inggris"];
   const mockStudentsGrades = [
     { id: "S001", name: "Ahmad Subarjo", tugas: 85, uts: 78, uas: 80, akhir: 81, predikat: "B+" },
     { id: "S002", name: "Budi Santoso", tugas: 90, uts: 88, uas: 92, akhir: 90, predikat: "A" },
@@ -48,27 +87,35 @@ export default function GuruPenilaianPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
               <label htmlFor="kelas-select" className="block text-sm font-medium text-muted-foreground mb-1">Pilih Kelas</label>
-              <Select value={selectedClass} onValueChange={setSelectedClass}>
-                <SelectTrigger id="kelas-select">
-                  <SelectValue placeholder="Pilih Kelas" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockClasses.map(cls => <SelectItem key={cls} value={cls}>{cls}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {isLoadingData ? (
+                <div className="flex items-center h-10"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Memuat...</div>
+              ) : (
+                <Select value={selectedClass} onValueChange={setSelectedClass} disabled={uniqueTeachingClasses.length === 0}>
+                    <SelectTrigger id="kelas-select">
+                    <SelectValue placeholder={uniqueTeachingClasses.length === 0 ? "Tidak ada kelas" : "Pilih Kelas"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {uniqueTeachingClasses.map(cls => <SelectItem key={cls} value={cls}>{cls}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+              )}
             </div>
             <div>
               <label htmlFor="subject-select" className="block text-sm font-medium text-muted-foreground mb-1">Pilih Mata Pelajaran</label>
-              <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                <SelectTrigger id="subject-select">
-                  <SelectValue placeholder="Pilih Mapel" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockSubjects.map(sub => <SelectItem key={sub} value={sub}>{sub}</SelectItem>)}
-                </SelectContent>
-              </Select>
+               {isLoadingData ? (
+                <div className="flex items-center h-10"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Memuat...</div>
+              ) : (
+                <Select value={selectedSubject} onValueChange={setSelectedSubject} disabled={uniqueTeachingSubjects.length === 0}>
+                    <SelectTrigger id="subject-select">
+                    <SelectValue placeholder={uniqueTeachingSubjects.length === 0 ? "Tidak ada mapel" : "Pilih Mapel"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {uniqueTeachingSubjects.map(sub => <SelectItem key={sub} value={sub}>{sub}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+              )}
             </div>
-             <Button onClick={() => handlePlaceholderAction(`Tampilkan Data Nilai untuk ${selectedClass} - ${selectedSubject}`)} disabled={!selectedClass || !selectedSubject}>
+             <Button onClick={() => handlePlaceholderAction(`Tampilkan Data Nilai untuk ${selectedClass} - ${selectedSubject}`)} disabled={!selectedClass || !selectedSubject || isLoadingData}>
                 <Search className="mr-2 h-4 w-4" /> Tampilkan Data Nilai
             </Button>
           </div>
@@ -77,7 +124,7 @@ export default function GuruPenilaianPage() {
              <Card>
                 <CardHeader>
                     <CardTitle>Daftar Nilai: {selectedClass} - {selectedSubject}</CardTitle>
-                    <CardDescription>Input dan kelola nilai siswa.</CardDescription>
+                    <CardDescription>Input dan kelola nilai siswa (data mock).</CardDescription>
                 </CardHeader>
                 <CardContent>
                 <div className="overflow-x-auto">
