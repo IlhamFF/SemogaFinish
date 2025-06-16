@@ -1,37 +1,67 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/hooks/use-auth";
-import { CalendarDays, Clock, User, Home, ChevronLeft, ChevronRight, Search } from "lucide-react";
-import { format, addDays, subDays, startOfWeek, endOfWeek } from "date-fns";
+import { CalendarDays, Clock, User, Home, ChevronLeft, ChevronRight, Search, Loader2 } from "lucide-react";
+import { format, addDays, subDays, startOfWeek, endOfWeek, parseISO } from "date-fns";
 import { id as localeID } from 'date-fns/locale';
+import type { JadwalPelajaran } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
-const mockSchedule = {
-  "Senin": [
-    { time: "07:30 - 09:00", subject: "Matematika", teacher: "Bu Ani", room: "Kelas X-A" },
-    { time: "09:30 - 11:00", subject: "Bahasa Indonesia", teacher: "Pak Budi", room: "Kelas X-A" },
-  ],
-  "Selasa": [
-    { time: "07:30 - 09:00", subject: "Fisika", teacher: "Pak Eko", room: "Lab Fisika" },
-    { time: "09:30 - 11:00", subject: "Bahasa Inggris", teacher: "Ms. Jane", room: "Kelas X-A" },
-  ],
-  "Rabu": [{ time: "08:00 - 09:30", subject: "Kimia", teacher: "Bu Rina", room: "Lab Kimia" }],
-  "Kamis": [{ time: "07:30 - 09:00", subject: "Sejarah", teacher: "Pak Agus", room: "Kelas X-A" }],
-  "Jumat": [{ time: "07:30 - 09:00", subject: "Olahraga", teacher: "Pak Doni", room: "Lapangan" }],
-};
+type DayName = "Senin" | "Selasa" | "Rabu" | "Kamis" | "Jumat" | "Sabtu" | "Minggu";
+const DAY_ORDER: DayName[] = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
-type DayName = keyof typeof mockSchedule;
+// Define typical school time slots for the weekly view structure
+const MOCK_WEEKLY_TIME_SLOTS = [
+  "07:30-09:00", 
+  "09:30-11:00", 
+  "11:30-13:00",
+  "13:30-15:00",
+];
 
 export default function SiswaJadwalPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  
+  const [mySchedule, setMySchedule] = useState<JadwalPelajaran[]>([]);
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
+
+  const fetchSchedule = useCallback(async () => {
+    if (!user || !user.kelas) {
+      setIsLoadingSchedule(false);
+      return;
+    }
+    setIsLoadingSchedule(true);
+    try {
+      const response = await fetch(`/api/jadwal/pelajaran?kelas=${encodeURIComponent(user.kelas)}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengambil data jadwal.");
+      }
+      const data: JadwalPelajaran[] = await response.json();
+      setMySchedule(data);
+    } catch (error: any) {
+      toast({ title: "Error Jadwal", description: error.message, variant: "destructive" });
+      setMySchedule([]);
+    } finally {
+      setIsLoadingSchedule(false);
+    }
+  }, [user, toast]);
+
+  useEffect(() => {
+    if (user && user.isVerified) {
+      fetchSchedule();
+    }
+  }, [user, fetchSchedule]);
+
 
   if (!user || (user.role !== 'siswa' && user.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Siswa untuk melihat halaman ini.</p>;
@@ -42,21 +72,42 @@ export default function SiswaJadwalPage() {
   }
 
   const handlePlaceholderAction = (action: string) => {
-    alert(`Fungsi "${action}" belum diimplementasikan.`);
+    toast({ title: "Fitur Dalam Pengembangan", description: `Fungsi "${action}" belum diimplementasikan.`});
   };
 
-  const getDayName = (date: Date): DayName => {
-    const dayIndex = date.getDay();
-    const days: DayName[] = ["Minggu" as any, "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu" as any]; // Cast for non-school days
-    return days[dayIndex];
+  const getDayNameFromDate = (date: Date): DayName => {
+    const dayIndex = date.getDay(); // Sunday is 0, Monday is 1, etc.
+    // Adjust to match your DayName type if necessary (e.g., if your DayName array starts Monday=0)
+    return DAY_ORDER[dayIndex === 0 ? 6 : dayIndex - 1]; // Make Sunday index 6
   };
 
-  const selectedDayName = getDayName(selectedDate);
-  const scheduleForSelectedDay = mockSchedule[selectedDayName] || [];
+  const scheduleForSelectedDay = useMemo(() => {
+    if (isLoadingSchedule || !mySchedule) return [];
+    const dayName = getDayNameFromDate(selectedDate);
+    return mySchedule
+      .filter(item => item.hari === dayName)
+      .sort((a, b) => {
+        if (a.slotWaktu?.waktuMulai && b.slotWaktu?.waktuMulai) {
+          return a.slotWaktu.waktuMulai.localeCompare(b.slotWaktu.waktuMulai);
+        }
+        return 0;
+      });
+  }, [mySchedule, selectedDate, isLoadingSchedule]);
   
   const nextWeek = () => setCurrentWeekStart(addDays(currentWeekStart, 7));
   const prevWeek = () => setCurrentWeekStart(subDays(currentWeekStart, 7));
   const currentWeekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+
+
+  const getLessonsForDayAndSlot = (dayDate: Date, slotStartTime: string) => {
+    const dayName = getDayNameFromDate(dayDate);
+    return mySchedule.filter(
+      (item) =>
+        item.hari === dayName &&
+        item.slotWaktu?.waktuMulai === slotStartTime
+    );
+  };
+
 
   return (
     <div className="space-y-6">
@@ -66,7 +117,7 @@ export default function SiswaJadwalPage() {
             <CalendarDays className="mr-3 h-8 w-8 text-primary" />
             Jadwal Pelajaran Saya
             </h1>
-            <p className="text-muted-foreground">Lihat jadwal pelajaran harian dan mingguan Anda.</p>
+            <p className="text-muted-foreground">Lihat jadwal pelajaran harian dan mingguan Anda. Kelas: {user.kelas || "Tidak terdaftar"}</p>
         </div>
         <Popover>
           <PopoverTrigger asChild>
@@ -92,20 +143,23 @@ export default function SiswaJadwalPage() {
           <CardDescription>Mata pelajaran yang dijadwalkan untuk hari yang dipilih.</CardDescription>
         </CardHeader>
         <CardContent>
-          {scheduleForSelectedDay.length > 0 ? (
+          {isLoadingSchedule ? (
+            <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Memuat jadwal...</p></div>
+          ) : scheduleForSelectedDay.length > 0 ? (
             <ul className="space-y-4">
-              {scheduleForSelectedDay.map((item, index) => (
-                <li key={index} className="p-4 border rounded-lg shadow-sm bg-card hover:shadow-md transition-shadow">
+              {scheduleForSelectedDay.map((item) => (
+                <li key={item.id} className="p-4 border rounded-lg shadow-sm bg-card hover:shadow-md transition-shadow">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
                     <div className="mb-2 sm:mb-0">
-                      <h3 className="text-lg font-semibold text-primary">{item.subject}</h3>
-                      <p className="text-sm text-muted-foreground flex items-center"><User className="mr-2 h-4 w-4" /> {item.teacher}</p>
+                      <h3 className="text-lg font-semibold text-primary">{item.mapel?.nama || "Nama Mapel Tidak Ada"}</h3>
+                      <p className="text-sm text-muted-foreground flex items-center"><User className="mr-2 h-4 w-4" /> {item.guru?.fullName || item.guru?.name || "Guru Tidak Ada"}</p>
                     </div>
                     <div className="text-sm text-right">
-                      <p className="flex items-center justify-end"><Clock className="mr-2 h-4 w-4" /> {item.time}</p>
-                      <p className="flex items-center justify-end"><Home className="mr-2 h-4 w-4" /> {item.room}</p>
+                      <p className="flex items-center justify-end"><Clock className="mr-2 h-4 w-4" /> {item.slotWaktu?.namaSlot} ({item.slotWaktu?.waktuMulai} - {item.slotWaktu?.waktuSelesai})</p>
+                      <p className="flex items-center justify-end"><Home className="mr-2 h-4 w-4" /> {item.ruangan?.nama || "Ruangan Tidak Ada"}</p>
                     </div>
                   </div>
+                   {item.catatan && <p className="mt-2 text-xs text-muted-foreground border-t pt-2">Catatan: {item.catatan}</p>}
                 </li>
               ))}
             </ul>
@@ -113,7 +167,6 @@ export default function SiswaJadwalPage() {
             <div className="text-center py-8 text-muted-foreground">
               <CalendarDays className="mx-auto h-12 w-12" />
               <p className="mt-2">Tidak ada jadwal untuk hari ini.</p>
-              <p className="text-xs">({user.kelas ? `Kelas Anda: ${user.kelas}` : "Kelas tidak terdaftar"})</p>
             </div>
           )}
         </CardContent>
@@ -136,45 +189,54 @@ export default function SiswaJadwalPage() {
             </div>
         </CardHeader>
         <CardContent>
-            <div className="overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[120px]">Waktu</TableHead>
-                            {Array.from({length: 5}).map((_, dayIndex) => (
-                                <TableHead key={dayIndex}>{format(addDays(currentWeekStart, dayIndex), "eeee", {locale: localeID})}</TableHead>
-                            ))}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {/* Mocking time slots for simplicity */}
-                        {["07:30-09:00", "09:30-11:00", "11:30-13:00"].map(slot => (
-                            <TableRow key={slot}>
-                                <TableCell className="font-medium">{slot}</TableCell>
-                                {Array.from({length: 5}).map((_, dayIndex) => {
-                                    const dayDate = addDays(currentWeekStart, dayIndex);
-                                    const dayName = getDayName(dayDate);
-                                    const lesson = mockSchedule[dayName]?.find(l => l.time.startsWith(slot.split('-')[0]));
-                                    return (
-                                        <TableCell key={dayIndex}>
-                                            {lesson ? (
-                                                <div className="p-2 rounded-md bg-primary/10 border border-primary/20 text-xs">
-                                                    <p className="font-semibold text-primary">{lesson.subject}</p>
-                                                    <p className="text-muted-foreground">{lesson.teacher}</p>
-                                                    <p className="text-muted-foreground text-[10px]">R: {lesson.room}</p>
-                                                </div>
-                                            ) : <span className="text-muted-foreground">-</span>}
-                                        </TableCell>
-                                    );
-                                })}
+             {isLoadingSchedule ? (
+                <div className="flex justify-center items-center h-60"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Memuat jadwal mingguan...</p></div>
+             ) : mySchedule.length > 0 ? (
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader className="bg-muted/50">
+                            <TableRow>
+                                <TableHead className="w-[120px] sticky left-0 bg-muted/50 z-10">Waktu</TableHead>
+                                {Array.from({length: 5}).map((_, dayIndex) => ( // Senin - Jumat
+                                    <TableHead key={dayIndex} className="min-w-[150px]">{format(addDays(currentWeekStart, dayIndex), "eeee", {locale: localeID})}</TableHead>
+                                ))}
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
+                        </TableHeader>
+                        <TableBody>
+                            {MOCK_WEEKLY_TIME_SLOTS.map(slotRange => {
+                                const slotStartTime = slotRange.split('-')[0];
+                                return (
+                                <TableRow key={slotRange}>
+                                    <TableCell className="font-medium sticky left-0 bg-card z-10">{slotRange}</TableCell>
+                                    {Array.from({length: 5}).map((_, dayIndex) => {
+                                        const dayDate = addDays(currentWeekStart, dayIndex);
+                                        const lessonsInSlot = getLessonsForDayAndSlot(dayDate, slotStartTime);
+                                        return (
+                                            <TableCell key={dayIndex} className="align-top p-1">
+                                                {lessonsInSlot.length > 0 ? lessonsInSlot.map(lesson => (
+                                                    <div key={lesson.id} className="p-1.5 mb-1 rounded-md bg-primary/10 border border-primary/20 text-xs">
+                                                        <p className="font-semibold text-primary">{lesson.mapel?.nama}</p>
+                                                        <p className="text-muted-foreground text-[11px]">{lesson.guru?.fullName || lesson.guru?.name}</p>
+                                                        <p className="text-muted-foreground text-[10px]">R: {lesson.ruangan?.nama}</p>
+                                                    </div>
+                                                )) : <span className="text-muted-foreground text-xs">-</span>}
+                                            </TableCell>
+                                        );
+                                    })}
+                                </TableRow>
+                            )})}
+                        </TableBody>
+                    </Table>
+                </div>
+             ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                    <CalendarDays className="mx-auto h-12 w-12" />
+                    <p className="mt-2">Tidak ada jadwal pelajaran yang ditemukan untuk kelas Anda.</p>
+                </div>
+             )}
              <div className="mt-4 flex justify-end">
                 <Button variant="outline" onClick={() => handlePlaceholderAction("Cetak Jadwal Mingguan")}>
-                    <Search className="mr-2 h-4 w-4" /> Lihat Jadwal Lengkap / Cetak
+                    <Search className="mr-2 h-4 w-4" /> Lihat Detail / Cetak
                 </Button>
             </div>
         </CardContent>
