@@ -1,7 +1,7 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
 // KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR moved to constants.ts
-import { KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR } from "@/lib/constants";
+import { KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR as JENIS_MATERI_AJAR_CONST_FROM_LIB } from "@/lib/constants";
 
 export type Role = 'admin' | 'guru' | 'siswa' | 'pimpinan' | 'superadmin';
 
@@ -139,7 +139,7 @@ export interface MataPelajaran {
   updatedAt?: Date | string;
 }
 
-export type JenisMateriAjarType = typeof JENIS_MATERI_AJAR[number];
+export type JenisMateriAjarType = typeof JENIS_MATERI_AJAR_CONST_FROM_LIB[number];
 
 export interface MateriAjar {
   id: string;
@@ -156,5 +156,9 @@ export interface MateriAjar {
   updatedAt?: Date | string;
 }
 
-// Re-exporting from constants.ts for convenience if some files were importing them from types/index.ts
-export { KATEGORI_SKL_CONST as KATEGORI_SKL, FASE_CP_CONST as FASE_CP };
+// Re-exporting constants from constants.ts for convenience if some files were importing them from types/index.ts
+export { 
+    KATEGORI_SKL_CONST as KATEGORI_SKL, 
+    FASE_CP_CONST as FASE_CP,
+    JENIS_MATERI_AJAR_CONST_FROM_LIB as JENIS_MATERI_AJAR // Re-exporting JENIS_MATERI_AJAR
+};
