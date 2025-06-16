@@ -10,6 +10,7 @@ import type { MateriAjarEntity } from "./materi-ajar.entity";
 import type { SilabusEntity } from "./silabus.entity";
 import type { RppEntity } from "./rpp.entity";
 import type { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
+import type { TugasEntity } from "./tugas.entity"; // Added TugasEntity import
 
 @Entity({ name: "users" })
 export class UserEntity /* implements AdapterUser */ { // Removed implements
@@ -97,6 +98,9 @@ export class UserEntity /* implements AdapterUser */ { // Removed implements
 
   @OneToMany("JadwalPelajaranEntity", jadwal => jadwal.guru)
   jadwalMengajar?: JadwalPelajaranEntity[];
+
+  @OneToMany("TugasEntity", (tugas: TugasEntity) => tugas.uploader) // Added relation to TugasEntity
+  tugasUploaded?: TugasEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;

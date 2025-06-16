@@ -180,10 +180,28 @@ export interface JadwalPelajaran {
   updatedAt?: Date | string;
 }
 
+export interface Tugas {
+  id: string;
+  judul: string;
+  deskripsi?: string | null;
+  mapel: string;
+  kelas: string;
+  tenggat: string; // ISO string from API (Date object in entity)
+  namaFileLampiran?: string | null;
+  fileUrlLampiran?: string | null; // Simulated path
+  uploaderId: string;
+  uploader?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>;
+  createdAt?: string;
+  updatedAt?: string;
+  // For frontend display, might be mocked or derived
+  terkumpul?: number;
+  totalSiswa?: number;
+  status?: "Aktif" | "Ditutup" | "Draf";
+}
+
 
 export { 
     KATEGORI_SKL_CONST as KATEGORI_SKL, 
     FASE_CP_CONST as FASE_CP,
     JENIS_MATERI_AJAR_CONST_FROM_LIB as JENIS_MATERI_AJAR
 };
-
