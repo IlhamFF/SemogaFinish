@@ -1,8 +1,9 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
+// TODO: Implement server-side Firebase token verification
+// import { getServerSession } from "next-auth/next";
+// import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import * as z from "zod";
@@ -20,10 +21,10 @@ const slotWaktuCreateSchema = z.object({
 // GET /api/jadwal/slot-waktu - Mendapatkan semua slot waktu
 export async function GET() {
   // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  // const session = await getServerSession(authOptions);
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  // }
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -39,10 +40,10 @@ export async function GET() {
 // POST /api/jadwal/slot-waktu - Membuat slot waktu baru
 export async function POST(request: NextRequest) {
   // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  // const session = await getServerSession(authOptions);
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  // }
 
   try {
     const body = await request.json();
