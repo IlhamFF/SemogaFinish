@@ -1,86 +1,147 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/hooks/use-auth";
-import { BookOpen, DownloadCloud, Search, FileText, Video, Link as LinkIcon } from "lucide-react";
-
-interface Materi {
-  id: string;
-  judul: string;
-  mapel: string;
-  guru: string;
-  jenis: "PDF" | "Video" | "PPT" | "Link" | "Dokumen";
-  tanggalUpload: string;
-  link?: string; // For Video or Link type
-  fileName?: string; // For PDF, PPT, Dokumen
-}
-
-const mockMateri: Materi[] = [
-  { id: "MAT001", judul: "Modul Aljabar Linier Bab 1-3", mapel: "Matematika", guru: "Bu Ani", jenis: "PDF", tanggalUpload: "2024-07-20", fileName: "Modul_Aljabar.pdf" },
-  { id: "MAT002", judul: "Video Pembelajaran Termodinamika", mapel: "Fisika", guru: "Pak Eko", jenis: "Video", tanggalUpload: "2024-07-22", link: "https://youtube.com/example" },
-  { id: "MAT003", judul: "Presentasi Struktur Atom", mapel: "Kimia", guru: "Bu Rina", jenis: "PPT", tanggalUpload: "2024-07-18", fileName: "Struktur_Atom.pptx" },
-  { id: "MAT004", judul: "Kumpulan Soal UN Bahasa Indonesia", mapel: "Bahasa Indonesia", guru: "Pak Budi", jenis: "Dokumen", tanggalUpload: "2024-07-15", fileName: "Soal_UN_BI.docx" },
-  { id: "MAT005", judul: "Sumber Belajar Online Sejarah Dunia", mapel: "Sejarah", guru: "Pak Agus", jenis: "Link", tanggalUpload: "2024-07-25", link: "https://wikipedia.org/wiki/Sejarah_Dunia" },
-];
+import { BookOpen, DownloadCloud, Search, FileText, Video, Link as LinkIcon, Loader2, FolderKanban } from "lucide-react";
+import type { MateriAjar as Materi, JadwalPelajaran } from "@/types";
+import { useToast } from "@/hooks/use-toast";
+import { format, parseISO } from "date-fns";
 
 export default function SiswaMateriPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  
+  const [allAvailableMaterials, setAllAvailableMaterials] = useState<Materi[]>([]);
+  const [studentSubjects, setStudentSubjects] = useState<string[]>([]);
+  
+  const [isLoadingMaterials, setIsLoadingMaterials] = useState(true);
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [filterMapel, setFilterMapel] = useState<string>("semua");
+
+  const fetchStudentSchedule = useCallback(async () => {
+    if (!user || !user.kelas) {
+      setIsLoadingSchedule(false);
+      return;
+    }
+    setIsLoadingSchedule(true);
+    try {
+      const response = await fetch(`/api/jadwal/pelajaran?kelas=${encodeURIComponent(user.kelas)}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengambil jadwal siswa.");
+      }
+      const schedule: JadwalPelajaran[] = await response.json();
+      const uniqueSubjects = [...new Set(schedule.map(item => item.mapel?.nama).filter(Boolean) as string[])].sort();
+      setStudentSubjects(uniqueSubjects);
+    } catch (error: any) {
+      toast({ title: "Error Jadwal", description: error.message, variant: "destructive" });
+      setStudentSubjects([]);
+    } finally {
+      setIsLoadingSchedule(false);
+    }
+  }, [user, toast]);
+
+  const fetchAllMaterials = useCallback(async () => {
+    setIsLoadingMaterials(true);
+    try {
+      const response = await fetch('/api/kurikulum/materi-ajar');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengambil materi ajar.");
+      }
+      setAllAvailableMaterials(await response.json());
+    } catch (error: any) {
+      toast({ title: "Error Materi", description: error.message, variant: "destructive" });
+      setAllAvailableMaterials([]);
+    } finally {
+      setIsLoadingMaterials(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (user && user.isVerified) {
+      fetchStudentSchedule();
+      fetchAllMaterials();
+    } else {
+      setIsLoadingSchedule(false);
+      setIsLoadingMaterials(false);
+    }
+  }, [user, fetchStudentSchedule, fetchAllMaterials]);
+
 
   if (!user || (user.role !== 'siswa' && user.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Siswa untuk melihat halaman ini.</p>;
   }
-  if (!user.isVerified) {
+  if (user && !user.isVerified) {
     return <p>Silakan verifikasi email Anda untuk mengakses fitur ini.</p>;
   }
 
-  const handlePlaceholderAction = (action: string, materiId?: string, link?: string) => {
-    if (link) {
-        window.open(link, '_blank');
+  const handleDownloadOrOpenLink = (materi: Materi) => {
+    if (materi.jenisMateri === "Link" && materi.fileUrl) {
+        window.open(materi.fileUrl, '_blank', 'noopener,noreferrer');
+    } else if (materi.jenisMateri === "File" && materi.fileUrl) {
+        // For demo, assume fileUrl is a direct link. In reality, this might be an API endpoint.
+        toast({ title: "Simulasi Unduh", description: `Mengunduh ${materi.namaFileOriginal || materi.judul}... (URL: ${materi.fileUrl})` });
+        window.open(materi.fileUrl, '_blank'); 
     } else {
-        alert(`Fungsi "${action}" ${materiId ? `untuk materi ${materiId} ` : ''}belum diimplementasikan.`);
+        toast({ title: "Aksi Tidak Tersedia", description: "Tidak ada file atau tautan yang valid untuk materi ini.", variant: "destructive"});
     }
   };
 
-  const uniqueMapel = ["semua", ...new Set(mockMateri.map(m => m.mapel))];
+  const uniqueMapelOptionsForFilter = useMemo(() => {
+    return ["semua", ...studentSubjects];
+  }, [studentSubjects]);
 
-  const filteredMateri = mockMateri.filter(m => 
-    (m.judul.toLowerCase().includes(searchTerm.toLowerCase()) || m.guru.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (filterMapel === "semua" || m.mapel === filterMapel)
-  );
+  const displayedMaterials = useMemo(() => {
+    if (isLoadingSchedule || studentSubjects.length === 0) {
+      // If schedule is loading or student has no subjects, filter based on all materials for now,
+      // or return empty if no materials are relevant.
+      // Let's filter by search term and selected mapel from ALL materials if student subjects not yet loaded.
+      return allAvailableMaterials.filter(m =>
+        (m.judul.toLowerCase().includes(searchTerm.toLowerCase()) || (m.uploader?.fullName || m.uploader?.name || "").toLowerCase().includes(searchTerm.toLowerCase())) &&
+        (filterMapel === "semua" || m.mapelNama === filterMapel)
+      );
+    }
+    
+    return allAvailableMaterials.filter(m => 
+      studentSubjects.includes(m.mapelNama) && // Filter by student's actual subjects
+      (m.judul.toLowerCase().includes(searchTerm.toLowerCase()) || (m.uploader?.fullName || m.uploader?.name || "").toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (filterMapel === "semua" || m.mapelNama === filterMapel)
+    );
+  }, [allAvailableMaterials, studentSubjects, searchTerm, filterMapel, isLoadingSchedule]);
   
-  const getJenisIcon = (jenis: Materi["jenis"]) => {
+  const getJenisIcon = (jenis: Materi["jenisMateri"]) => {
     switch(jenis) {
-        case "PDF": return <FileText className="h-5 w-5 text-red-500" />;
-        case "Video": return <Video className="h-5 w-5 text-blue-500" />;
-        case "PPT": return <FileText className="h-5 w-5 text-orange-500" />;
-        case "Dokumen": return <FileText className="h-5 w-5 text-sky-500" />;
+        case "File": return <FileText className="h-5 w-5 text-sky-500" />; // Generic file
         case "Link": return <LinkIcon className="h-5 w-5 text-gray-500" />;
         default: return <FileText className="h-5 w-5" />;
     }
   }
 
+  const isLoading = isLoadingMaterials || isLoadingSchedule;
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-headline font-semibold flex items-center">
         <BookOpen className="mr-3 h-8 w-8 text-primary" />
-        Materi Pelajaran
+        Materi Pelajaran Saya
       </h1>
-      <p className="text-muted-foreground">Akses dan unduh materi pembelajaran yang dibagikan oleh guru Anda.</p>
+      <p className="text-muted-foreground">Akses dan unduh materi pembelajaran yang relevan dengan mata pelajaran Anda. Kelas: {user.kelas || "Tidak terdaftar"}</p>
 
       <Card className="shadow-lg">
         <CardHeader>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <CardTitle>Daftar Materi</CardTitle>
-                    <CardDescription>Cari dan filter materi yang tersedia.</CardDescription>
+                    <CardTitle>Daftar Materi Tersedia</CardTitle>
+                    <CardDescription>Cari dan filter materi untuk mata pelajaran Anda.</CardDescription>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                     <div className="relative flex-grow sm:flex-grow-0 sm:w-[200px] lg:w-[300px]">
@@ -90,15 +151,16 @@ export default function SiswaMateriPage() {
                             className="pl-8 w-full"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)} 
+                            disabled={isLoading}
                         />
                     </div>
-                    <Select value={filterMapel} onValueChange={setFilterMapel}>
+                    <Select value={filterMapel} onValueChange={setFilterMapel} disabled={isLoading || studentSubjects.length === 0}>
                         <SelectTrigger className="w-full sm:w-[180px]">
                             <SelectValue placeholder="Filter Mata Pelajaran" />
                         </SelectTrigger>
                         <SelectContent>
-                            {uniqueMapel.map(mapel => (
-                                <SelectItem key={mapel} value={mapel}>{mapel === "semua" ? "Semua Mapel" : mapel}</SelectItem>
+                            {uniqueMapelOptionsForFilter.map(mapel => (
+                                <SelectItem key={mapel} value={mapel}>{mapel === "semua" ? "Semua Mapel Saya" : mapel}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
@@ -106,7 +168,9 @@ export default function SiswaMateriPage() {
             </div>
         </CardHeader>
         <CardContent>
-          {filteredMateri.length > 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center h-60"><Loader2 className="h-10 w-10 animate-spin text-primary" /> <p className="ml-3">Memuat materi...</p></div>
+          ) : displayedMaterials.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -120,21 +184,21 @@ export default function SiswaMateriPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredMateri.map((materi) => (
+                  {displayedMaterials.map((materi) => (
                     <TableRow key={materi.id}>
-                      <TableCell>{getJenisIcon(materi.jenis)}</TableCell>
-                      <TableCell className="font-medium">{materi.judul}</TableCell>
-                      <TableCell>{materi.mapel}</TableCell>
-                      <TableCell>{materi.guru}</TableCell>
-                      <TableCell>{materi.tanggalUpload}</TableCell>
+                      <TableCell>{getJenisIcon(materi.jenisMateri)}</TableCell>
+                      <TableCell className="font-medium max-w-sm truncate" title={materi.judul}>{materi.judul}</TableCell>
+                      <TableCell>{materi.mapelNama}</TableCell>
+                      <TableCell>{materi.uploader?.fullName || materi.uploader?.name || "N/A"}</TableCell>
+                      <TableCell>{format(parseISO(materi.tanggalUpload), "dd/MM/yyyy")}</TableCell>
                       <TableCell className="text-right">
                         <Button 
-                            variant={materi.link ? "outline" : "default"} 
+                            variant={materi.jenisMateri === "Link" ? "outline" : "default"} 
                             size="sm" 
-                            onClick={() => handlePlaceholderAction(materi.link ? "Buka Tautan" : "Unduh Materi", materi.id, materi.link)}
+                            onClick={() => handleDownloadOrOpenLink(materi)}
                         >
-                          {materi.link ? <LinkIcon className="mr-2 h-4 w-4" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
-                          {materi.link ? "Buka Tautan" : "Unduh"}
+                          {materi.jenisMateri === "Link" ? <LinkIcon className="mr-2 h-4 w-4" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
+                          {materi.jenisMateri === "Link" ? "Buka Tautan" : "Unduh/Lihat"}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -144,9 +208,10 @@ export default function SiswaMateriPage() {
             </div>
           ) : (
             <div className="text-center py-10 text-muted-foreground">
-              <BookOpen className="mx-auto h-12 w-12" />
-              <p className="mt-2">Tidak ada materi yang cocok dengan filter Anda.</p>
-              {user.kelas && <p className="text-xs mt-1">(Pastikan Anda terdaftar di kelas yang benar: {user.kelas})</p>}
+              <FolderKanban className="mx-auto h-12 w-12" />
+              <p className="mt-2">
+                {studentSubjects.length === 0 && !isLoadingSchedule ? "Jadwal Anda belum tersedia atau tidak ada mata pelajaran." : "Tidak ada materi yang cocok dengan filter atau untuk mata pelajaran Anda saat ini."}
+              </p>
             </div>
           )}
         </CardContent>
