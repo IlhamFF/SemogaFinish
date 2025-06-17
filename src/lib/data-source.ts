@@ -2,9 +2,8 @@
 import "reflect-metadata"; // Ensure this is the very first import
 import { DataSource, type DataSourceOptions } from "typeorm";
 import { UserEntity } from "@/entities/user.entity";
-import { AccountEntity } from "@/entities/account.entity";
-import { SessionEntity } from "@/entities/session.entity";
-import { VerificationTokenEntity } from "@/entities/verification-token.entity";
+// Entitas AccountEntity, SessionEntity, dan VerificationTokenEntity tidak lagi diimpor
+// karena sudah tidak digunakan setelah penghapusan NextAuth.js
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import { SklEntity } from "@/entities/skl.entity";
 import { CpEntity } from "@/entities/cp.entity";
@@ -30,9 +29,9 @@ export const dataSourceOptions: DataSourceOptions = {
   logging: process.env.NODE_ENV === "development" ? ["query", "error"] : ["error"],
   entities: [
     UserEntity,
-    AccountEntity,
-    SessionEntity,
-    VerificationTokenEntity,
+    // AccountEntity, // REMOVED - No longer used
+    // SessionEntity, // REMOVED - No longer used
+    // VerificationTokenEntity, // REMOVED - No longer used
     MataPelajaranEntity,
     SklEntity,
     CpEntity,
