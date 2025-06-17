@@ -1,8 +1,8 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+// import { getServerSession } from "next-auth/next"; // REMOVED
+// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { MateriKategoriEntity } from "@/entities/materi-kategori.entity";
 import * as z from "zod";
@@ -13,10 +13,11 @@ const kategoriCreateSchema = z.object({
 
 // GET /api/kurikulum/materi-kategori - Mendapatkan semua kategori materi
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -31,10 +32,11 @@ export async function GET() {
 
 // POST /api/kurikulum/materi-kategori - Membuat kategori materi baru
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   try {
     const body = await request.json();
@@ -60,10 +62,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error("Error creating kategori materi:", error);
-    if (error.code === '23505') { // Kode error PostgreSQL untuk unique violation
+    if (error.code === '23505') { 
         return NextResponse.json({ message: "Nama kategori sudah ada (dari DB)." }, { status: 409 });
     }
     return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
   }
 }
-    

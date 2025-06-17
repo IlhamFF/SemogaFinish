@@ -1,12 +1,12 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+// import { getServerSession } from "next-auth/next"; // REMOVED
+// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { CpEntity } from "@/entities/cp.entity";
 import * as z from "zod";
-import { FASE_CP } from "@/types"; // FASE_CP from types for Zod enum
+import { FASE_CP } from "@/types"; 
 import type { FaseCpType } from "@/types";
 
 const cpCreateSchema = z.object({
@@ -18,10 +18,11 @@ const cpCreateSchema = z.object({
 
 // GET /api/kurikulum/cp - Mendapatkan semua CP
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -36,10 +37,11 @@ export async function GET() {
 
 // POST /api/kurikulum/cp - Membuat CP baru
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   try {
     const body = await request.json();
@@ -54,7 +56,6 @@ export async function POST(request: NextRequest) {
     const dataSource = await getInitializedDataSource();
     const cpRepo = dataSource.getRepository(CpEntity);
 
-    // Cek duplikasi kode
     const existingCp = await cpRepo.findOneBy({ kode });
     if (existingCp) {
       return NextResponse.json({ message: "Kode CP sudah ada." }, { status: 409 });
@@ -72,10 +73,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error("Error creating CP:", error);
-    if (error.code === '23505') { // Kode error PostgreSQL untuk unique violation
+    if (error.code === '23505') { 
         return NextResponse.json({ message: "Kode CP sudah ada (dari DB)." }, { status: 409 });
     }
     return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
   }
 }
-    

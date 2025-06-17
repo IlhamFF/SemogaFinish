@@ -1,13 +1,14 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+// import { getServerSession } from "next-auth/next"; // REMOVED
+// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { RppEntity } from "@/entities/rpp.entity";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import * as z from "zod";
 import { format } from 'date-fns';
+import type { User } from '@/types'; // Import User from your types for session user structure
 
 const rppCreateSchema = z.object({
   judul: z.string().min(5, { message: "Judul RPP minimal 5 karakter." }).max(255),
@@ -22,14 +23,16 @@ const rppCreateSchema = z.object({
 
 // GET /api/kurikulum/rpp - Mendapatkan semua RPP
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user || (session.user.role !== 'admin' && session.user.role !== 'superadmin' && session.user.role !== 'guru')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || !session.user || (session.user.role !== 'admin' && session.user.role !== 'superadmin' && session.user.role !== 'guru')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { searchParams } = new URL(request.url);
   const mapelIdFilter = searchParams.get("mapelId");
   const kelasFilter = searchParams.get("kelas");
+  // const uploaderIdFilter = session?.user?.role === 'guru' ? session.user.id : searchParams.get("uploaderId"); // Hypothetical if session was available
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -47,11 +50,10 @@ export async function GET(request: NextRequest) {
     if (kelasFilter) {
       queryOptions.where.kelas = kelasFilter;
     }
-
-    // Jika user adalah guru, filter hanya untuk RPP yang dia upload
-    if (session.user.role === 'guru') {
-        queryOptions.where.uploaderId = session.user.id; 
-    }
+    // TODO: Add role-based filtering if session is available.
+    // if (uploaderIdFilter) {
+    //   queryOptions.where.uploaderId = uploaderIdFilter;
+    // }
 
     const rppList = await rppRepo.find(queryOptions);
 
@@ -68,13 +70,16 @@ export async function GET(request: NextRequest) {
 
 // POST /api/kurikulum/rpp - Membuat RPP baru
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user || (session.user.role !== 'admin' && session.user.role !== 'superadmin' && session.user.role !== 'guru')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || !session.user || (session.user.role !== 'admin' && session.user.role !== 'superadmin' && session.user.role !== 'guru')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
+  const body = await request.json(); // Get body first
+  const uploaderId = body.uploaderId || "mock-uploader-id"; // MOCK - REPLACE WITH ACTUAL AUTH
+  if(!uploaderId) return NextResponse.json({ message: "Uploader ID tidak ditemukan. Autentikasi diperlukan." }, { status: 401 });
 
   try {
-    const body = await request.json();
     const validation = rppCreateSchema.safeParse(body);
 
     if (!validation.success) {
@@ -82,7 +87,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { judul, mapelId, kelas, pertemuanKe, materiPokok, kegiatanPembelajaran, penilaian, namaFileOriginal } = validation.data;
-    const uploaderId = session.user.id;
 
     const dataSource = await getInitializedDataSource();
     const rppRepo = dataSource.getRepository(RppEntity);

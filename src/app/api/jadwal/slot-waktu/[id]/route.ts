@@ -1,8 +1,8 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+// import { getServerSession } from "next-auth/next"; // REMOVED
+// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import * as z from "zod";
@@ -18,8 +18,6 @@ const slotWaktuUpdateSchema = z.object({
     if (data.waktuMulai && data.waktuSelesai) {
         return data.waktuMulai < data.waktuSelesai;
     }
-    // Jika hanya satu yang diupdate, validasi ini tidak bisa diterapkan langsung di sini
-    // Perlu dicek terhadap data existing di DB saat update.
     return true;
 }, {
   message: "Waktu mulai harus sebelum waktu selesai.",
@@ -31,10 +29,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {
@@ -61,10 +60,11 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {
@@ -99,14 +99,12 @@ export async function PUT(
         return NextResponse.json({ message: "Slot waktu tidak ditemukan." }, { status: 404 });
     }
 
-    // Validasi waktuMulai vs waktuSelesai jika salah satunya diupdate
     const finalWaktuMulai = updateData.waktuMulai ?? existingSlot.waktuMulai;
     const finalWaktuSelesai = updateData.waktuSelesai ?? existingSlot.waktuSelesai;
     if (finalWaktuMulai >= finalWaktuSelesai) {
         return NextResponse.json({ message: "Waktu mulai harus sebelum waktu selesai." }, { status: 400 });
     }
 
-    // Cek duplikasi namaSlot jika diupdate
     if (updateData.namaSlot && updateData.namaSlot !== existingSlot.namaSlot) {
         const duplicateSlot = await slotWaktuRepo.findOneBy({ namaSlot: updateData.namaSlot });
         if (duplicateSlot) {
@@ -137,10 +135,11 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {
@@ -158,7 +157,6 @@ export async function DELETE(
     return NextResponse.json({ message: "Slot waktu berhasil dihapus." });
   } catch (error) {
     console.error("Error deleting slot waktu:", error);
-    // TODO: Handle error jika slot waktu masih terhubung ke jadwal pelajaran
     return NextResponse.json({ message: "Terjadi kesalahan internal server atau slot waktu masih digunakan dalam jadwal." }, { status: 500 });
   }
 }

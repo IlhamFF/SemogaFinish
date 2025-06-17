@@ -1,8 +1,8 @@
 
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+// import { getServerSession } from "next-auth/next"; // REMOVED
+// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { JadwalPelajaranEntity } from "@/entities/jadwal-pelajaran.entity";
 import { UserEntity } from "@/entities/user.entity";
@@ -10,7 +10,7 @@ import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import { RuanganEntity } from "@/entities/ruangan.entity";
 import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import * as z from "zod";
-import { FindOptionsWhere, In, Not } from "typeorm";
+import { FindOptionsWhere, In, Not } from "typeorm"; // Make sure Not is imported
 
 
 const jadwalPelajaranUpdateSchema = z.object({
@@ -25,7 +25,6 @@ const jadwalPelajaranUpdateSchema = z.object({
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });
 
-// Helper function for conflict checking during update
 async function checkKonflikUpdate(
   dataSource: Awaited<ReturnType<typeof getInitializedDataSource>>,
   jadwalId: string,
@@ -35,31 +34,27 @@ async function checkKonflikUpdate(
 
   const { hari, kelas, slotWaktuId, guruId, ruanganId } = data;
 
-  // Check for class conflict
-  let konflik = await jadwalRepo.findOne({ where: { hari, kelas, slotWaktuId, id: Not(jadwalId) } });
+  let konflik = await jadwalRepo.findOne({ where: { hari, kelas, slotWaktuId, id: Not(jadwalId) } }); // Use Not here
   if (konflik) return `Kelas ${kelas} sudah memiliki jadwal lain pada ${hari}, slot waktu tersebut.`;
 
-  // Check for teacher conflict
-  konflik = await jadwalRepo.findOne({ where: { hari, guruId, slotWaktuId, id: Not(jadwalId) } });
+  konflik = await jadwalRepo.findOne({ where: { hari, guruId, slotWaktuId, id: Not(jadwalId) } }); // Use Not here
   if (konflik) return `Guru tersebut sudah mengajar di kelas lain (${konflik.kelas}) pada ${hari}, slot waktu tersebut.`;
   
-  // Check for room conflict
-  konflik = await jadwalRepo.findOne({ where: { hari, ruanganId, slotWaktuId, id: Not(jadwalId) } });
+  konflik = await jadwalRepo.findOne({ where: { hari, ruanganId, slotWaktuId, id: Not(jadwalId) } }); // Use Not here
   if (konflik) return `Ruangan tersebut sudah digunakan kelas lain (${konflik.kelas}) pada ${hari}, slot waktu tersebut.`;
 
   return null;
 }
 
-
-// GET /api/jadwal/pelajaran/[id] - Mendapatkan satu entri jadwal
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {
@@ -87,16 +82,15 @@ export async function GET(
   }
 }
 
-
-// PUT /api/jadwal/pelajaran/[id] - Memperbarui entri jadwal
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {
@@ -120,17 +114,15 @@ export async function PUT(
       return NextResponse.json({ message: "Jadwal pelajaran tidak ditemukan." }, { status: 404 });
     }
 
-    // Prepare data for conflict check (use existing values if not provided in payload)
     const conflictCheckData = {
       hari: updatePayload.hari ?? existingJadwal.hari,
       kelas: updatePayload.kelas ?? existingJadwal.kelas,
       slotWaktuId: updatePayload.slotWaktuId ?? existingJadwal.slotWaktuId,
       guruId: updatePayload.guruId ?? existingJadwal.guruId,
       ruanganId: updatePayload.ruanganId ?? existingJadwal.ruanganId,
-      mapelId: updatePayload.mapelId ?? existingJadwal.mapelId, // Not directly used in checkKonflikUpdate but good to have
+      mapelId: updatePayload.mapelId ?? existingJadwal.mapelId,
     };
 
-    // Validate FKs if they are being changed
     if (updatePayload.guruId && updatePayload.guruId !== existingJadwal.guruId) {
         const guru = await dataSource.getRepository(UserEntity).findOneBy({ id: updatePayload.guruId, role: 'guru' });
         if (!guru) return NextResponse.json({ message: "Guru baru tidak ditemukan atau bukan role guru." }, { status: 400 });
@@ -144,7 +136,6 @@ export async function PUT(
     if (updatePayload.slotWaktuId && updatePayload.slotWaktuId !== existingJadwal.slotWaktuId) {
         if (!await dataSource.getRepository(SlotWaktuEntity).findOneBy({ id: updatePayload.slotWaktuId })) return NextResponse.json({ message: "Slot waktu baru tidak ditemukan." }, { status: 400 });
     }
-
 
     const konflik = await checkKonflikUpdate(dataSource, id, conflictCheckData);
     if (konflik) {
@@ -161,23 +152,22 @@ export async function PUT(
 
   } catch (error: any) {
     console.error("Error updating jadwal pelajaran:", error);
-    if (error.code === '23505') { // Unique constraint violation
+    if (error.code === '23505') {
         return NextResponse.json({ message: "Jadwal pelajaran duplikat untuk kelas pada slot waktu dan hari yang sama setelah update." }, { status: 409 });
     }
     return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
   }
 }
 
-
-// DELETE /api/jadwal/pelajaran/[id] - Menghapus entri jadwal
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {

@@ -1,12 +1,12 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+// import { getServerSession } from "next-auth/next"; // REMOVED
+// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { SklEntity } from "@/entities/skl.entity";
 import * as z from "zod";
-import { KATEGORI_SKL } from "@/types"; // KATEGORI_SKL from types for Zod enum
+import { KATEGORI_SKL } from "@/types"; 
 import type { KategoriSklType } from "@/types";
 
 const sklCreateSchema = z.object({
@@ -17,10 +17,11 @@ const sklCreateSchema = z.object({
 
 // GET /api/kurikulum/skl - Mendapatkan semua SKL
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -35,10 +36,11 @@ export async function GET() {
 
 // POST /api/kurikulum/skl - Membuat SKL baru
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   try {
     const body = await request.json();
@@ -53,7 +55,6 @@ export async function POST(request: NextRequest) {
     const dataSource = await getInitializedDataSource();
     const sklRepo = dataSource.getRepository(SklEntity);
 
-    // Cek duplikasi kode
     const existingSkl = await sklRepo.findOneBy({ kode });
     if (existingSkl) {
       return NextResponse.json({ message: "Kode SKL sudah ada." }, { status: 409 });
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
     const newSkl = sklRepo.create({
       kode,
       deskripsi,
-      kategori: kategori as KategoriSklType, // Zod enum should align with KategoriSklType
+      kategori: kategori as KategoriSklType,
     });
 
     await sklRepo.save(newSkl);
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error("Error creating SKL:", error);
-    if (error.code === '23505') { // Kode error PostgreSQL untuk unique violation
+    if (error.code === '23505') {
         return NextResponse.json({ message: "Kode SKL sudah ada (dari DB)." }, { status: 409 });
     }
     return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });

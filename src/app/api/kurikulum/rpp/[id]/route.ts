@@ -1,12 +1,13 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+// import { getServerSession } from "next-auth/next"; // REMOVED
+// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { RppEntity } from "@/entities/rpp.entity";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import * as z from "zod";
+import type { User } from '@/types'; // Import User from your types for session user structure
 
 const rppUpdateSchema = z.object({
   judul: z.string().min(5, { message: "Judul RPP minimal 5 karakter." }).max(255).optional(),
@@ -26,10 +27,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user ||(session.user.role !== 'admin' && session.user.role !== 'superadmin' && session.user.role !== 'guru')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || !session.user ||(session.user.role !== 'admin' && session.user.role !== 'superadmin' && session.user.role !== 'guru')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {
@@ -47,13 +49,8 @@ export async function GET(
     if (!rpp) {
       return NextResponse.json({ message: "RPP tidak ditemukan." }, { status: 404 });
     }
-    // Otorisasi: Guru hanya bisa melihat RPP yang mereka unggah
-    if (session.user.role === 'guru' && rpp.uploaderId !== session.user.id) {
-        // Admin/Superadmin bisa lihat semua, guru hanya miliknya.
-        // Jika ingin guru bisa lihat RPP mapelnya walau bukan dia yg upload, logikanya beda.
-        // Untuk GET ini, kita anggap guru bisa lihat jika itu RPPnya
-        return NextResponse.json({ message: "Anda tidak berhak melihat RPP ini." }, { status: 403 });
-    }
+    // TODO: Add role-based authorization check here
+    // if (session.user.role === 'guru' && rpp.uploaderId !== session.user.id) { ... }
 
     return NextResponse.json({
         ...rpp,
@@ -71,10 +68,11 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user || (session.user.role !== 'admin' && session.user.role !== 'superadmin' && session.user.role !== 'guru')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || !session.user || (session.user.role !== 'admin' && session.user.role !== 'superadmin' && session.user.role !== 'guru')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {
@@ -94,7 +92,7 @@ export async function PUT(
 
     if (validatedData.judul !== undefined) updateData.judul = validatedData.judul;
     if (validatedData.mapelId !== undefined) {
-        const dataSource = await getInitializedDataSource(); // Re-get for this scope
+        const dataSource = await getInitializedDataSource();
         const mapelRepo = dataSource.getRepository(MataPelajaranEntity);
         const mapelExists = await mapelRepo.findOneBy({ id: validatedData.mapelId });
         if (!mapelExists) {
@@ -128,10 +126,8 @@ export async function PUT(
     if (!existingRpp) {
         return NextResponse.json({ message: "RPP tidak ditemukan." }, { status: 404 });
     }
-
-    if (session.user.role === 'guru' && existingRpp.uploaderId !== session.user.id) {
-        return NextResponse.json({ message: "Anda tidak berhak memperbarui RPP ini." }, { status: 403 });
-    }
+    // TODO: Add role-based authorization check here
+    // if (session.user.role === 'guru' && existingRpp.uploaderId !== session.user.id) { ... }
 
     const updateResult = await rppRepo.update(id, updateData);
 
@@ -157,10 +153,11 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user || (session.user.role !== 'admin' && session.user.role !== 'superadmin' && session.user.role !== 'guru')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || !session.user || (session.user.role !== 'admin' && session.user.role !== 'superadmin' && session.user.role !== 'guru')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {
@@ -175,10 +172,8 @@ export async function DELETE(
     if (!rppToDelete) {
         return NextResponse.json({ message: "RPP tidak ditemukan." }, { status: 404 });
     }
-
-    if (session.user.role === 'guru' && rppToDelete.uploaderId !== session.user.id) {
-        return NextResponse.json({ message: "Anda tidak berhak menghapus RPP ini." }, { status: 403 });
-    }
+    // TODO: Add role-based authorization check here
+    // if (session.user.role === 'guru' && rppToDelete.uploaderId !== session.user.id) { ... }
     
     const deleteResult = await rppRepo.delete(id);
 
@@ -191,4 +186,3 @@ export async function DELETE(
     return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
   }
 }
-

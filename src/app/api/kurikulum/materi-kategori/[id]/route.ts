@@ -1,8 +1,8 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+// import { getServerSession } from "next-auth/next"; // REMOVED
+// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { MateriKategoriEntity } from "@/entities/materi-kategori.entity";
 import * as z from "zod";
@@ -13,16 +13,16 @@ const kategoriUpdateSchema = z.object({
   message: "Minimal satu field (nama) harus diisi untuk melakukan pembaruan.",
 });
 
-
 // GET /api/kurikulum/materi-kategori/[id] - Mendapatkan satu kategori materi
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {
@@ -49,10 +49,11 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {
@@ -72,14 +73,13 @@ export async function PUT(
       updateData.nama = validation.data.nama;
     }
     
-    if (Object.keys(updateData).length === 0) { // Seharusnya sudah ditangani refine, tapi sebagai fallback
+    if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ message: "Tidak ada data untuk diperbarui." }, { status: 400 });
     }
     
     const dataSource = await getInitializedDataSource();
     const kategoriRepo = dataSource.getRepository(MateriKategoriEntity);
 
-    // Cek jika nama baru sudah ada (dan bukan kategori yang sama)
     if (updateData.nama) {
         const existingKategori = await kategoriRepo.findOne({ where: { nama: updateData.nama }});
         if (existingKategori && existingKategori.id !== id) {
@@ -98,7 +98,7 @@ export async function PUT(
 
   } catch (error: any) {
     console.error("Error updating kategori materi:", error);
-     if (error.code === '23505') { // Kode error PostgreSQL untuk unique violation
+     if (error.code === '23505') {
         return NextResponse.json({ message: "Nama kategori sudah ada (dari DB)." }, { status: 409 });
     }
     return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
@@ -110,10 +110,11 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {
@@ -131,8 +132,6 @@ export async function DELETE(
     return NextResponse.json({ message: "Kategori materi berhasil dihapus." });
   } catch (error) {
     console.error("Error deleting kategori materi:", error);
-    // TODO: Handle error jika kategori masih terhubung ke entitas materi ajar
     return NextResponse.json({ message: "Terjadi kesalahan internal server atau kategori terkait dengan data lain." }, { status: 500 });
   }
 }
-    

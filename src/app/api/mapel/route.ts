@@ -1,8 +1,8 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { NextRequest, NextResponse } from "next/server"; // Added NextRequest
+// import { getServerSession } from "next-auth/next"; // REMOVED
+// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import * as z from "zod";
@@ -17,13 +17,12 @@ const mataPelajaranSchema = z.object({
 });
 
 // GET /api/mapel - Mendapatkan semua mata pelajaran
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  // For now, only admin can get all mapel for management.
-  // If other roles need to list mapel (e.g., for selection), adjust roles here or create a public endpoint.
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+export async function GET(request: NextRequest) { // Added request parameter
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -37,11 +36,12 @@ export async function GET() {
 }
 
 // POST /api/mapel - Membuat mata pelajaran baru
-export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+export async function POST(request: NextRequest) { // Changed from Request to NextRequest
+  // TODO: Implement server-side Firebase token verification for admin/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   try {
     const body = await request.json();

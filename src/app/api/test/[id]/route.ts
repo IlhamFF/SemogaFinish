@@ -1,18 +1,19 @@
 
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+// import { getServerSession } from "next-auth/next"; // REMOVED
+// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { TestEntity, type TestTipe, type TestStatus } from "@/entities/test.entity";
 import * as z from "zod";
 import { formatISO } from 'date-fns';
+import type { User } from '@/types'; // Import User from your types for session user structure
 
 const testUpdateSchema = z.object({
   judul: z.string().min(5, { message: "Judul test minimal 5 karakter." }).optional(),
   mapel: z.string().optional(),
   kelas: z.string().optional(),
-  tanggal: z.date().optional(), // Expecting Date object from client form
+  tanggal: z.date().optional(),
   durasi: z.coerce.number().min(5, { message: "Durasi minimal 5 menit." }).optional(),
   tipe: z.enum(["Kuis", "Ulangan Harian", "UTS", "UAS", "Lainnya"]).optional(),
   status: z.enum(["Draf", "Terjadwal", "Berlangsung", "Selesai", "Dinilai"]).optional(),
@@ -24,10 +25,11 @@ const testUpdateSchema = z.object({
 
 // GET /api/test/[id] - Mendapatkan detail test
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user || (session.user.role !== 'guru' && session.user.role !== 'superadmin')) {
-        return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-    }
+    // TODO: Implement server-side Firebase token verification
+    // const session = await getServerSession(authOptions); // REMOVED
+    // if (!session || !session.user || (session.user.role !== 'guru' && session.user.role !== 'superadmin' && session.user.role !== 'siswa')) { // REMOVED
+    //     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+    // } // REMOVED
 
     const { id } = params;
     if (!id) {
@@ -42,9 +44,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         if (!test) {
             return NextResponse.json({ message: "Test tidak ditemukan." }, { status: 404 });
         }
-        if (session.user.role === 'guru' && test.uploaderId !== session.user.id) {
-            return NextResponse.json({ message: "Anda tidak berhak melihat test ini." }, { status: 403 });
-        }
+        // TODO: Add role-based authorization
+        // if (session.user.role === 'guru' && test.uploaderId !== session.user.id) { ... }
+        // if (session.user.role === 'siswa' && test.kelas !== session.user.kelasId) { ... }
         
         return NextResponse.json({
             ...test,
@@ -57,13 +59,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 }
 
-
 // PUT /api/test/[id] - Memperbarui test
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user || (session.user.role !== 'guru' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for guru/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || !session.user || (session.user.role !== 'guru' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {
@@ -72,7 +74,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
   try {
     const body = await request.json();
-    if (body.tanggal) { // Convert ISO string from JSON to Date for Zod
+    if (body.tanggal) {
         body.tanggal = new Date(body.tanggal);
     }
     const validation = testUpdateSchema.safeParse(body);
@@ -90,14 +92,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (!existingTest) {
       return NextResponse.json({ message: "Test tidak ditemukan." }, { status: 404 });
     }
-    if (session.user.role === 'guru' && existingTest.uploaderId !== session.user.id) {
-        return NextResponse.json({ message: "Anda tidak berhak memperbarui test ini." }, { status: 403 });
-    }
+    // TODO: Add role-based authorization
+    // if (session.user.role === 'guru' && existingTest.uploaderId !== session.user.id) { ... }
     
     const updateData: Partial<TestEntity> = { ...updatePayload };
     if (updatePayload.tipe) updateData.tipe = updatePayload.tipe as TestTipe;
     if (updatePayload.status) updateData.status = updatePayload.status as TestStatus;
-
 
     const updateResult = await testRepo.update(id, updateData);
 
@@ -120,10 +120,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 // DELETE /api/test/[id] - Menghapus test
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user || (session.user.role !== 'guru' && session.user.role !== 'superadmin')) {
-    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
-  }
+  // TODO: Implement server-side Firebase token verification for guru/superadmin
+  // const session = await getServerSession(authOptions); // REMOVED
+  // if (!session || !session.user || (session.user.role !== 'guru' && session.user.role !== 'superadmin')) { // REMOVED
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
+  // } // REMOVED
 
   const { id } = params;
   if (!id) {
@@ -138,9 +139,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (!testToDelete) {
       return NextResponse.json({ message: "Test tidak ditemukan." }, { status: 404 });
     }
-    if (session.user.role === 'guru' && testToDelete.uploaderId !== session.user.id) {
-        return NextResponse.json({ message: "Anda tidak berhak menghapus test ini." }, { status: 403 });
-    }
+    // TODO: Add role-based authorization
+    // if (session.user.role === 'guru' && testToDelete.uploaderId !== session.user.id) { ... }
 
     const deleteResult = await testRepo.delete(id);
 
