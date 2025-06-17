@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -17,18 +17,21 @@ import { UserPlus, CheckCircle, ShieldAlert, Loader2, Search, UploadCloud } from
 import { UserForm } from "@/components/admin/user-form";
 import { UserTableActions } from "@/components/admin/user-table-actions";
 import { useToast } from "@/hooks/use-toast";
+import { format, parseISO } from 'date-fns';
 
 type UserRoleTab = "semua" | Role;
+type UserFormValues = Parameters<typeof UserForm>[0]["onSubmit"] extends (data: infer T, ...args: any[]) => any ? T : never;
+
 
 export default function AdminUsersPage() {
-  const { user: currentUser, isLoading: authIsLoading, updateSession } = useAuth(); // isLoading from useAuth is session loading
+  const { user: currentUserAuth, isLoading: authIsLoading, updateSession } = useAuth();
   const { toast } = useToast();
 
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportUserDialogOpen, setIsImportUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [pageLoading, setPageLoading] = useState(true); // For data fetching and submissions
+  const [pageLoading, setPageLoading] = useState(true); 
   
   const [activeTab, setActiveTab] = useState<UserRoleTab>("semua");
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,25 +39,35 @@ export default function AdminUsersPage() {
   const [mataPelajaranFilter, setMataPelajaranFilter] = useState<string>("semua");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setPageLoading(true);
     try {
       const response = await fetch('/api/users');
-      if (!response.ok) throw new Error("Gagal mengambil data pengguna.");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengambil data pengguna.");
+      }
       const data = await response.json();
-      setAllUsers(data);
+      setAllUsers(data.map((u: any) => ({
+        ...u,
+        // Pastikan birthDate dan joinDate adalah string ISO jika dari DB
+        birthDate: u.birthDate ? format(parseISO(u.birthDate), 'yyyy-MM-dd') : null,
+        joinDate: u.joinDate ? format(parseISO(u.joinDate), 'yyyy-MM-dd') : null,
+        mataPelajaran: Array.isArray(u.mataPelajaran) ? u.mataPelajaran.join(', ') : u.mataPelajaran,
+        kelas: u.kelasId || u.kelas, // Use kelasId as kelas
+      })));
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Tidak dapat memuat pengguna.", variant: "destructive" });
     } finally {
       setPageLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
-    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin')) {
+    if (currentUserAuth && (currentUserAuth.role === 'admin' || currentUserAuth.role === 'superadmin')) {
       fetchUsers();
     }
-  }, [currentUser]);
+  }, [currentUserAuth, fetchUsers]);
 
   const handleCreateUser = () => {
     setEditingUser(null);
@@ -75,7 +88,7 @@ export default function AdminUsersPage() {
         throw new Error(errorData.message || "Gagal menghapus pengguna.");
       }
       toast({ title: "Pengguna Dihapus", description: "Pengguna telah berhasil dihapus." });
-      fetchUsers(); // Refresh list
+      fetchUsers(); 
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -83,7 +96,7 @@ export default function AdminUsersPage() {
     }
   };
   
-  const handleVerifySiswa = async (userId: string) => {
+  const handleVerifyUser = async (userId: string) => {
     setPageLoading(true);
     try {
       const response = await fetch(`/api/users/${userId}`, {
@@ -95,14 +108,18 @@ export default function AdminUsersPage() {
         const errorData = await response.json();
         throw new Error(errorData.message || "Gagal memverifikasi pengguna.");
       }
-      toast({ title: "Pengguna Diverifikasi", description: "Email pengguna telah diverifikasi." });
-      fetchUsers(); // Refresh list
+      toast({ title: "Pengguna Diverifikasi", description: "Status verifikasi pengguna telah diperbarui." });
+      fetchUsers(); 
+      if (currentUserAuth?.id === userId) {
+        await updateSession();
+      }
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setPageLoading(false);
     }
   };
+
 
   const handleChangeRole = async (userToUpdate: User, newRole: Role) => {
     setPageLoading(true);
@@ -117,9 +134,9 @@ export default function AdminUsersPage() {
         throw new Error(errorData.message || "Gagal mengubah peran pengguna.");
       }
       toast({ title: "Peran Diperbarui", description: `Peran untuk ${userToUpdate.email} telah diubah menjadi ${ROLES[newRole]}.` });
-      fetchUsers(); // Refresh list
-      if (currentUser?.id === userToUpdate.id) {
-          await updateSession(); // Update current user's session if their own role changed
+      fetchUsers(); 
+      if (currentUserAuth?.id === userToUpdate.id) {
+          await updateSession(); 
       }
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -128,20 +145,32 @@ export default function AdminUsersPage() {
     }
   }
 
-  const handleFormSubmit = async (data: Partial<User> & { email: string; role: Role; password?: string; }, currentlyEditingUser: User | null) => {
+  const handleFormSubmit = async (data: UserFormValues, currentlyEditingUser: User | null) => {
     setPageLoading(true);
     const url = currentlyEditingUser ? `/api/users/${currentlyEditingUser.id}` : '/api/users';
     const method = currentlyEditingUser ? 'PUT' : 'POST';
     
-    // For PUT, only send changed fields. For POST, send all.
-    let payload: any = data;
-    if (method === 'PUT') {
-      // Ensure email is not sent for update if it's not allowed to change
-      const { email, ...updatePayload } = data;
-      payload = updatePayload;
-      if (!payload.password) delete payload.password; // Don't send empty password for update
+    let payload: any = { ...data };
+    if (payload.birthDate && payload.birthDate instanceof Date) {
+      payload.birthDate = format(payload.birthDate, 'yyyy-MM-dd');
+    }
+    if (payload.joinDate && payload.joinDate instanceof Date) {
+      payload.joinDate = format(payload.joinDate, 'yyyy-MM-dd');
     }
 
+    if (method === 'PUT') {
+      const { email, password, ...updatePayload } = payload; // Email and password not sent for PUT via this form. Password changed elsewhere.
+      payload = updatePayload;
+      if (!payload.password && currentlyEditingUser) delete payload.password;
+    } else {
+      // For POST, ensure password is included if provided, or handle default if not
+      if (!payload.password) {
+        // For Firebase, password is required at Firebase user creation.
+        // For local profiles, this form doesn't create Firebase users directly.
+        // This form is for LOCAL profile management by admin.
+        delete payload.password; // Don't send empty password to local user creation API
+      }
+    }
 
     try {
       const response = await fetch(url, {
@@ -151,11 +180,11 @@ export default function AdminUsersPage() {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || `Gagal ${currentlyEditingUser ? 'memperbarui' : 'membuat'} pengguna.`);
+        throw new Error(errorData.message || `Gagal ${currentlyEditingUser ? 'memperbarui' : 'membuat'} profil pengguna lokal.`);
       }
-      toast({ title: "Berhasil!", description: `Pengguna telah ${currentlyEditingUser ? 'diperbarui' : 'dibuat'}.` });
+      toast({ title: "Berhasil!", description: `Profil pengguna lokal telah ${currentlyEditingUser ? 'diperbarui' : 'dibuat'}.` });
       setIsFormOpen(false);
-      fetchUsers(); // Refresh list
+      fetchUsers(); 
     } catch (error: any) {
       toast({ title: "Operasi Gagal", description: error.message, variant: "destructive"});
     } finally {
@@ -171,7 +200,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleImportSubmit = () => { // Placeholder simulation
+  const handleImportSubmit = () => { 
     if (!selectedFile) {
       toast({ title: "Tidak Ada File", description: "Silakan pilih file untuk diimpor.", variant: "destructive" });
       return;
@@ -179,10 +208,10 @@ export default function AdminUsersPage() {
     setPageLoading(true);
     setTimeout(() => {
       setPageLoading(false);
-      toast({ title: "Simulasi Impor Berhasil", description: `File "${selectedFile.name}" telah (disimulasikan) diimpor. Pengguna baru akan ditambahkan.` });
+      toast({ title: "Simulasi Impor Berhasil", description: `File "${selectedFile.name}" telah (disimulasikan) diimpor. Profil pengguna baru akan ditambahkan.` });
       setIsImportUserDialogOpen(false);
       setSelectedFile(null); 
-      fetchUsers(); // Simulate refresh
+      fetchUsers(); 
     }, 1500);
   };
   
@@ -211,11 +240,11 @@ export default function AdminUsersPage() {
   }, [allUsers, activeTab, searchTerm, kelasFilter, mataPelajaranFilter]);
 
 
-  if (authIsLoading && !currentUser) { // Show loader if session is initially loading and no current user yet
+  if (authIsLoading && !currentUserAuth) { 
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
 
-  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'superadmin')) {
+  if (!currentUserAuth || (currentUserAuth.role !== 'admin' && currentUserAuth.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi admin untuk melihat halaman ini.</p>;
   }
 
@@ -223,15 +252,15 @@ export default function AdminUsersPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-headline font-semibold">Manajemen Pengguna</h1>
-          <p className="text-muted-foreground">Lihat, buat, dan kelola akun pengguna di sistem.</p>
+          <h1 className="text-3xl font-headline font-semibold">Manajemen Profil Pengguna Lokal</h1>
+          <p className="text-muted-foreground">Lihat, buat, dan kelola profil pengguna lokal di sistem. Akun autentikasi dibuat terpisah di Firebase.</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setIsImportUserDialogOpen(true)} variant="outline" disabled={pageLoading}>
-            <UploadCloud className="mr-2 h-4 w-4" /> Impor Pengguna
+            <UploadCloud className="mr-2 h-4 w-4" /> Impor Profil Lokal
           </Button>
           <Button onClick={handleCreateUser} disabled={pageLoading}>
-            <UserPlus className="mr-2 h-4 w-4" /> Buat Pengguna
+            <UserPlus className="mr-2 h-4 w-4" /> Buat Profil Lokal Baru
           </Button>
         </div>
       </div>
@@ -262,10 +291,10 @@ export default function AdminUsersPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
                     <CardTitle>
-                        {activeTab === "semua" ? "Semua Pengguna" : `Pengguna ${ROLES[activeTab as Role]}`}
+                        {activeTab === "semua" ? "Semua Pengguna Lokal" : `Pengguna Lokal ${ROLES[activeTab as Role]}`}
                     </CardTitle>
                     <CardDescription>
-                        Daftar pengguna yang cocok. Jumlah: {filteredUsers.length}.
+                        Daftar profil pengguna lokal yang cocok. Jumlah: {filteredUsers.length}.
                     </CardDescription>
                 </div>
                 {activeTab === 'siswa' && uniqueKelas.length > 1 && (
@@ -302,10 +331,10 @@ export default function AdminUsersPage() {
                     <TableRow>
                     <TableHead>Nama Lengkap</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Peran</TableHead>
+                    <TableHead>Peran Lokal</TableHead>
                     {activeTab === 'siswa' && <TableHead>Kelas</TableHead>}
                     {activeTab === 'guru' && <TableHead>Mapel</TableHead>}
-                    <TableHead>Status</TableHead>
+                    <TableHead>Status Verifikasi Lokal</TableHead>
                     <TableHead className="text-right">Tindakan</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -324,21 +353,21 @@ export default function AdminUsersPage() {
                         <TableCell>
                         {user.isVerified ? (
                             <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-                            <CheckCircle className="mr-1 h-3 w-3" /> Terverifikasi
+                            <CheckCircle className="mr-1 h-3 w-3" /> Terverifikasi (Lokal)
                             </Badge>
                         ) : (
                             <Badge variant="destructive">
-                            <ShieldAlert className="mr-1 h-3 w-3" /> Belum Terverifikasi
+                            <ShieldAlert className="mr-1 h-3 w-3" /> Belum Terverifikasi (Lokal)
                             </Badge>
                         )}
                         </TableCell>
                         <TableCell className="text-right">
                         <UserTableActions 
                             user={user} 
-                            currentUser={currentUser}
+                            currentUser={currentUserAuth}
                             onEdit={handleEditUser} 
                             onDelete={handleDeleteUser}
-                            onVerify={handleVerifySiswa}
+                            onVerify={handleVerifyUser}
                             onChangeRole={handleChangeRole}
                         />
                         </TableCell>
@@ -349,7 +378,7 @@ export default function AdminUsersPage() {
             </div>
             {filteredUsers.length === 0 && !pageLoading && (
                 <div className="text-center py-10 text-muted-foreground">
-                    Tidak ada pengguna yang cocok dengan filter saat ini.
+                    Tidak ada profil pengguna lokal yang cocok dengan filter saat ini.
                 </div>
             )}
             </CardContent>
@@ -367,9 +396,9 @@ export default function AdminUsersPage() {
       <Dialog open={isImportUserDialogOpen} onOpenChange={setIsImportUserDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Impor Pengguna Massal</DialogTitle>
+            <DialogTitle>Impor Profil Pengguna Lokal</DialogTitle>
             <DialogDescription>
-              Unggah file CSV atau Excel untuk menambahkan beberapa pengguna sekaligus.
+              Unggah file CSV atau Excel untuk menambahkan beberapa profil pengguna lokal sekaligus.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
@@ -381,7 +410,7 @@ export default function AdminUsersPage() {
             />
             {selectedFile && <p className="text-xs text-muted-foreground">File terpilih: {selectedFile.name}</p>}
             <p className="text-xs text-muted-foreground">
-              Pastikan format file sesuai. <a href="/contoh_template_impor.csv" download className="text-primary hover:underline">Unduh contoh template CSV</a>.
+              Pastikan format file sesuai. <a href="/contoh_template_impor_profil.csv" download className="text-primary hover:underline">Unduh contoh template CSV</a>.
             </p>
           </div>
           <DialogFooter>

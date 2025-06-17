@@ -1,6 +1,5 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
-// import type { AdapterUser } from "@auth/core/adapters"; // Removed
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
 import type { Role } from "@/types";
 import type { AccountEntity } from "./account.entity";
@@ -11,10 +10,10 @@ import type { SilabusEntity } from "./silabus.entity";
 import type { RppEntity } from "./rpp.entity";
 import type { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
 import type { TugasEntity } from "./tugas.entity";
-import type { TestEntity } from "./test.entity"; // Added TestEntity import
+import type { TestEntity } from "./test.entity";
 
 @Entity({ name: "users" })
-export class UserEntity /* implements AdapterUser */ { // Removed implements
+export class UserEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
@@ -30,8 +29,10 @@ export class UserEntity /* implements AdapterUser */ { // Removed implements
   @Column({ type: "varchar", nullable: true })
   image?: string | null; 
 
-  @Column({ type: "varchar", nullable: true }) // For storing hashed password
-  passwordHash?: string | null;
+  // passwordHash is removed as Firebase handles passwords
+
+  @Column({ type: "varchar", nullable: true }) // Added for Firebase UID
+  firebaseUid?: string | null;
 
   @Column({
     type: "enum",
@@ -68,42 +69,46 @@ export class UserEntity /* implements AdapterUser */ { // Removed implements
   joinDate?: string | null; 
 
   @Column({ type: "varchar", nullable: true })
-  kelasId?: string | null; // This stores the class name string for Siswa
+  kelasId?: string | null; 
 
   @Column("simple-array", { nullable: true })
-  mataPelajaran?: string[] | null; // Nama mata pelajaran yang diampu guru
-
+  mataPelajaran?: string[] | null; 
+  
+  // resetPasswordToken and resetPasswordExpires might still be useful if you implement
+  // a Firebase-based password reset flow that involves your backend for custom logic/emailing.
+  // For a pure Firebase client-side reset, these aren't strictly needed in local DB.
+  // Keeping them for now in case of future advanced flows.
   @Column({ type: "varchar", nullable: true })
   resetPasswordToken?: string | null;
 
   @Column({ type: "timestamp with time zone", nullable: true })
   resetPasswordExpires?: Date | null;
   
-  @OneToMany("AccountEntity", account => account.user)
+  @OneToMany("AccountEntity", (account: AccountEntity) => account.user)
   accounts?: AccountEntity[];
 
-  @OneToMany("SessionEntity", session => session.user)
+  @OneToMany("SessionEntity", (session: SessionEntity) => session.user)
   sessions?: SessionEntity[];
 
-  @OneToMany("StrukturKurikulumEntity", ske => ske.guruPengampu)
+  @OneToMany("StrukturKurikulumEntity", (ske: StrukturKurikulumEntity) => ske.guruPengampu)
   strukturKurikulumDiajar?: StrukturKurikulumEntity[];
 
-  @OneToMany("MateriAjarEntity", materi => materi.uploader)
+  @OneToMany("MateriAjarEntity", (materi: MateriAjarEntity) => materi.uploader)
   materiAjarUploaded?: MateriAjarEntity[];
 
-  @OneToMany("SilabusEntity", silabus => silabus.uploader)
+  @OneToMany("SilabusEntity", (silabus: SilabusEntity) => silabus.uploader)
   silabusUploaded?: SilabusEntity[];
 
-  @OneToMany("RppEntity", rpp => rpp.uploader)
+  @OneToMany("RppEntity", (rpp: RppEntity) => rpp.uploader)
   rppUploaded?: RppEntity[];
 
-  @OneToMany("JadwalPelajaranEntity", jadwal => jadwal.guru)
+  @OneToMany("JadwalPelajaranEntity", (jadwal: JadwalPelajaranEntity) => jadwal.guru)
   jadwalMengajar?: JadwalPelajaranEntity[];
 
   @OneToMany("TugasEntity", (tugas: TugasEntity) => tugas.uploader)
   tugasUploaded?: TugasEntity[];
 
-  @OneToMany("TestEntity", (test: TestEntity) => test.uploader) // Added relation to TestEntity
+  @OneToMany("TestEntity", (test: TestEntity) => test.uploader)
   testUploaded?: TestEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
