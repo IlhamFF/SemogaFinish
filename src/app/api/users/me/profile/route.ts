@@ -1,11 +1,10 @@
 
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import * as z from "zod";
+import { getTokenFromRequest, verifyToken } from "@/lib/auth-utils";
 
 const profileUpdateSchema = z.object({
   fullName: z.string().min(2, { message: "Nama lengkap minimal 2 karakter."}).optional(),
@@ -14,16 +13,19 @@ const profileUpdateSchema = z.object({
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Format tanggal lahir YYYY-MM-DD" }).optional().nullable(),
   bio: z.string().max(300, { message: "Bio maksimal 300 karakter." }).optional().nullable(),
   avatarUrl: z.string().url({ message: "URL Avatar tidak valid." }).optional().nullable().or(z.literal('')),
-  // name: z.string().min(2, { message: "Nama panggilan minimal 2 karakter."}).optional().nullable(), // Uncomment if 'name' is also updatable from settings
 });
 
 export async function PUT(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user || !session.user.id) {
-    return NextResponse.json({ message: "Akses ditolak. Anda harus login." }, { status: 401 });
+  const token = getTokenFromRequest(request);
+  if (!token) {
+    return NextResponse.json({ message: "Akses ditolak. Tidak terautentikasi." }, { status: 401 });
   }
 
+  const decodedToken = verifyToken(token);
+  if (!decodedToken) {
+    return NextResponse.json({ message: "Token tidak valid atau kedaluwarsa." }, { status: 401 });
+  }
+  
   try {
     const body = await request.json();
     const validation = profileUpdateSchema.safeParse(body);
@@ -32,18 +34,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const userId = session.user.id;
+    const userId = decodedToken.id;
     const updateData: Partial<UserEntity> = {};
     const validatedData = validation.data;
 
-    // Map validated data to UserEntity fields
     if (validatedData.fullName !== undefined) updateData.fullName = validatedData.fullName;
-    // if (validatedData.name !== undefined) updateData.name = validatedData.name; // If 'name' is also updatable
     if (validatedData.phone !== undefined) updateData.phone = validatedData.phone;
     if (validatedData.address !== undefined) updateData.address = validatedData.address;
-    if (validatedData.birthDate !== undefined) updateData.birthDate = validatedData.birthDate; // Stored as string 'YYYY-MM-DD'
+    if (validatedData.birthDate !== undefined) updateData.birthDate = validatedData.birthDate;
     if (validatedData.bio !== undefined) updateData.bio = validatedData.bio;
-    if (validatedData.avatarUrl !== undefined) updateData.image = validatedData.avatarUrl; // 'avatarUrl' from form maps to 'image' in UserEntity
+    if (validatedData.avatarUrl !== undefined) updateData.image = validatedData.avatarUrl;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ message: "Tidak ada data untuk diperbarui." }, { status: 400 });
@@ -51,11 +51,9 @@ export async function PUT(request: NextRequest) {
 
     const dataSource = await getInitializedDataSource();
     const userRepo = dataSource.getRepository(UserEntity);
-
     const updateResult = await userRepo.update(userId, updateData);
 
     if (updateResult.affected === 0) {
-      // Should not happen if session user ID is valid
       return NextResponse.json({ message: "Pengguna tidak ditemukan untuk diperbarui." }, { status: 404 });
     }
 

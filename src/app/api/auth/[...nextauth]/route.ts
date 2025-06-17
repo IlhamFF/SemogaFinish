@@ -1,185 +1,20 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
-import NextAuth, { type NextAuthOptions, type User as NextAuthUser } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { TypeORMAdapter } from "@auth/typeorm-adapter";
-import { dataSourceOptions, getInitializedDataSource } from "@/lib/data-source";
-import { UserEntity } from "@/entities/user.entity";
-import bcrypt from "bcryptjs";
-import type { Role } from "@/types";
-import { ROUTES } from "@/lib/constants"; // Ensure ROUTES is imported
+// This file is no longer used for NextAuth.js as Firebase Authentication is in place.
+// It's kept to avoid breaking existing file structure references during transition if any.
+// It can be safely deleted once all NextAuth.js dependencies are removed.
 
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      role: Role;
-      isVerified: boolean;
-      fullName?: string | null;
-      name?: string | null; 
-      email?: string | null; 
-      image?: string | null; 
-      phone?: string | null;
-      address?: string | null;
-      birthDate?: string | null; 
-      bio?: string | null;
-      nis?: string | null;
-      nip?: string | null;
-      joinDate?: string | null; 
-      kelasId?: string | null; 
-      mataPelajaran?: string[] | null; 
-    };
-  }
+// import "reflect-metadata"; 
+// import NextAuth, { type NextAuthOptions, type User as NextAuthUser } from "next-auth";
+// // ... (rest of the old NextAuth.js code) ...
 
-  interface User extends NextAuthUser { 
-    role: Role;
-    isVerified: boolean;
-    fullName?: string | null;
-    passwordHash?: string | null; 
-    phone?: string | null;
-    address?: string | null;
-    birthDate?: string | null;
-    bio?: string | null;
-    nis?: string | null;
-    nip?: string | null;
-    joinDate?: string | null;
-    kelasId?: string | null;
-    mataPelajaran?: string[] | null;
-  }
+// const handler = NextAuth(authOptions); // authOptions would be undefined now
+
+// export { handler as GET, handler as POST };
+
+export async function GET() {
+  return new Response("NextAuth.js endpoint is deprecated. Using custom token auth.", { status: 404 });
 }
 
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    role: Role;
-    isVerified: boolean;
-    name?: string | null; 
-    email?: string | null; 
-    picture?: string | null; 
-    fullName?: string | null;
-    phone?: string | null;
-    address?: string | null;
-    birthDate?: string | null;
-    bio?: string | null;
-    nis?: string | null;
-    nip?: string | null;
-    joinDate?: string | null;
-    kelasId?: string | null;
-    mataPelajaran?: string[] | null;
-  }
+export async function POST() {
+  return new Response("NextAuth.js endpoint is deprecated. Using custom token auth.", { status: 404 });
 }
-
-export const authOptions: NextAuthOptions = {
-  adapter: TypeORMAdapter(dataSourceOptions),
-  providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email", placeholder: "jsmith@example.com" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials, req) {
-        if (!credentials?.email || !credentials.password) {
-          return null;
-        }
-        
-        const dataSource = await getInitializedDataSource();
-        const userRepo = dataSource.getRepository(UserEntity);
-        
-        const user = await userRepo.findOne({ where: { email: credentials.email } });
-
-        if (!user || !user.passwordHash) {
-          return null;
-        }
-        
-        const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
-
-        if (!isValidPassword) {
-          return null;
-        }
-        
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name, 
-          image: user.image, 
-          role: user.role,
-          isVerified: user.isVerified,
-          fullName: user.fullName,
-          phone: user.phone,
-          address: user.address,
-          birthDate: user.birthDate,
-          bio: user.bio,
-          nis: user.nis,
-          nip: user.nip,
-          joinDate: user.joinDate,
-          kelasId: user.kelasId,
-          mataPelajaran: user.mataPelajaran,
-        };
-      },
-    }),
-  ],
-  session: {
-    strategy: "jwt",
-  },
-  callbacks: {
-    async jwt({ token, user, trigger, session: newSessionData }) { 
-      if (user) { 
-        token.id = user.id;
-        token.role = user.role;
-        token.isVerified = user.isVerified;
-        token.name = user.name; 
-        token.picture = user.image; 
-        token.email = user.email;
-        token.fullName = user.fullName;
-        token.phone = user.phone;
-        token.address = user.address;
-        token.birthDate = user.birthDate;
-        token.bio = user.bio;
-        token.nis = user.nis;
-        token.nip = user.nip;
-        token.joinDate = user.joinDate;
-        token.kelasId = user.kelasId;
-        token.mataPelajaran = user.mataPelajaran;
-      }
-      if (trigger === "update" && newSessionData?.user) {
-        const updatedUserFields = newSessionData.user as Partial<User>; 
-        token.name = updatedUserFields.name ?? token.name;
-        token.picture = updatedUserFields.image ?? token.picture; 
-        token.fullName = updatedUserFields.fullName ?? token.fullName;
-        token.phone = updatedUserFields.phone ?? token.phone;
-        token.address = updatedUserFields.address ?? token.address;
-        token.birthDate = updatedUserFields.birthDate ?? token.birthDate;
-        token.bio = updatedUserFields.bio ?? token.bio;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      session.user.id = token.id;
-      session.user.role = token.role;
-      session.user.isVerified = token.isVerified;
-      session.user.name = token.name; 
-      session.user.image = token.picture; 
-      session.user.email = token.email;
-      session.user.fullName = token.fullName;
-      session.user.phone = token.phone;
-      session.user.address = token.address;
-      session.user.birthDate = token.birthDate;
-      session.user.bio = token.bio;
-      session.user.nis = token.nis;
-      session.user.nip = token.nip;
-      session.user.joinDate = token.joinDate;
-      session.user.kelasId = token.kelasId;
-      session.user.mataPelajaran = token.mataPelajaran;
-      return session;
-    },
-  },
-  pages: {
-    signIn: ROUTES.LOGIN, 
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-};
-
-const handler = NextAuth(authOptions);
-
-export { handler as GET, handler as POST };

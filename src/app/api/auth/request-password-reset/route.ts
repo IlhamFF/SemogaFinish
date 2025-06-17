@@ -1,22 +1,22 @@
 
 import "reflect-metadata";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import crypto from 'crypto';
 import bcrypt from "bcryptjs";
 import * as z from "zod";
+import { TOKEN_NAME } from "@/lib/auth-utils"; // Just to use a constant name
 
 const requestResetSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
 });
 
-// Fungsi untuk menghasilkan token yang lebih aman
-function generateToken() {
+function generateResetToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validation = requestResetSchema.safeParse(body);
@@ -29,35 +29,30 @@ export async function POST(request: Request) {
 
     const dataSource = await getInitializedDataSource();
     const userRepo = dataSource.getRepository(UserEntity);
-
     const user = await userRepo.findOne({ where: { email } });
 
     if (!user) {
-      // Jangan beri tahu jika email ada atau tidak untuk keamanan, tapi untuk demo kita bisa beri tahu
+      // To prevent email enumeration, always return a generic success message.
+      // Log the attempt or actual token for testing if needed.
+      console.log(`Password reset requested for non-existent email: ${email} (Simulating success)`);
       return NextResponse.json({ message: "Jika email terdaftar, instruksi reset akan dikirim (simulasi)." }, { status: 200 });
     }
 
-    const resetToken = generateToken();
-    const hashedToken = await bcrypt.hash(resetToken, 10); // Hash the token before storing
+    const resetToken = generateResetToken();
+    const hashedToken = await bcrypt.hash(resetToken, 10); 
     const expires = new Date(Date.now() + 3600000); // Token valid for 1 hour
 
     user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = expires;
     await userRepo.save(user);
 
-    // SIMULASI PENGIRIMAN EMAIL
-    // Di aplikasi nyata, Anda akan mengirim email berisi link dengan `resetToken` (bukan hashedToken)
-    console.log(`Password Reset Token for ${email}: ${resetToken}`); // Log token untuk testing
-    // Untuk DEMO, kita akan mengembalikan token (TIDAK AMAN UNTUK PRODUKSI)
-    // agar frontend bisa langsung menggunakannya untuk membuat URL reset.
-    
-    // TODO: Di aplikasi produksi, jangan kembalikan token di respons.
-    // Kirim email di sini.
+    // SIMULATE EMAIL SENDING
+    console.log(`Password Reset Token for ${email} (SAVE THIS FOR TESTING): ${resetToken}`);
+    // In a real app, you would email a link like: yourdomain.com/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}
     
     return NextResponse.json({ 
-      message: "Jika email terdaftar, instruksi reset akan dikirim (simulasi). Cek console server untuk token.",
-      // HANYA UNTUK DEMO: mengembalikan token asli. JANGAN LAKUKAN INI DI PRODUKSI.
-      // Di produksi, frontend akan mendapatkan token dari link email.
+      message: "Jika email terdaftar, instruksi reset akan dikirim (simulasi). Cek console server untuk token (HANYA UNTUK DEMO).",
+      // DO NOT RETURN THE ACTUAL TOKEN IN PRODUCTION. THIS IS FOR DEMO ONLY.
       demoResetToken: resetToken 
     }, { status: 200 });
 

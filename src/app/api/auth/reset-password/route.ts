@@ -1,6 +1,6 @@
 
 import "reflect-metadata";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import bcrypt from "bcryptjs";
@@ -12,7 +12,7 @@ const resetPasswordSchema = z.object({
   newPassword: z.string().min(6, { message: "Kata sandi baru minimal 6 karakter." }),
 });
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validation = resetPasswordSchema.safeParse(body);
@@ -29,7 +29,6 @@ export async function POST(request: Request) {
     const user = await userRepo.findOne({ 
       where: { 
         email,
-        // resetPasswordToken IS NOT NULL can be added if DB supports it efficiently
       } 
     });
     
@@ -50,7 +49,8 @@ export async function POST(request: Request) {
     user.passwordHash = hashedPassword;
     user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
-    if (user.isVerified === false) { // Optionally verify user on password reset
+    // Optionally, mark email as verified if it wasn't already
+    if (!user.isVerified) {
         user.isVerified = true;
         user.emailVerified = new Date();
     }

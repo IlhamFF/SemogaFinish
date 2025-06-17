@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useAuth } from "@/hooks/use-auth"; 
+import { useToast } from "@/hooks/use-toast"; // Changed from useAuth
 import { ROUTES, APP_NAME } from "@/lib/constants";
 import { Loader2, ShieldCheck } from "lucide-react";
 
@@ -24,7 +24,8 @@ const resetPasswordSchema = z.object({
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 function ResetPasswordContent() {
-  const { resetPassword, isLoading: authIsLoading } = useAuth(); 
+  const { toast } = useToast();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [formError, setFormError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -41,9 +42,10 @@ function ResetPasswordContent() {
       setToken(tokenFromQuery);
     } else {
       setFormError("Tautan reset tidak valid atau telah kedaluwarsa.");
+      toast({title: "Error", description: "Tautan reset tidak valid atau parameter hilang.", variant: "destructive"})
     }
     setPageLoading(false);
-  }, [searchParams]);
+  }, [searchParams, toast]);
 
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
@@ -53,19 +55,34 @@ function ResetPasswordContent() {
   async function onSubmit(values: ResetPasswordFormValues) {
     if (!email || !token) { 
         setFormError("Email atau token tidak valid untuk reset kata sandi.");
+        toast({title: "Error", description: "Email atau token tidak ditemukan.", variant: "destructive"});
         return;
     }
     setFormError(null);
     setIsSubmitting(true);
-    const success = await resetPassword(email, token, values.password); 
-    // useAuth's resetPassword will handle navigation on success via toast
-    if (!success) {
-      // Error toast already shown by useAuth
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, token, newPassword: values.password }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast({ title: "Gagal Reset Kata Sandi", description: data.message || "Terjadi kesalahan.", variant: "destructive" });
+        setFormError(data.message || "Gagal mereset kata sandi.");
+      } else {
+        toast({ title: "Kata Sandi Direset", description: data.message });
+        router.push(ROUTES.LOGIN);
+      }
+    } catch (error) {
+      toast({ title: "Gagal Reset Kata Sandi", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
+      setFormError("Tidak dapat terhubung ke server.");
     }
     setIsSubmitting(false);
   }
 
-  if (pageLoading || authIsLoading) {
+  if (pageLoading) {
       return (
         <div className="flex min-h-screen items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -122,8 +139,8 @@ function ResetPasswordContent() {
                     )}
                 />
                 {formError && email && token && <p className="text-sm font-medium text-destructive">{formError}</p>}
-                <Button type="submit" className="w-full" disabled={isSubmitting || authIsLoading}>
-                    {(isSubmitting || authIsLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Simpan Kata Sandi Baru
                 </Button>
                 </form>
@@ -136,7 +153,6 @@ function ResetPasswordContent() {
   );
 }
 
-
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
@@ -144,4 +160,3 @@ export default function ResetPasswordPage() {
     </Suspense>
   )
 }
-

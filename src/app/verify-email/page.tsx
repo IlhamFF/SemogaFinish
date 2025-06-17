@@ -8,38 +8,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/hooks/use-auth"; 
 import { ROUTES, APP_NAME } from "@/lib/constants";
 import { MailCheck, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
 
 export default function VerifyEmailPage() {
-  const { user, verifyUserEmail, isLoading, logout } = useAuth();
+  const { user, isLoading, logout, fetchUser } = useAuth(); // Using custom token auth
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
         router.replace(ROUTES.LOGIN);
       } else if (user.isVerified) {
+        // Redirect verified user to their dashboard
+        let dashboardUrl = ROUTES.HOME;
         switch (user.role) {
-          case 'admin': router.replace(ROUTES.ADMIN_DASHBOARD); break;
-          case 'guru': router.replace(ROUTES.GURU_DASHBOARD); break;
-          case 'siswa': router.replace(ROUTES.SISWA_DASHBOARD); break;
-          case 'pimpinan': router.replace(ROUTES.PIMPINAN_DASHBOARD); break;
-          case 'superadmin': router.replace(ROUTES.ADMIN_DASHBOARD); break;
-          default: router.replace(ROUTES.HOME);
+            case 'admin': dashboardUrl = ROUTES.ADMIN_DASHBOARD; break;
+            case 'guru': dashboardUrl = ROUTES.GURU_DASHBOARD; break;
+            case 'siswa': dashboardUrl = ROUTES.SISWA_DASHBOARD; break;
+            case 'pimpinan': dashboardUrl = ROUTES.PIMPINAN_DASHBOARD; break;
+            case 'superadmin': dashboardUrl = ROUTES.ADMIN_DASHBOARD; break;
         }
+        router.replace(dashboardUrl);
       }
     }
   }, [user, isLoading, router]);
 
-  const handleVerify = async () => {
-    if (user && !user.isVerified) {
-      // The verifyUserEmail function in useAuth now just provides a message for demo.
-      // Real verification would involve a backend call if it's a token-based system.
-      // For admin-initiated verification, it's done through the admin panel.
-      // For self-verification simulation:
-      await verifyUserEmail(user.id); 
-      // Since verifyUserEmail in the new useAuth doesn't auto-redirect based on session updates for self-verification,
-      // we might need to manually prompt or re-check session status.
-      // For demo, let's assume it tells user to re-login or refreshes.
+  const handleCheckVerification = async () => {
+    // In a custom token system, email verification status is managed by your backend.
+    // This button would typically re-fetch user data to check if an admin has verified them.
+    // Or, if you had an email token flow, that token would be sent to a backend endpoint to verify.
+    toast({ title: "Cek Verifikasi", description: "Memeriksa status verifikasi terbaru..." });
+    await fetchUser(); // Re-fetch user data which might have been updated by an admin
+    if (user && user.isVerified) {
+        toast({ title: "Akun Terverifikasi!", description: "Anda akan diarahkan ke dasbor." });
+    } else if (user && !user.isVerified) {
+        toast({ title: "Belum Terverifikasi", description: "Akun Anda masih menunggu verifikasi oleh admin.", variant: "default" });
     }
   };
 
@@ -51,8 +56,7 @@ export default function VerifyEmailPage() {
     );
   }
   
-  // Redirecting or already verified
-  if (!user || (user && user.isVerified)) {
+  if (!user || (user && user.isVerified)) { // Redirecting or already verified
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -69,7 +73,7 @@ export default function VerifyEmailPage() {
           </div>
           <CardTitle className="text-3xl font-headline text-primary">{APP_NAME}</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Verifikasi Alamat Email Anda
+            Verifikasi Akun Anda
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 text-center">
@@ -77,16 +81,12 @@ export default function VerifyEmailPage() {
             Terima kasih telah mendaftar, {user.email}! Akun Anda belum terverifikasi.
           </p>
           <p>
-            Untuk sistem demo ini, verifikasi email akan disimulasikan.
-            Di aplikasi nyata, Anda akan menerima email dengan tautan verifikasi.
-            Setelah diverifikasi oleh Admin atau melalui tautan email, status Anda akan diperbarui.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            (Tombol di bawah ini hanya untuk tujuan demonstrasi dan tidak melakukan verifikasi email sesungguhnya di backend tanpa token. Verifikasi aktual dilakukan oleh admin atau melalui link email yang valid.)
+            Untuk sistem ini, akun siswa baru perlu diverifikasi oleh administrator sekolah. 
+            Silakan hubungi admin untuk mengaktifkan akun Anda.
           </p>
           
-          <Button onClick={handleVerify} className="w-full" disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Simulasikan Cek Verifikasi"}
+          <Button onClick={handleCheckVerification} className="w-full" disabled={isLoading}>
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Cek Status Verifikasi Saya"}
           </Button>
           <Button variant="link" onClick={logout} className="text-sm text-muted-foreground">
             Keluar
@@ -96,5 +96,3 @@ export default function VerifyEmailPage() {
     </div>
   );
 }
-
-    

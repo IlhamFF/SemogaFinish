@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useAuth } from "@/hooks/use-auth"; 
+import { useToast } from "@/hooks/use-toast"; // Changed from useAuth
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ROUTES, APP_NAME } from "@/lib/constants";
@@ -21,7 +21,7 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
-  const { requestPasswordReset, isLoading } = useAuth(); 
+  const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -32,12 +32,25 @@ export default function ForgotPasswordPage() {
 
   async function onSubmit(values: ForgotPasswordFormValues) {
     setIsSubmitting(true);
-    const demoToken = await requestPasswordReset(values.email); 
-    if (demoToken) {
-      // For DEMO: redirect with token. In real app, user gets email.
-      router.push(`${ROUTES.RESET_PASSWORD}?email=${encodeURIComponent(values.email)}&token=${demoToken}`);
+    try {
+      const response = await fetch('/api/auth/request-password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: values.email }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast({ title: "Gagal Meminta Reset", description: data.message || "Terjadi kesalahan.", variant: "destructive" });
+      } else {
+        toast({ title: "Permintaan Terkirim", description: data.message });
+        if (data.demoResetToken) { // For DEMO purposes to navigate with token
+          router.push(`${ROUTES.RESET_PASSWORD}?email=${encodeURIComponent(values.email)}&token=${data.demoResetToken}`);
+        }
+      }
+    } catch (error) {
+      toast({ title: "Gagal Meminta Reset", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
     }
-    // If demoToken is null, toast already shown by useAuth
     setIsSubmitting(false);
   }
 
@@ -55,7 +68,7 @@ export default function ForgotPasswordPage() {
         </CardHeader>
         <CardContent>
           <p className="mb-6 text-center text-sm text-muted-foreground">
-            Masukkan alamat email Anda. Jika akun ada, kami akan (mensimulasikan) pengiriman tautan untuk mereset kata sandi Anda.
+            Masukkan alamat email Anda. Kami akan (mensimulasikan) pengiriman tautan untuk mereset kata sandi Anda.
           </p>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -72,8 +85,8 @@ export default function ForgotPasswordPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading || isSubmitting}>
-                {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Kirim Instruksi Reset
               </Button>
             </form>
