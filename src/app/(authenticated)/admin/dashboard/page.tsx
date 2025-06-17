@@ -7,9 +7,9 @@ import { BarChart3, Users, Bell, BookOpenText, AlertTriangle } from "lucide-reac
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { User } from "@/types"; // Import User type
+import type { User, MataPelajaran } from "@/types"; 
 import { Loader2 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -17,30 +17,55 @@ export default function AdminDashboardPage() {
   const { toast } = useToast();
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [allMataPelajaran, setAllMataPelajaran] = useState<MataPelajaran[]>([]);
+  const [isLoadingMapel, setIsLoadingMapel] = useState(true);
+
+  const fetchUsersForStats = useCallback(async () => {
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin')) {
+      setIsLoadingStats(true);
+      try {
+        const response = await fetch('/api/users');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Gagal mengambil data pengguna untuk statistik.");
+        }
+        const data = await response.json();
+        setAllUsers(data);
+      } catch (error: any) {
+        toast({ title: "Error Statistik Pengguna", description: error.message, variant: "destructive" });
+      } finally {
+        setIsLoadingStats(false);
+      }
+    } else {
+      setIsLoadingStats(false); 
+    }
+  }, [currentUser, toast]);
+
+  const fetchMataPelajaran = useCallback(async () => {
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin')) {
+      setIsLoadingMapel(true);
+      try {
+        const response = await fetch('/api/mapel');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Gagal mengambil data mata pelajaran.");
+        }
+        const data = await response.json();
+        setAllMataPelajaran(data);
+      } catch (error: any) {
+        toast({ title: "Error Data Mapel", description: error.message, variant: "destructive" });
+      } finally {
+        setIsLoadingMapel(false);
+      }
+    } else {
+      setIsLoadingMapel(false);
+    }
+  }, [currentUser, toast]);
 
   useEffect(() => {
-    const fetchUsersForStats = async () => {
-      if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin')) {
-        setIsLoadingStats(true);
-        try {
-          const response = await fetch('/api/users');
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || "Gagal mengambil data pengguna untuk statistik.");
-          }
-          const data = await response.json();
-          setAllUsers(data);
-        } catch (error: any) {
-          toast({ title: "Error Statistik", description: error.message, variant: "destructive" });
-        } finally {
-          setIsLoadingStats(false);
-        }
-      } else {
-        setIsLoadingStats(false); // Not an admin, no need to load
-      }
-    };
     fetchUsersForStats();
-  }, [currentUser, toast]);
+    fetchMataPelajaran();
+  }, [fetchUsersForStats, fetchMataPelajaran]);
   
   if (authLoading || !currentUser) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
@@ -52,12 +77,13 @@ export default function AdminDashboardPage() {
   
   const totalPengguna = allUsers.length;
   const verifikasiTertunda = allUsers.filter(u => u.role === 'siswa' && !u.isVerified).length;
+  const totalMataPelajaran = allMataPelajaran.length;
 
   const statCards = [
     { title: "Total Pengguna", value: isLoadingStats ? <Loader2 className="h-5 w-5 animate-spin" /> : totalPengguna.toString(), icon: Users, color: "text-primary", link: ROUTES.ADMIN_USERS },
-    { title: "Kursus", value: "25", icon: BookOpenText, color: "text-green-500" }, // Mock
-    { title: "Verifikasi Tertunda", value: isLoadingStats ? <Loader2 className="h-5 w-5 animate-spin" /> : verifikasiTertunda.toString(), icon: AlertTriangle, color: "text-yellow-500", link: ROUTES.ADMIN_USERS },
-    { title: "Peringatan Sistem", value: "2", icon: Bell, color: "text-red-500" }, // Mock
+    { title: "Total Mapel", value: isLoadingMapel ? <Loader2 className="h-5 w-5 animate-spin" /> : totalMataPelajaran.toString(), icon: BookOpenText, color: "text-green-500", link: ROUTES.ADMIN_MATA_PELAJARAN, description: "Jumlah mata pelajaran terdaftar" },
+    { title: "Verifikasi Tertunda", value: isLoadingStats ? <Loader2 className="h-5 w-5 animate-spin" /> : verifikasiTertunda.toString(), icon: AlertTriangle, color: "text-yellow-500", link: ROUTES.ADMIN_USERS, description: "Siswa menunggu verifikasi" },
+    { title: "Peringatan Sistem", value: "2", icon: Bell, color: "text-red-500", description: "Peringatan & notifikasi (mock)" },
   ];
 
 
@@ -77,10 +103,10 @@ export default function AdminDashboardPage() {
               <div className="text-2xl font-bold">{card.value}</div>
               {card.link ? (
                 <Link href={card.link} className="text-xs text-muted-foreground hover:text-primary transition-colors">
-                  Lihat detail &rarr;
+                  {card.description || "Lihat detail \u2192"}
                 </Link>
               ) : (
-                 <p className="text-xs text-muted-foreground">Baru diperbarui</p>
+                 <p className="text-xs text-muted-foreground">{card.description || "Baru diperbarui"}</p>
               )}
             </CardContent>
           </Card>
@@ -125,14 +151,14 @@ export default function AdminDashboardPage() {
                   </div>
                 </Link>
              </Button>
-             <Button variant="outline" className="w-full justify-start text-left h-auto py-3">
+             <Button variant="outline" className="w-full justify-start text-left h-auto py-3" onClick={() => toast({title: "Fitur Dalam Pengembangan", description: "Laporan dan analitik belum tersedia."})}>
                 <BarChart3 className="mr-3 h-5 w-5" />
                  <div>
                     <p className="font-semibold">Lihat Laporan</p>
                     <p className="text-xs text-muted-foreground">Akses analitik sistem.</p>
                   </div>
             </Button>
-             <Button variant="outline" className="w-full justify-start text-left h-auto py-3">
+             <Button variant="outline" className="w-full justify-start text-left h-auto py-3" onClick={() => toast({title: "Fitur Dalam Pengembangan", description: "Pengiriman pengumuman belum tersedia."})}>
                 <Bell className="mr-3 h-5 w-5" />
                 <div>
                     <p className="font-semibold">Kirim Pengumuman</p>
