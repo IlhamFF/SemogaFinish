@@ -17,7 +17,7 @@ import { RuanganEntity } from "@/entities/ruangan.entity";
 import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import { JadwalPelajaranEntity } from "@/entities/jadwal-pelajaran.entity";
 import { TugasEntity } from "@/entities/tugas.entity";
-import { TestEntity } from "@/entities/test.entity"; // Added TestEntity
+import { TestEntity } from "@/entities/test.entity";
 
 export const dataSourceOptions: DataSourceOptions = {
   type: "postgres",
@@ -45,30 +45,33 @@ export const dataSourceOptions: DataSourceOptions = {
     SlotWaktuEntity,
     JadwalPelajaranEntity,
     TugasEntity,
-    TestEntity, // Added TestEntity
+    TestEntity,
   ],
   migrations: [], 
   subscribers: [],
 };
 
-let AppDataSource: DataSource;
-
+let AppDataSource: DataSource | undefined = undefined;
 
 export async function getInitializedDataSource(): Promise<DataSource> {
-  if (!AppDataSource || !AppDataSource.isInitialized) {
-    const newDataSource = new DataSource(dataSourceOptions);
-    try {
-      await newDataSource.initialize();
-      AppDataSource = newDataSource;
-      console.log("DataSource has been initialized successfully.");
-    } catch (err) {
-      console.error("Error during DataSource initialization:", err);
-      if (AppDataSource && AppDataSource.isInitialized) {
-        console.warn("Using previously initialized AppDataSource despite new initialization attempt error.");
-        return AppDataSource;
-      }
-      throw err; 
-    }
+  // If already initialized and connected, return it.
+  if (AppDataSource && AppDataSource.isInitialized) {
+    return AppDataSource;
   }
-  return AppDataSource;
+
+  // If AppDataSource exists but is not initialized (e.g., previous attempt failed)
+  // or if it doesn't exist, create a new instance.
+  const newDataSource = new DataSource(dataSourceOptions);
+  try {
+    console.log("Attempting to initialize DataSource...");
+    await newDataSource.initialize();
+    AppDataSource = newDataSource; // Assign to global AppDataSource only after successful initialization
+    console.log("DataSource has been initialized successfully.");
+    return AppDataSource;
+  } catch (err) {
+    console.error("Error during DataSource initialization:", err);
+    // If initialization fails, ensure AppDataSource is reset so subsequent calls try fresh.
+    AppDataSource = undefined; 
+    throw err; // Re-throw the error to be handled by the caller.
+  }
 }
