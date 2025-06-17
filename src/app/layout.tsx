@@ -19,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" suppressHydrationWarning={true}> {/* Added suppressHydrationWarning */}
+    <html lang="id" suppressHydrationWarning={true}>
       <head>
         <title>{APP_NAME}</title>
         <meta name="description" content="Sistem Manajemen Pendidikan Komprehensif untuk SMA Az-Bail" />
