@@ -1,27 +1,26 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth"; 
 import { ROUTES, APP_NAME } from "@/lib/constants";
-import { MailCheck, Loader2 } from "lucide-react";
-import Link from "next/link";
+import { MailCheck, Loader2, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function VerifyEmailPage() {
-  const { user, isLoading, logout, fetchUser } = useAuth(); // Using custom token auth
+  const { user, isLoading, logout, fetchUser } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const [isResending, setIsResending] = useState(false);
 
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
         router.replace(ROUTES.LOGIN);
       } else if (user.isVerified) {
-        // Redirect verified user to their dashboard
         let dashboardUrl = ROUTES.HOME;
         switch (user.role) {
             case 'admin': dashboardUrl = ROUTES.ADMIN_DASHBOARD; break;
@@ -36,27 +35,33 @@ export default function VerifyEmailPage() {
   }, [user, isLoading, router]);
 
   const handleCheckVerification = async () => {
-    // In a custom token system, email verification status is managed by your backend.
-    // This button would typically re-fetch user data to check if an admin has verified them.
-    // Or, if you had an email token flow, that token would be sent to a backend endpoint to verify.
     toast({ title: "Cek Verifikasi", description: "Memeriksa status verifikasi terbaru..." });
-    await fetchUser(); // Re-fetch user data which might have been updated by an admin
+    await fetchUser(); 
     if (user && user.isVerified) {
         toast({ title: "Akun Terverifikasi!", description: "Anda akan diarahkan ke dasbor." });
     } else if (user && !user.isVerified) {
-        toast({ title: "Belum Terverifikasi", description: "Akun Anda masih menunggu verifikasi oleh admin.", variant: "default" });
+        toast({ title: "Belum Terverifikasi", description: "Akun Anda masih menunggu verifikasi.", variant: "default" });
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  if (!user || (user && user.isVerified)) { // Redirecting or already verified
+  const handleResendVerification = async () => {
+    if (!user) return;
+    setIsResending(true);
+    try {
+      const response = await fetch('/api/auth/resend-verification', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok) {
+        toast({ title: "Gagal Mengirim Ulang", description: data.message || "Terjadi kesalahan.", variant: "destructive" });
+      } else {
+        toast({ title: "Email Verifikasi Terkirim", description: data.message + " (Cek konsol server untuk link simulasi)." });
+      }
+    } catch (error) {
+      toast({ title: "Gagal Mengirim Ulang", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
+    }
+    setIsResending(false);
+  };
+
+  if (isLoading || !user || (user && user.isVerified)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -73,21 +78,27 @@ export default function VerifyEmailPage() {
           </div>
           <CardTitle className="text-3xl font-headline text-primary">{APP_NAME}</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Verifikasi Akun Anda
+            Verifikasi Akun Email Anda
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 text-center">
           <p>
-            Terima kasih telah mendaftar, {user.email}! Akun Anda belum terverifikasi.
+            Terima kasih telah mendaftar, {user.email}! 
+            Sebuah email verifikasi (disimulasikan) telah dikirim ke alamat email Anda.
           </p>
           <p>
-            Untuk sistem ini, akun siswa baru perlu diverifikasi oleh administrator sekolah. 
-            Silakan hubungi admin untuk mengaktifkan akun Anda.
+            Silakan periksa kotak masuk Anda (atau konsol server untuk link simulasi) dan klik tautan verifikasi untuk mengaktifkan akun Anda.
           </p>
           
-          <Button onClick={handleCheckVerification} className="w-full" disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Cek Status Verifikasi Saya"}
-          </Button>
+          <div className="space-y-2">
+            <Button onClick={handleCheckVerification} className="w-full" disabled={isLoading}>
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Saya Sudah Verifikasi / Cek Status"}
+            </Button>
+            <Button onClick={handleResendVerification} variant="outline" className="w-full" disabled={isResending || isLoading}>
+              {isResending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+              Kirim Ulang Email Verifikasi
+            </Button>
+          </div>
           <Button variant="link" onClick={logout} className="text-sm text-muted-foreground">
             Keluar
           </Button>

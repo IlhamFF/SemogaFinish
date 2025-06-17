@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import cookie from 'cookie';
 import type { NextRequest, NextResponse } from 'next/server';
 import type { User } from '@/types'; // Using your simplified User type
+import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-please-change-this';
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '1d'; // e.g., 1 day
@@ -61,4 +62,8 @@ export function clearTokenCookie(res: NextResponse): void {
 export function getTokenFromRequest(req: NextRequest): string | null {
   const cookies = req.cookies.get(TOKEN_NAME);
   return cookies?.value || null;
+}
+
+export function generateSecureToken(length = 32): string {
+  return crypto.randomBytes(length).toString('hex');
 }

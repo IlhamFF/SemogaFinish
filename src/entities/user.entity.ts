@@ -31,7 +31,7 @@ export class UserEntity {
   @Column({ type: "varchar", nullable: true })
   image?: string | null; 
 
-  @Column({ type: "varchar" }) // For storing hashed password
+  @Column({ type: "varchar" }) 
   passwordHash!: string;
 
   @Column({
@@ -79,6 +79,12 @@ export class UserEntity {
 
   @Column({ type: "timestamp with time zone", nullable: true })
   resetPasswordExpires?: Date | null;
+
+  @Column({ type: "varchar", nullable: true })
+  emailVerificationToken?: string | null;
+
+  @Column({ type: "timestamp with time zone", nullable: true })
+  emailVerificationTokenExpires?: Date | null;
   
   // @OneToMany("AccountEntity", (account: AccountEntity) => account.user)
   // accounts?: AccountEntity[];
