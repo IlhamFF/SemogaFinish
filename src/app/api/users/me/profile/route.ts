@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import * as z from "zod";
-import { getTokenFromRequest, verifyToken } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils"; // Use getAuthenticatedUser
 
 const profileUpdateSchema = z.object({
   fullName: z.string().min(2, { message: "Nama lengkap minimal 2 karakter."}).optional(),
@@ -16,14 +16,9 @@ const profileUpdateSchema = z.object({
 });
 
 export async function PUT(request: NextRequest) {
-  const token = getTokenFromRequest(request);
-  if (!token) {
+  const authenticatedUser = getAuthenticatedUser(request); // Get authenticated user
+  if (!authenticatedUser) {
     return NextResponse.json({ message: "Akses ditolak. Tidak terautentikasi." }, { status: 401 });
-  }
-
-  const decodedToken = verifyToken(token);
-  if (!decodedToken) {
-    return NextResponse.json({ message: "Token tidak valid atau kedaluwarsa." }, { status: 401 });
   }
   
   try {
@@ -34,7 +29,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const userId = decodedToken.id;
+    const userId = authenticatedUser.id; // Use ID from token
     const updateData: Partial<UserEntity> = {};
     const validatedData = validation.data;
 

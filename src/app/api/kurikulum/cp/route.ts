@@ -1,13 +1,12 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { CpEntity } from "@/entities/cp.entity";
 import * as z from "zod";
 import { FASE_CP } from "@/types"; 
 import type { FaseCpType } from "@/types";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const cpCreateSchema = z.object({
   kode: z.string().min(2, { message: "Kode CP minimal 2 karakter." }).max(100, { message: "Kode CP maksimal 100 karakter."}),
@@ -16,13 +15,14 @@ const cpCreateSchema = z.object({
   elemen: z.string().min(3, { message: "Elemen minimal 3 karakter." }).max(255, { message: "Elemen maksimal 255 karakter."}),
 });
 
-// GET /api/kurikulum/cp - Mendapatkan semua CP
-export async function GET() {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+export async function GET(request: NextRequest) {
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -35,13 +35,14 @@ export async function GET() {
   }
 }
 
-// POST /api/kurikulum/cp - Membuat CP baru
 export async function POST(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat membuat CP." }, { status: 403 });
+  }
 
   try {
     const body = await request.json();

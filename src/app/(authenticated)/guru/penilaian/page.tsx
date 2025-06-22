@@ -5,46 +5,105 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
-import { GraduationCap, BookOpenCheck, Edit, Percent, FileText, BarChart, Search, Eye, MessageSquare, Loader2 } from "lucide-react";
+import { GraduationCap, Search, Loader2, Save } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { JadwalPelajaran } from "@/types";
+import type { JadwalPelajaran, NilaiSemesterSiswa, SemesterType, User as AppUser, MataPelajaran } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
+
+type StudentGradeRow = {
+  siswa: Pick<AppUser, 'id' | 'fullName' | 'name' | 'nis' | 'email'>;
+  nilaiSemester: NilaiSemesterSiswa | null;
+};
+
+type EditableGrade = {
+  nilaiTugas?: number | null;
+  nilaiUTS?: number | null;
+  nilaiUAS?: number | null;
+  nilaiHarian?: number | null;
+  catatanGuru?: string | null;
+  nilaiAkhir?: number | null; 
+  predikat?: string | null;
+};
+
+function calculateNilaiAkhirClient(data: EditableGrade): number | null {
+  const { nilaiTugas, nilaiUTS, nilaiUAS, nilaiHarian } = data;
+  const bobotTugas = 0.20;
+  const bobotUTS = 0.30;
+  const bobotUAS = 0.40;
+  const bobotHarian = 0.10;
+
+  let totalNilai = 0;
+  let totalBobot = 0;
+
+  if (typeof nilaiTugas === 'number' && !isNaN(nilaiTugas)) { totalNilai += nilaiTugas * bobotTugas; totalBobot += bobotTugas; }
+  if (typeof nilaiUTS === 'number' && !isNaN(nilaiUTS)) { totalNilai += nilaiUTS * bobotUTS; totalBobot += bobotUTS; }
+  if (typeof nilaiUAS === 'number' && !isNaN(nilaiUAS)) { totalNilai += nilaiUAS * bobotUAS; totalBobot += bobotUAS; }
+  if (typeof nilaiHarian === 'number' && !isNaN(nilaiHarian)) { totalNilai += nilaiHarian * bobotHarian; totalBobot += bobotHarian; }
+  
+  if (totalBobot === 0) return null;
+  return parseFloat((totalNilai / totalBobot).toFixed(2));
+}
+
+function determinePredikatClient(nilaiAkhir: number | null): string | null {
+  if (nilaiAkhir === null || isNaN(nilaiAkhir)) return null;
+  if (nilaiAkhir >= 90) return "A";
+  if (nilaiAkhir >= 80) return "B";
+  if (nilaiAkhir >= 70) return "C";
+  if (nilaiAkhir >= 60) return "D";
+  return "E";
+}
+
 
 export default function GuruPenilaianPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedClass, setSelectedClass] = React.useState<string | undefined>();
-  const [selectedSubject, setSelectedSubject] = React.useState<string | undefined>();
+  
+  const [selectedClass, setSelectedClass] = useState<string | undefined>();
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string | undefined>();
+  const [selectedSemester, setSelectedSemester] = useState<SemesterType | undefined>();
+  const [selectedTahunAjaran, setSelectedTahunAjaran] = useState<string>(`${new Date().getFullYear() -1}/${new Date().getFullYear()}`);
 
   const [uniqueTeachingClasses, setUniqueTeachingClasses] = useState<string[]>([]);
-  const [uniqueTeachingSubjects, setUniqueTeachingSubjects] = useState<string[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [uniqueTeachingSubjects, setUniqueTeachingSubjects] = useState<Array<{ id: string; nama: string }>>([]);
+  const [isLoadingTeachingData, setIsLoadingTeachingData] = useState(true);
 
+  const [studentGradesData, setStudentGradesData] = useState<StudentGradeRow[]>([]);
+  const [editableGrades, setEditableGrades] = useState<Record<string, EditableGrade>>({});
+  const [isLoadingStudentGrades, setIsLoadingStudentGrades] = useState(false);
+  const [isSubmittingGrades, setIsSubmittingGrades] = useState(false);
+
+  const semesterOptions: SemesterType[] = ["Ganjil", "Genap"];
 
   const fetchTeachingData = useCallback(async () => {
     if (!user || !user.id) return;
-    setIsLoadingData(true);
+    setIsLoadingTeachingData(true);
     try {
       const response = await fetch(`/api/jadwal/pelajaran?guruId=${user.id}`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Gagal mengambil data jadwal mengajar.");
-      }
+      if (!response.ok) throw new Error("Gagal mengambil data jadwal mengajar.");
       const jadwalList: JadwalPelajaran[] = await response.json();
       
       const classes = [...new Set(jadwalList.map(j => j.kelas).filter(Boolean))].sort();
-      const subjects = [...new Set(jadwalList.map(j => j.mapel?.nama).filter(Boolean))].sort();
+      
+      const subjectMap = new Map<string, { id: string, nama: string }>();
+      jadwalList.forEach(j => {
+          if (j.mapel?.id && j.mapel.nama && !subjectMap.has(j.mapel.id)) {
+              subjectMap.set(j.mapel.id, { id: j.mapel.id, nama: j.mapel.nama });
+          }
+      });
+      const subjects = Array.from(subjectMap.values()).sort((a,b) => a.nama.localeCompare(b.nama));
       
       setUniqueTeachingClasses(classes as string[]);
-      setUniqueTeachingSubjects(subjects as string[]);
+      setUniqueTeachingSubjects(subjects);
 
     } catch (error: any) {
       toast({ title: "Error Data Pengajaran", description: error.message, variant: "destructive" });
-      setUniqueTeachingClasses([]);
-      setUniqueTeachingSubjects([]);
     } finally {
-      setIsLoadingData(false);
+      setIsLoadingTeachingData(false);
     }
   }, [user, toast]);
 
@@ -54,20 +113,114 @@ export default function GuruPenilaianPage() {
     }
   }, [user, fetchTeachingData]);
 
+  const fetchStudentGrades = async () => {
+    if (!selectedClass || !selectedSubjectId || !selectedSemester || !selectedTahunAjaran) {
+      toast({ title: "Filter Tidak Lengkap", description: "Harap pilih Kelas, Mata Pelajaran, Semester, dan Tahun Ajaran.", variant: "default" });
+      setStudentGradesData([]);
+      setEditableGrades({});
+      return;
+    }
+    setIsLoadingStudentGrades(true);
+    try {
+      const response = await fetch(`/api/penilaian/semester?kelasId=${encodeURIComponent(selectedClass)}&mapelId=${selectedSubjectId}&semester=${selectedSemester}&tahunAjaran=${encodeURIComponent(selectedTahunAjaran)}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengambil data nilai siswa.");
+      }
+      const data: StudentGradeRow[] = await response.json();
+      setStudentGradesData(data);
+      
+      const initialEditableGrades: Record<string, EditableGrade> = {};
+      data.forEach(row => {
+        initialEditableGrades[row.siswa.id] = {
+          nilaiTugas: row.nilaiSemester?.nilaiTugas ?? null,
+          nilaiUTS: row.nilaiSemester?.nilaiUTS ?? null,
+          nilaiUAS: row.nilaiSemester?.nilaiUAS ?? null,
+          nilaiHarian: row.nilaiSemester?.nilaiHarian ?? null,
+          catatanGuru: row.nilaiSemester?.catatanGuru ?? null,
+          nilaiAkhir: row.nilaiSemester?.nilaiAkhir ?? null,
+          predikat: row.nilaiSemester?.predikat ?? null,
+        };
+        const calculatedAkhir = calculateNilaiAkhirClient(initialEditableGrades[row.siswa.id]);
+        initialEditableGrades[row.siswa.id].nilaiAkhir = calculatedAkhir;
+        initialEditableGrades[row.siswa.id].predikat = determinePredikatClient(calculatedAkhir);
+      });
+      setEditableGrades(initialEditableGrades);
 
-  if (!user || (user.role !== 'guru' && user.role !== 'superadmin')) {
-    return <p>Akses Ditolak. Anda harus menjadi Guru untuk melihat halaman ini.</p>;
-  }
-
-  const handlePlaceholderAction = (action: string) => {
-    alert(`Fungsi "${action}" belum diimplementasikan.`);
+    } catch (error: any) {
+      toast({ title: "Error Ambil Nilai", description: error.message, variant: "destructive" });
+      setStudentGradesData([]);
+      setEditableGrades({});
+    } finally {
+      setIsLoadingStudentGrades(false);
+    }
   };
 
-  const mockStudentsGrades = [
-    { id: "S001", name: "Ahmad Subarjo", tugas: 85, uts: 78, uas: 80, akhir: 81, predikat: "B+" },
-    { id: "S002", name: "Budi Santoso", tugas: 90, uts: 88, uas: 92, akhir: 90, predikat: "A" },
-    { id: "S003", name: "Citra Lestari", tugas: 70, uts: 65, uas: 72, akhir: 69, predikat: "C" },
-  ];
+  const handleGradeInputChange = (siswaId: string, field: keyof EditableGrade, value: string | number | null) => {
+    setEditableGrades(prev => {
+      const updatedStudentGrade = {
+        ...prev[siswaId],
+        [field]: value === '' || value === null ? null : (typeof value === 'string' && field !== 'catatanGuru' ? parseFloat(value) : value)
+      };
+      
+      if (field !== 'nilaiAkhir' && field !== 'predikat' && field !== 'catatanGuru') {
+          const calculatedAkhir = calculateNilaiAkhirClient(updatedStudentGrade);
+          updatedStudentGrade.nilaiAkhir = calculatedAkhir;
+          updatedStudentGrade.predikat = determinePredikatClient(calculatedAkhir);
+      }
+
+      return { ...prev, [siswaId]: updatedStudentGrade };
+    });
+  };
+
+  const handleSaveAllGrades = async () => {
+    if (!selectedClass || !selectedSubjectId || !selectedSemester || !selectedTahunAjaran || studentGradesData.length === 0) {
+      toast({ title: "Data Tidak Lengkap", description: "Pastikan filter dan data siswa sudah terisi.", variant: "default" });
+      return;
+    }
+    setIsSubmittingGrades(true);
+    
+    const payload = studentGradesData.map(row => {
+      const grades = editableGrades[row.siswa.id] || {};
+      return {
+        siswaId: row.siswa.id,
+        mapelId: selectedSubjectId, 
+        kelasId: selectedClass,
+        semester: selectedSemester,
+        tahunAjaran: selectedTahunAjaran,
+        nilaiTugas: grades.nilaiTugas,
+        nilaiUTS: grades.nilaiUTS,
+        nilaiUAS: grades.nilaiUAS,
+        nilaiHarian: grades.nilaiHarian,
+        catatanGuru: grades.catatanGuru,
+        nilaiAkhir: grades.nilaiAkhir, 
+        predikat: grades.predikat
+      };
+    });
+
+    try {
+      const response = await fetch('/api/penilaian/semester/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const responseData = await response.json();
+      if (!response.ok && response.status !== 207) {
+        throw new Error(responseData.message || "Gagal menyimpan data nilai.");
+      }
+      toast({ title: "Nilai Disimpan", description: responseData.message || "Data nilai berhasil disimpan/diperbarui.", duration: 5000 });
+      fetchStudentGrades(); 
+    } catch (error: any) {
+      toast({ title: "Error Simpan Nilai", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSubmittingGrades(false);
+    }
+  };
+
+
+  if (!user || (user.role !== 'guru' && user.role !== 'superadmin')) {
+    return <p>Akses Ditolak.</p>;
+  }
 
   return (
     <div className="space-y-6">
@@ -75,130 +228,103 @@ export default function GuruPenilaianPage() {
       
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <GraduationCap className="mr-2 h-6 w-6 text-primary" />
-            Manajemen Penilaian Akademik
-          </CardTitle>
-          <CardDescription>
-            Input nilai, kelola komponen penilaian, hitung nilai akhir, dan publikasikan rapor siswa.
-          </CardDescription>
+          <CardTitle className="flex items-center"><GraduationCap className="mr-2 h-6 w-6 text-primary" />Filter Data Penilaian</CardTitle>
+          <CardDescription>Pilih kelas, mata pelajaran, semester, dan tahun ajaran untuk mengelola nilai.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
             <div>
-              <label htmlFor="kelas-select" className="block text-sm font-medium text-muted-foreground mb-1">Pilih Kelas</label>
-              {isLoadingData ? (
-                <div className="flex items-center h-10"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Memuat...</div>
-              ) : (
+              <Label htmlFor="kelas-select" className="text-sm font-medium text-muted-foreground mb-1">Kelas</Label>
+              {isLoadingTeachingData ? <Loader2 className="h-5 w-5 animate-spin"/> : (
                 <Select value={selectedClass} onValueChange={setSelectedClass} disabled={uniqueTeachingClasses.length === 0}>
-                    <SelectTrigger id="kelas-select">
-                    <SelectValue placeholder={uniqueTeachingClasses.length === 0 ? "Tidak ada kelas" : "Pilih Kelas"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                    {uniqueTeachingClasses.map(cls => <SelectItem key={cls} value={cls}>{cls}</SelectItem>)}
-                    </SelectContent>
+                    <SelectTrigger id="kelas-select"><SelectValue placeholder={uniqueTeachingClasses.length === 0 ? "Tidak ada kelas" : "Pilih Kelas"} /></SelectTrigger>
+                    <SelectContent>{uniqueTeachingClasses.map(cls => <SelectItem key={cls} value={cls}>{cls}</SelectItem>)}</SelectContent>
                 </Select>
               )}
             </div>
             <div>
-              <label htmlFor="subject-select" className="block text-sm font-medium text-muted-foreground mb-1">Pilih Mata Pelajaran</label>
-               {isLoadingData ? (
-                <div className="flex items-center h-10"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Memuat...</div>
-              ) : (
-                <Select value={selectedSubject} onValueChange={setSelectedSubject} disabled={uniqueTeachingSubjects.length === 0}>
-                    <SelectTrigger id="subject-select">
-                    <SelectValue placeholder={uniqueTeachingSubjects.length === 0 ? "Tidak ada mapel" : "Pilih Mapel"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                    {uniqueTeachingSubjects.map(sub => <SelectItem key={sub} value={sub}>{sub}</SelectItem>)}
-                    </SelectContent>
+              <Label htmlFor="subject-select" className="text-sm font-medium text-muted-foreground mb-1">Mata Pelajaran</Label>
+               {isLoadingTeachingData ?  <Loader2 className="h-5 w-5 animate-spin"/> : (
+                <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId} disabled={uniqueTeachingSubjects.length === 0}>
+                    <SelectTrigger id="subject-select"><SelectValue placeholder={uniqueTeachingSubjects.length === 0 ? "Tidak ada mapel" : "Pilih Mapel"} /></SelectTrigger>
+                    <SelectContent>{uniqueTeachingSubjects.map(sub => <SelectItem key={sub.id} value={sub.id}>{sub.nama}</SelectItem>)}</SelectContent>
                 </Select>
               )}
             </div>
-             <Button onClick={() => handlePlaceholderAction(`Tampilkan Data Nilai untuk ${selectedClass} - ${selectedSubject}`)} disabled={!selectedClass || !selectedSubject || isLoadingData}>
-                <Search className="mr-2 h-4 w-4" /> Tampilkan Data Nilai
-            </Button>
+            <div>
+              <Label htmlFor="semester-select" className="text-sm font-medium text-muted-foreground mb-1">Semester</Label>
+              <Select value={selectedSemester} onValueChange={(val) => setSelectedSemester(val as SemesterType)}>
+                <SelectTrigger id="semester-select"><SelectValue placeholder="Pilih Semester" /></SelectTrigger>
+                <SelectContent>{semesterOptions.map(sem => <SelectItem key={sem} value={sem}>{sem}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="tahun-ajaran-input" className="text-sm font-medium text-muted-foreground mb-1">Tahun Ajaran</Label>
+              <Input id="tahun-ajaran-input" placeholder="Contoh: 2023/2024" value={selectedTahunAjaran} onChange={(e) => setSelectedTahunAjaran(e.target.value)} />
+            </div>
           </div>
-
-          {selectedClass && selectedSubject && (
-             <Card>
-                <CardHeader>
-                    <CardTitle>Daftar Nilai: {selectedClass} - {selectedSubject}</CardTitle>
-                    <CardDescription>Input dan kelola nilai siswa (data mock).</CardDescription>
-                </CardHeader>
-                <CardContent>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border">
-                    <thead className="bg-muted/50">
-                        <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Nama Siswa</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Tugas</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">UTS</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">UAS</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Nilai Akhir</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Predikat</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Tindakan</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-card divide-y divide-border">
-                        {mockStudentsGrades.map(siswa => (
-                        <tr key={siswa.id}>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-foreground">{siswa.name}</td>
-                            <td className="px-4 py-3"><Input type="number" defaultValue={siswa.tugas} className="w-20 h-8 text-sm" onChange={(e) => handlePlaceholderAction(`Update nilai tugas ${siswa.name}`)} /></td>
-                            <td className="px-4 py-3"><Input type="number" defaultValue={siswa.uts} className="w-20 h-8 text-sm" onChange={(e) => handlePlaceholderAction(`Update nilai UTS ${siswa.name}`)} /></td>
-                            <td className="px-4 py-3"><Input type="number" defaultValue={siswa.uas} className="w-20 h-8 text-sm" onChange={(e) => handlePlaceholderAction(`Update nilai UAS ${siswa.name}`)} /></td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground font-semibold">{siswa.akhir}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground">{siswa.predikat}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-center">
-                                <Button variant="ghost" size="sm" onClick={() => handlePlaceholderAction(`Detail nilai ${siswa.name}`)} className="mr-1"><Eye className="h-4 w-4"/></Button>
-                                <Button variant="ghost" size="sm" onClick={() => handlePlaceholderAction(`Beri feedback ${siswa.name}`)}><MessageSquare className="h-4 w-4"/></Button>
-                            </td>
-                        </tr>
-                        ))}
-                    </tbody>
-                    </table>
-                </div>
-                <div className="mt-4 flex justify-end">
-                    <Button onClick={() => handlePlaceholderAction("Simpan Semua Perubahan Nilai")}>Simpan Semua Nilai</Button>
-                </div>
-                </CardContent>
-            </Card>
-          )}
-
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl">
-                <BookOpenCheck className="mr-3 h-5 w-5 text-primary" />
-                Pengelolaan Komponen & Rapor
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <Button variant="outline" onClick={() => handlePlaceholderAction("Atur Bobot Penilaian")} className="justify-start text-left h-auto py-3">
-                <Percent className="mr-3 h-5 w-5" />
-                <div>
-                  <p className="font-semibold">Bobot Nilai</p>
-                  <p className="text-xs text-muted-foreground">Atur persentase komponen.</p>
-                </div>
-              </Button>
-              <Button variant="outline" onClick={() => handlePlaceholderAction("Generate Rapor Sementara")} className="justify-start text-left h-auto py-3">
-                <FileText className="mr-3 h-5 w-5" />
-                 <div>
-                  <p className="font-semibold">Generate Rapor</p>
-                  <p className="text-xs text-muted-foreground">Buat draf rapor siswa.</p>
-                </div>
-              </Button>
-               <Button variant="outline" onClick={() => handlePlaceholderAction("Analisis Hasil Belajar")} className="justify-start text-left h-auto py-3">
-                <BarChart className="mr-3 h-5 w-5" />
-                 <div>
-                  <p className="font-semibold">Analisis Nilai</p>
-                  <p className="text-xs text-muted-foreground">Statistik pencapaian siswa.</p>
-                </div>
-              </Button>
-            </CardContent>
-          </Card>
+          <Button onClick={fetchStudentGrades} disabled={isLoadingStudentGrades || isLoadingTeachingData || !selectedClass || !selectedSubjectId || !selectedSemester || !selectedTahunAjaran}>
+            {isLoadingStudentGrades ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4" />} Tampilkan Data Nilai
+          </Button>
         </CardContent>
       </Card>
+
+      {studentGradesData.length > 0 && (
+        <Card className="shadow-lg">
+          <CardHeader>
+              <CardTitle>Daftar Nilai Siswa: {selectedClass} - {uniqueTeachingSubjects.find(s => s.id === selectedSubjectId)?.nama} - {selectedSemester} {selectedTahunAjaran}</CardTitle>
+              <CardDescription>Input dan kelola nilai siswa. Perubahan nilai akan otomatis menghitung nilai akhir dan predikat.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="max-h-[70vh]">
+              <Table>
+                <TableHeader className="sticky top-0 bg-card z-10">
+                  <TableRow>
+                    <TableHead className="min-w-[180px]">Nama Siswa (NIS)</TableHead>
+                    <TableHead className="w-[100px] text-center">Tugas</TableHead>
+                    <TableHead className="w-[100px] text-center">UTS</TableHead>
+                    <TableHead className="w-[100px] text-center">UAS</TableHead>
+                    <TableHead className="w-[100px] text-center">Harian</TableHead>
+                    <TableHead className="w-[100px] text-center font-semibold">Akhir</TableHead>
+                    <TableHead className="w-[100px] text-center font-semibold">Predikat</TableHead>
+                    <TableHead className="min-w-[200px]">Catatan Guru</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {studentGradesData.map((row) => {
+                    const currentGrade = editableGrades[row.siswa.id] || {};
+                    return (
+                      <TableRow key={row.siswa.id}>
+                        <TableCell className="font-medium">{row.siswa.fullName || row.siswa.name} <span className="text-xs text-muted-foreground">({row.siswa.nis || "N/A"})</span></TableCell>
+                        <TableCell><Input type="number" min="0" max="100" value={currentGrade.nilaiTugas ?? ""} onChange={(e) => handleGradeInputChange(row.siswa.id, "nilaiTugas", e.target.value)} className="w-20 h-8 text-sm text-center" /></TableCell>
+                        <TableCell><Input type="number" min="0" max="100" value={currentGrade.nilaiUTS ?? ""} onChange={(e) => handleGradeInputChange(row.siswa.id, "nilaiUTS", e.target.value)} className="w-20 h-8 text-sm text-center" /></TableCell>
+                        <TableCell><Input type="number" min="0" max="100" value={currentGrade.nilaiUAS ?? ""} onChange={(e) => handleGradeInputChange(row.siswa.id, "nilaiUAS", e.target.value)} className="w-20 h-8 text-sm text-center" /></TableCell>
+                        <TableCell><Input type="number" min="0" max="100" value={currentGrade.nilaiHarian ?? ""} onChange={(e) => handleGradeInputChange(row.siswa.id, "nilaiHarian", e.target.value)} className="w-20 h-8 text-sm text-center" /></TableCell>
+                        <TableCell className="text-center font-semibold">{currentGrade.nilaiAkhir?.toFixed(2) ?? "-"}</TableCell>
+                        <TableCell className="text-center font-semibold">{currentGrade.predikat ?? "-"}</TableCell>
+                        <TableCell><Textarea value={currentGrade.catatanGuru ?? ""} onChange={(e) => handleGradeInputChange(row.siswa.id, "catatanGuru", e.target.value)} placeholder="Catatan..." className="min-h-[40px] text-xs" rows={1} /></TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+            <div className="mt-6 flex justify-end">
+                <Button onClick={handleSaveAllGrades} disabled={isSubmittingGrades || isLoadingStudentGrades}>
+                  {isSubmittingGrades && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Save className="mr-2 h-4 w-4"/> Simpan Semua Nilai
+                </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      {(!isLoadingStudentGrades && studentGradesData.length === 0 && selectedClass && selectedSubjectId && selectedSemester && selectedTahunAjaran) && (
+        <Card className="shadow-lg">
+            <CardContent className="pt-6">
+                <p className="text-muted-foreground text-center">Tidak ada data siswa ditemukan untuk filter yang dipilih.</p>
+            </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

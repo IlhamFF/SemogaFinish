@@ -1,10 +1,9 @@
-
 import "reflect-metadata"; // Ensure this is the very first import
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import type { UserEntity } from "./user.entity"; // Menggunakan import type
 
 export type TestTipe = "Kuis" | "Ulangan Harian" | "UTS" | "UAS" | "Lainnya";
-export type TestStatus = "Draf" | "Terjadwal" | "Berlangsung" | "Selesai" | "Dinilai"; // Ditambah "Menunggu Hasil" jika perlu
+export type TestStatus = "Draf" | "Terjadwal" | "Berlangsung" | "Selesai" | "Menunggu Hasil" | "Dinilai";
 
 @Entity({ name: "tests" })
 export class TestEntity {
@@ -34,7 +33,7 @@ export class TestEntity {
 
   @Column({
     type: "enum",
-    enum: ["Draf", "Terjadwal", "Berlangsung", "Selesai", "Dinilai"], // "Menunggu Hasil" bisa jadi alias "Selesai"
+    enum: ["Draf", "Terjadwal", "Berlangsung", "Selesai", "Menunggu Hasil", "Dinilai"],
     default: "Draf",
   })
   status!: TestStatus;

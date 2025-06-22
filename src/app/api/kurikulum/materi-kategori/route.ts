@@ -1,23 +1,23 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { MateriKategoriEntity } from "@/entities/materi-kategori.entity";
 import * as z from "zod";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const kategoriCreateSchema = z.object({
   nama: z.string().min(3, { message: "Nama kategori minimal 3 karakter." }).max(255, { message: "Nama kategori maksimal 255 karakter." }),
 });
 
-// GET /api/kurikulum/materi-kategori - Mendapatkan semua kategori materi
-export async function GET() {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+export async function GET(request: NextRequest) {
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -30,13 +30,14 @@ export async function GET() {
   }
 }
 
-// POST /api/kurikulum/materi-kategori - Membuat kategori materi baru
 export async function POST(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat membuat kategori." }, { status: 403 });
+  }
 
   try {
     const body = await request.json();

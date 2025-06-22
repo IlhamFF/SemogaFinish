@@ -1,14 +1,13 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { StrukturKurikulumEntity } from "@/entities/struktur-kurikulum.entity";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import { UserEntity } from "@/entities/user.entity";
 import * as z from "zod";
 import { SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS } from "@/lib/constants";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const strukturKurikulumCreateSchema = z.object({
   tingkat: z.enum(SCHOOL_GRADE_LEVELS as [string, ...string[]]),
@@ -24,11 +23,13 @@ const strukturKurikulumGetSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
 
   const { searchParams } = new URL(request.url);
   const queryParams = {
@@ -74,11 +75,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat membuat item struktur." }, { status: 403 });
+  }
 
   try {
     const body = await request.json();

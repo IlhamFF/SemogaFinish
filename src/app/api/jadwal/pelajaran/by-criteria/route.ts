@@ -1,19 +1,19 @@
 
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { JadwalPelajaranEntity } from "@/entities/jadwal-pelajaran.entity";
 import { FindOptionsWhere } from "typeorm";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
-// DELETE /api/jadwal/pelajaran/by-criteria?kelas=X IPA 1&hari=Senin
 export async function DELETE(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat menghapus jadwal." }, { status: 403 });
+  }
 
   const { searchParams } = new URL(request.url);
   const criteria: FindOptionsWhere<JadwalPelajaranEntity> = {};

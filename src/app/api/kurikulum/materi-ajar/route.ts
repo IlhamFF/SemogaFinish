@@ -1,14 +1,12 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { MateriAjarEntity } from "@/entities/materi-ajar.entity";
 import * as z from "zod";
 import { JENIS_MATERI_AJAR, type JenisMateriAjarType } from "@/types";
 import { format } from 'date-fns';
-import type { User } from '@/types'; // Import User from your types for session user structure
+import { getAuthenticatedUser } from "@/lib/auth-utils"; // Import new auth util
 
 const materiAjarCreateSchema = z.object({
   judul: z.string().min(3, { message: "Judul minimal 3 karakter." }).max(255),
@@ -17,6 +15,7 @@ const materiAjarCreateSchema = z.object({
   jenisMateri: z.enum(JENIS_MATERI_AJAR, { required_error: "Jenis materi wajib dipilih." }),
   namaFileOriginal: z.string().optional().nullable(),
   fileUrl: z.string().url({ message: "URL tidak valid atau format path salah." }).optional().nullable(),
+  // uploaderId is removed from here, will be taken from token
 }).refine(data => {
     if (data.jenisMateri === "File" && !data.namaFileOriginal) {
         return true; 
@@ -31,12 +30,12 @@ const materiAjarCreateSchema = z.object({
 });
 
 // GET /api/kurikulum/materi-ajar - Mendapatkan semua materi ajar
-export async function GET(request: NextRequest) { // Added request parameter for future use
-  // TODO: Implement server-side Firebase token verification
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'guru' && session.user.role !== 'superadmin' && session.user.role !== 'siswa')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+export async function GET(request: NextRequest) {
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Akses ditolak. Tidak terautentikasi." }, { status: 401 });
+  }
+  // Further role-based access for GET can be added here if needed
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -57,22 +56,18 @@ export async function GET(request: NextRequest) { // Added request parameter for
 
 // POST /api/kurikulum/materi-ajar - Membuat materi ajar baru
 export async function POST(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification for admin/guru/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // For now, we'll assume the uploaderId will be passed in the body or derived from a verified Firebase token.
-  // This needs proper auth. For demo, we'll extract uploaderId from a hypothetical, unverified session or body.
-  // This is NOT secure for production.
-  // if (!session || !session.user || (session.user.role !== 'admin' && session.user.role !== 'guru' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Akses ditolak. Tidak terautentikasi." }, { status: 401 });
+  }
+  // Check if user role is allowed to create material (e.g., guru, admin, superadmin)
+  if (!['guru', 'admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Peran tidak diizinkan." }, { status: 403 });
+  }
+  const uploaderId = authenticatedUser.id;
 
   try {
     const body = await request.json();
-    // const uploaderId = session?.user?.id; // This would be the correct way if session was available
-    const uploaderId = body.uploaderId || "mock-uploader-id"; // MOCK - REPLACE WITH ACTUAL AUTH
-    if(!uploaderId) return NextResponse.json({ message: "Uploader ID tidak ditemukan. Autentikasi diperlukan." }, { status: 401 });
-
-
     const validation = materiAjarCreateSchema.safeParse(body);
 
     if (!validation.success) {
@@ -97,7 +92,7 @@ export async function POST(request: NextRequest) {
       namaFileOriginal: jenisMateri === "File" ? namaFileOriginal : null,
       fileUrl: finalFileUrl,
       tanggalUpload: format(new Date(), "yyyy-MM-dd"),
-      uploaderId, // Use extracted/mocked uploaderId
+      uploaderId, // Use uploaderId from authenticated token
     });
 
     await materiRepo.save(newMateri);

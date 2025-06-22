@@ -6,7 +6,7 @@ import { UserEntity } from "@/entities/user.entity";
 import crypto from 'crypto';
 import bcrypt from "bcryptjs";
 import * as z from "zod";
-import { TOKEN_NAME } from "@/lib/auth-utils"; // Just to use a constant name
+import { sendPasswordResetEmail } from "@/lib/email-service";
 
 const requestResetSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
@@ -32,10 +32,9 @@ export async function POST(request: NextRequest) {
     const user = await userRepo.findOne({ where: { email } });
 
     if (!user) {
-      // To prevent email enumeration, always return a generic success message.
-      // Log the attempt or actual token for testing if needed.
-      console.log(`Password reset requested for non-existent email: ${email} (Simulating success)`);
-      return NextResponse.json({ message: "Jika email terdaftar, instruksi reset akan dikirim (simulasi)." }, { status: 200 });
+      // To prevent email enumeration, we return a generic success message even if the user doesn't exist.
+      console.log(`Password reset requested for non-existent email: ${email}`);
+      return NextResponse.json({ message: "Jika email terdaftar, instruksi reset akan dikirim." }, { status: 200 });
     }
 
     const resetToken = generateResetToken();
@@ -46,13 +45,16 @@ export async function POST(request: NextRequest) {
     user.resetPasswordExpires = expires;
     await userRepo.save(user);
 
-    // SIMULATE EMAIL SENDING
-    console.log(`Password Reset Token for ${email} (SAVE THIS FOR TESTING): ${resetToken}`);
-    // In a real app, you would email a link like: yourdomain.com/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const resetLink = `${appUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
     
+    // This function call simulates sending an email in a real application.
+    await sendPasswordResetEmail(email, resetLink);
+    
+    // For demonstration purposes, the unhashed token is sent in the response.
+    // In a production environment, this should be removed and the user should get the token from their email.
     return NextResponse.json({ 
-      message: "Jika email terdaftar, instruksi reset akan dikirim (simulasi). Cek console server untuk token (HANYA UNTUK DEMO).",
-      // DO NOT RETURN THE ACTUAL TOKEN IN PRODUCTION. THIS IS FOR DEMO ONLY.
+      message: "Jika email terdaftar, instruksi reset akan dikirim.",
       demoResetToken: resetToken 
     }, { status: 200 });
 

@@ -1,11 +1,10 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import * as z from "zod";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const slotWaktuUpdateSchema = z.object({
   namaSlot: z.string().min(3, { message: "Nama slot minimal 3 karakter." }).max(100).optional(),
@@ -24,16 +23,17 @@ const slotWaktuUpdateSchema = z.object({
   path: ["waktuSelesai"],
 });
 
-// GET /api/jadwal/slot-waktu/[id] - Mendapatkan satu slot waktu
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -55,16 +55,17 @@ export async function GET(
   }
 }
 
-// PUT /api/jadwal/slot-waktu/[id] - Memperbarui slot waktu
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat mengubah slot waktu." }, { status: 403 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -123,23 +124,24 @@ export async function PUT(
 
   } catch (error: any) {
     console.error("Error updating slot waktu:", error);
-    if (error.code === '23505') { // Unique violation
+    if (error.code === '23505') { 
         return NextResponse.json({ message: "Nama slot waktu sudah ada (dari DB)." }, { status: 409 });
     }
     return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
   }
 }
 
-// DELETE /api/jadwal/slot-waktu/[id] - Menghapus slot waktu
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat menghapus slot waktu." }, { status: 403 });
+  }
 
   const { id } = params;
   if (!id) {

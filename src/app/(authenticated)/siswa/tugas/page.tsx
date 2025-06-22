@@ -2,26 +2,26 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
-import { ClipboardCheck, FilePenLine, UploadCloud, Eye, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { ClipboardCheck, FilePenLine, UploadCloud, Eye, Clock, CheckCircle2, Loader2, Send } from "lucide-react";
 import { format, formatDistanceToNow, parseISO, isPast } from 'date-fns';
 import { id as localeID } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
-import type { Tugas as TugasType } from "@/types"; // Assuming Tugas type is defined in types
+import type { Tugas as TugasType, TugasSubmission } from "@/types"; 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
-// Keep this client-side status for now as backend doesn't store submission status
 type TugasSiswaStatus = "Belum Dikerjakan" | "Terlambat" | "Sudah Dikumpulkan" | "Dinilai";
 
 interface TugasDisplay extends TugasType {
   statusFrontend: TugasSiswaStatus;
-  // nilaiFrontend?: number; // Renamed to avoid conflict with potential backend field later
-  // feedbackGuruFrontend?: string;
+  submission?: TugasSubmission | null;
 }
-
 
 export default function SiswaTugasPage() {
   const { user } = useAuth();
@@ -30,42 +30,51 @@ export default function SiswaTugasPage() {
   const [tugasList, setTugasList] = useState<TugasDisplay[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Client-side status derivation logic
-  const getTugasSiswaStatus = (tugas: TugasType): TugasSiswaStatus => {
-    // This is a simplified mock. Real status would depend on actual submission data.
-    // For now, assume we don't have submission data.
-    if (tugas.nilai) return "Dinilai"; // If it has a grade, it's Dinilai
-    
-    // Example: If we had a 'submittedAt' field on TugasType
-    // if (tugas.submittedAt) {
-    //   return "Sudah Dikumpulkan"; 
-    // }
+  // State untuk dialog submission
+  const [isSubmissionDialogOpen, setIsSubmissionDialogOpen] = useState(false);
+  const [selectedTugas, setSelectedTugas] = useState<TugasDisplay | null>(null);
+  const [submissionFile, setSubmissionFile] = useState<File | null>(null);
+  const [submissionNotes, setSubmissionNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    if (isPast(parseISO(tugas.tenggat))) {
-      return "Terlambat";
-    }
-    return "Belum Dikerjakan";
-  };
 
-  const fetchTugasSiswa = useCallback(async () => {
+  const fetchTugasDanSubmissions = useCallback(async () => {
     if (!user || !user.kelas) {
       setIsLoading(false);
       return;
     }
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/tugas`); // API will filter by session.user.kelas if user is siswa
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Gagal mengambil data tugas.");
+      // Fetch both tasks and user's submissions in parallel
+      const [tugasRes, submissionsRes] = await Promise.all([
+        fetch(`/api/tugas`), // API filters by class for siswa
+        fetch(`/api/tugas/submissions/me`) // API gets all submissions for the current user
+      ]);
+      
+      if (!tugasRes.ok || !submissionsRes.ok) {
+        throw new Error("Gagal mengambil data tugas atau submissions.");
       }
-      const data: TugasType[] = await response.json();
-      const processedData: TugasDisplay[] = data.map(t => ({
-        ...t,
-        statusFrontend: getTugasSiswaStatus(t),
-        // nilaiFrontend: t.nilai, // Assuming 'nilai' might come from backend later
-        // feedbackGuruFrontend: t.feedbackGuru, // Assuming 'feedbackGuru' might come from backend later
-      }));
+      
+      const tugasData: TugasType[] = await tugasRes.json();
+      const submissionsData: TugasSubmission[] = await submissionsRes.json();
+      const submissionsMap = new Map(submissionsData.map(sub => [sub.tugasId, sub]));
+
+      const processedData: TugasDisplay[] = tugasData.map(t => {
+        const submission = submissionsMap.get(t.id);
+        let status: TugasSiswaStatus;
+
+        if (submission) {
+          status = submission.status === "Dinilai" ? "Dinilai" : "Sudah Dikumpulkan";
+        } else {
+          status = isPast(parseISO(t.tenggat)) ? "Terlambat" : "Belum Dikerjakan";
+        }
+
+        return {
+          ...t,
+          statusFrontend: status,
+          submission: submission,
+        };
+      });
       setTugasList(processedData);
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -75,25 +84,74 @@ export default function SiswaTugasPage() {
     }
   }, [user, toast]);
 
+
   useEffect(() => {
     if (user && user.isVerified) {
-      fetchTugasSiswa();
+      fetchTugasDanSubmissions();
     } else if (user && !user.isVerified) {
-      setIsLoading(false); // Stop loading if user is not verified
+      setIsLoading(false);
     }
-  }, [user, fetchTugasSiswa]);
+  }, [user, fetchTugasDanSubmissions]);
 
 
   if (!user || (user.role !== 'siswa' && user.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Siswa untuk melihat halaman ini.</p>;
   }
-  if (user && !user.isVerified) { // Check user specifically, not isLoading
+  if (user && !user.isVerified) {
     return <p>Silakan verifikasi email Anda untuk mengakses fitur ini.</p>;
   }
-
-  const handlePlaceholderAction = (action: string, tugasId?: string) => {
-    toast({title:"Fitur Belum Tersedia", description:`Fungsi "${action}" ${tugasId ? `untuk tugas ${tugasId} ` : ''}belum diimplementasikan.`});
+  
+  const handleOpenSubmissionDialog = (tugas: TugasDisplay) => {
+    setSelectedTugas(tugas);
+    setSubmissionFile(null);
+    setSubmissionNotes(tugas.submission?.catatanSiswa || "");
+    setIsSubmissionDialogOpen(true);
   };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setSubmissionFile(event.target.files[0]);
+    } else {
+      setSubmissionFile(null);
+    }
+  };
+  
+  const handleSubmissionSubmit = async () => {
+    if (!selectedTugas) return;
+    if (!submissionFile && !submissionNotes) {
+        toast({ title: "Submission Kosong", description: "Harap lampirkan file atau isi catatan jawaban.", variant: "destructive" });
+        return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+        const payload = {
+            tugasId: selectedTugas.id,
+            namaFileJawaban: submissionFile?.name,
+            catatanSiswa: submissionNotes,
+        };
+
+        const response = await fetch('/api/tugas/submissions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || "Gagal mengirimkan tugas.");
+        }
+        
+        toast({ title: "Berhasil!", description: `Tugas "${selectedTugas.judul}" telah dikumpulkan.` });
+        setIsSubmissionDialogOpen(false);
+        fetchTugasDanSubmissions(); // Refresh the list
+    } catch (error: any) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
 
   const tugasMendatang = tugasList.filter(t => t.statusFrontend === "Belum Dikerjakan" || t.statusFrontend === "Terlambat");
   const tugasSelesai = tugasList.filter(t => t.statusFrontend === "Sudah Dikumpulkan" || t.statusFrontend === "Dinilai");
@@ -143,9 +201,9 @@ export default function SiswaTugasPage() {
                   <Button 
                     size="sm" 
                     className="mt-3 w-full sm:w-auto" 
-                    onClick={() => handlePlaceholderAction("Upload Jawaban", tugas.id)}
+                    onClick={() => handleOpenSubmissionDialog(tugas)}
                   >
-                    <UploadCloud className="mr-2 h-4 w-4" /> Upload Jawaban
+                    <UploadCloud className="mr-2 h-4 w-4" /> Kumpulkan Jawaban
                   </Button>
                 )}
                 {tugas.statusFrontend === "Sudah Dikumpulkan" && (
@@ -153,15 +211,15 @@ export default function SiswaTugasPage() {
                 )}
                 {tugas.statusFrontend === "Dinilai" && (
                   <div className="mt-3 p-3 bg-muted/50 rounded-md">
-                    <p className="text-sm font-semibold">Nilai: {tugas.nilai ?? "Belum Dinilai"}{tugas.nilai ? "/100" : ""}</p>
-                    {/* {tugas.feedbackGuruFrontend && <p className="text-xs text-muted-foreground mt-1">Feedback: {tugas.feedbackGuruFrontend}</p>} */}
+                    <p className="text-sm font-semibold">Nilai: {tugas.submission?.nilai ?? "N/A"}/100</p>
+                    {tugas.submission?.feedbackGuru && <p className="text-xs text-muted-foreground mt-1">Feedback: {tugas.submission.feedbackGuru}</p>}
                      <Button 
                         variant="link" 
                         size="sm" 
                         className="p-0 h-auto mt-1 text-xs"
-                        onClick={() => handlePlaceholderAction("Lihat Detail Penilaian", tugas.id)}
+                        onClick={() => handleOpenSubmissionDialog(tugas)}
                     >
-                        Lihat Detail Penilaian
+                        Lihat Detail Submission
                     </Button>
                   </div>
                 )}
@@ -179,6 +237,7 @@ export default function SiswaTugasPage() {
   );
 
   return (
+    <>
     <div className="space-y-6">
       <h1 className="text-3xl font-headline font-semibold flex items-center">
         <ClipboardCheck className="mr-3 h-8 w-8 text-primary" />
@@ -189,7 +248,7 @@ export default function SiswaTugasPage() {
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "mendatang" | "selesai")}>
         <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
           <TabsTrigger value="mendatang">Tugas Mendatang ({tugasMendatang.length})</TabsTrigger>
-          <TabsTrigger value="selesai">Tugas Selesai ({tugasSelesai.length})</TabsTrigger>
+          <TabsTrigger value="selesai">Riwayat Tugas ({tugasSelesai.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="mendatang">
           <Card className="shadow-lg mt-4">
@@ -215,6 +274,83 @@ export default function SiswaTugasPage() {
         </TabsContent>
       </Tabs>
     </div>
+
+    {/* Submission Dialog */}
+    <Dialog open={isSubmissionDialogOpen} onOpenChange={setIsSubmissionDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Pengumpulan Tugas: {selectedTugas?.judul}</DialogTitle>
+                <DialogDescription>
+                    {selectedTugas?.statusFrontend === "Dinilai" || selectedTugas?.statusFrontend === "Sudah Dikumpulkan" 
+                        ? "Melihat detail submission Anda." 
+                        : `Tenggat: ${selectedTugas ? format(parseISO(selectedTugas.tenggat), "dd MMM yyyy, HH:mm", { locale: localeID }) : ''}`}
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+                {selectedTugas?.submission ? (
+                    <div className="space-y-3 text-sm">
+                        <div>
+                            <p className="font-semibold">Status:</p>
+                            <p>{selectedTugas.statusFrontend}</p>
+                        </div>
+                         <div>
+                            <p className="font-semibold">Dikumpulkan Pada:</p>
+                            <p>{format(parseISO(selectedTugas.submission.dikumpulkanPada), "dd MMM yyyy, HH:mm", { locale: localeID })}</p>
+                        </div>
+                        {selectedTugas.submission.namaFileJawaban && (
+                             <div>
+                                <p className="font-semibold">File Terlampir:</p>
+                                <p className="text-primary hover:underline cursor-pointer">{selectedTugas.submission.namaFileJawaban}</p>
+                            </div>
+                        )}
+                         {selectedTugas.submission.catatanSiswa && (
+                             <div>
+                                <p className="font-semibold">Catatan Anda:</p>
+                                <p className="p-2 bg-muted rounded-md whitespace-pre-wrap">{selectedTugas.submission.catatanSiswa}</p>
+                            </div>
+                        )}
+                        {selectedTugas.statusFrontend === "Dinilai" && (
+                             <div className="p-3 border rounded-md bg-primary/5">
+                                <p className="font-semibold">Nilai: <span className="text-lg text-primary">{selectedTugas.submission.nilai}/100</span></p>
+                                {selectedTugas.submission.feedbackGuru && <p className="font-semibold mt-2">Feedback Guru:</p>}
+                                {selectedTugas.submission.feedbackGuru && <p className="text-muted-foreground whitespace-pre-wrap">{selectedTugas.submission.feedbackGuru}</p>}
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <>
+                        <div>
+                            <Label htmlFor="file-submission">Unggah File Jawaban (Opsional jika ada jawaban teks)</Label>
+                            <Input id="file-submission" type="file" onChange={handleFileChange} disabled={isSubmitting}/>
+                            {submissionFile && <p className="text-xs text-muted-foreground mt-1">File terpilih: {submissionFile.name}</p>}
+                        </div>
+                        <div>
+                            <Label htmlFor="catatan-submission">Catatan / Jawaban Teks</Label>
+                            <Textarea 
+                                id="catatan-submission" 
+                                placeholder="Tulis jawaban atau catatan Anda di sini..." 
+                                value={submissionNotes}
+                                onChange={(e) => setSubmissionNotes(e.target.value)}
+                                disabled={isSubmitting}
+                                rows={5}
+                            />
+                        </div>
+                    </>
+                )}
+
+            </div>
+            <DialogFooter>
+                <DialogClose asChild><Button variant="outline">Tutup</Button></DialogClose>
+                {(!selectedTugas?.submission) && (
+                     <Button onClick={handleSubmissionSubmit} disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Send className="mr-2 h-4 w-4" /> Kirim Jawaban
+                    </Button>
+                )}
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
 

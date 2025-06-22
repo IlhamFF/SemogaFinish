@@ -1,13 +1,12 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { CpEntity } from "@/entities/cp.entity";
 import * as z from "zod";
 import { FASE_CP } from "@/types";
 import type { FaseCpType } from "@/types";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const cpUpdateSchema = z.object({
   deskripsi: z.string().min(10, { message: "Deskripsi CP minimal 10 karakter." }).optional(),
@@ -17,16 +16,17 @@ const cpUpdateSchema = z.object({
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });
 
-// GET /api/kurikulum/cp/[id] - Mendapatkan satu CP
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -48,16 +48,17 @@ export async function GET(
   }
 }
 
-// PUT /api/kurikulum/cp/[id] - Memperbarui CP
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat mengubah CP." }, { status: 403 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -105,16 +106,17 @@ export async function PUT(
   }
 }
 
-// DELETE /api/kurikulum/cp/[id] - Menghapus CP
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat menghapus CP." }, { status: 403 });
+  }
 
   const { id } = params;
   if (!id) {

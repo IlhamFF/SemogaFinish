@@ -2,27 +2,39 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { BarChart3, Users, Bell, BookOpenText, AlertTriangle } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
-import { ROUTES } from "@/lib/constants";
-import React, { useState, useEffect, useCallback } from "react";
+import { BarChart3, Users, BookOpenText, PieChart as PieChartIcon } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { ROUTES, ROLES } from "@/lib/constants";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { User, MataPelajaran } from "@/types"; 
+import type { User, MataPelajaran, Role } from "@/types"; 
 import { Loader2 } from "lucide-react";
+import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format, parseISO } from "date-fns";
+
+
+const ROLE_COLORS: Record<Role, string> = {
+    admin: "hsl(var(--chart-1))",
+    guru: "hsl(var(--chart-2))",
+    siswa: "hsl(var(--chart-3))",
+    pimpinan: "hsl(var(--chart-4))",
+    superadmin: "hsl(var(--chart-5))",
+};
 
 export default function AdminDashboardPage() {
   const { user: currentUser, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [allMataPelajaran, setAllMataPelajaran] = useState<MataPelajaran[]>([]);
   const [isLoadingMapel, setIsLoadingMapel] = useState(true);
 
   const fetchUsersForStats = useCallback(async () => {
     if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin')) {
-      setIsLoadingStats(true);
+      setIsLoadingUsers(true);
       try {
         const response = await fetch('/api/users');
         if (!response.ok) {
@@ -34,10 +46,10 @@ export default function AdminDashboardPage() {
       } catch (error: any) {
         toast({ title: "Error Statistik Pengguna", description: error.message, variant: "destructive" });
       } finally {
-        setIsLoadingStats(false);
+        setIsLoadingUsers(false);
       }
     } else {
-      setIsLoadingStats(false); 
+      setIsLoadingUsers(false); 
     }
   }, [currentUser, toast]);
 
@@ -67,6 +79,27 @@ export default function AdminDashboardPage() {
     fetchMataPelajaran();
   }, [fetchUsersForStats, fetchMataPelajaran]);
   
+  const adminRoleDistributionData = useMemo(() => {
+    if (allUsers.length === 0) return [];
+    const roleCounts = allUsers.reduce((acc, currentUser) => {
+      acc[currentUser.role] = (acc[currentUser.role] || 0) + 1;
+      return acc;
+    }, {} as Record<Role, number>);
+
+    return Object.entries(roleCounts).map(([role, count]) => ({
+      name: ROLES[role as Role] || role,
+      value: count,
+      fill: ROLE_COLORS[role as Role] || "hsl(var(--muted))",
+    }));
+  }, [allUsers]);
+  
+  const recentlyJoinedUsers = useMemo(() => {
+    return [...allUsers]
+      .sort((a, b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime())
+      .slice(0, 5);
+  }, [allUsers]);
+
+
   if (authLoading || !currentUser) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
@@ -78,14 +111,14 @@ export default function AdminDashboardPage() {
   const totalPengguna = allUsers.length;
   const verifikasiTertunda = allUsers.filter(u => u.role === 'siswa' && !u.isVerified).length;
   const totalMataPelajaran = allMataPelajaran.length;
+  const totalGuru = allUsers.filter(u => u.role === 'guru').length;
 
   const statCards = [
-    { title: "Total Pengguna", value: isLoadingStats ? <Loader2 className="h-5 w-5 animate-spin" /> : totalPengguna.toString(), icon: Users, color: "text-primary", link: ROUTES.ADMIN_USERS },
+    { title: "Total Pengguna", value: isLoadingUsers ? <Loader2 className="h-5 w-5 animate-spin" /> : totalPengguna.toString(), icon: Users, color: "text-primary", link: ROUTES.ADMIN_USERS, description: `${totalGuru} Guru, ${totalPengguna - totalGuru} lainnya` },
     { title: "Total Mapel", value: isLoadingMapel ? <Loader2 className="h-5 w-5 animate-spin" /> : totalMataPelajaran.toString(), icon: BookOpenText, color: "text-green-500", link: ROUTES.ADMIN_MATA_PELAJARAN, description: "Jumlah mata pelajaran terdaftar" },
-    { title: "Verifikasi Tertunda", value: isLoadingStats ? <Loader2 className="h-5 w-5 animate-spin" /> : verifikasiTertunda.toString(), icon: AlertTriangle, color: "text-yellow-500", link: ROUTES.ADMIN_USERS, description: "Siswa menunggu verifikasi" },
-    { title: "Peringatan Sistem", value: "2", icon: Bell, color: "text-red-500", description: "Peringatan & notifikasi (mock)" },
+    { title: "Verifikasi Tertunda", value: isLoadingUsers ? <Loader2 className="h-5 w-5 animate-spin" /> : verifikasiTertunda.toString(), icon: Users, color: "text-yellow-500", link: ROUTES.ADMIN_USERS, description: "Siswa menunggu verifikasi" },
+    { title: "Tindakan Cepat", value: "Kelola", icon: BarChart3, color: "text-indigo-500", link: ROUTES.ADMIN_USERS, description: "Kelola Pengguna \u2192" },
   ];
-
 
   return (
     <div className="space-y-6">
@@ -116,60 +149,63 @@ export default function AdminDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Aktivitas Terkini</CardTitle>
-            <CardDescription>Gambaran umum kejadian sistem terkini (data mock).</CardDescription>
+            <CardTitle className="flex items-center"><PieChartIcon className="mr-2 h-5 w-5 text-primary" /> Distribusi Peran Pengguna</CardTitle>
+            <CardDescription>Visualisasi jumlah pengguna berdasarkan peran.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ul className="space-y-3">
-              <li className="flex items-center justify-between">
-                <span className="text-sm">Pengguna baru terdaftar: siswa_baru@example.com</span>
-                <span className="text-xs text-muted-foreground">2 menit lalu</span>
-              </li>
-              <li className="flex items-center justify-between">
-                <span className="text-sm">Guru memperbarui profil: guru_hebat@example.com</span>
-                <span className="text-xs text-muted-foreground">1 jam lalu</span>
-              </li>
-              <li className="flex items-center justify-between">
-                <span className="text-sm">Pemeliharaan sistem dijadwalkan.</span>
-                <span className="text-xs text-muted-foreground">Besok</span>
-              </li>
-            </ul>
+          <CardContent className="h-[300px] flex items-center justify-center">
+            {isLoadingUsers ? (
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            ) : adminRoleDistributionData.length > 0 ? (
+                <ChartContainer config={{}} className="w-full h-full max-w-[250px] aspect-square">
+                    <RechartsPieChart>
+                        <Tooltip content={<ChartTooltipContent hideLabel hideIndicator nameKey="name" />} />
+                        <Pie data={adminRoleDistributionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
+                            {adminRoleDistributionData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                        </Pie>
+                    </RechartsPieChart>
+                </ChartContainer>
+            ) : (
+                <p className="text-muted-foreground">Data pengguna tidak tersedia.</p>
+            )}
           </CardContent>
         </Card>
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Tindakan Cepat</CardTitle>
-            <CardDescription>Lakukan tugas umum dengan cepat.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-             <Button asChild variant="outline" className="w-full justify-start text-left h-auto py-3">
-                <Link href={ROUTES.ADMIN_USERS}>
-                  <Users className="mr-3 h-5 w-5" />
-                  <div>
-                    <p className="font-semibold">Kelola Pengguna</p>
-                    <p className="text-xs text-muted-foreground">Lihat, tambah, atau edit pengguna.</p>
-                  </div>
-                </Link>
-             </Button>
-             <Button variant="outline" className="w-full justify-start text-left h-auto py-3" onClick={() => toast({title: "Fitur Dalam Pengembangan", description: "Laporan dan analitik belum tersedia."})}>
-                <BarChart3 className="mr-3 h-5 w-5" />
-                 <div>
-                    <p className="font-semibold">Lihat Laporan</p>
-                    <p className="text-xs text-muted-foreground">Akses analitik sistem.</p>
-                  </div>
-            </Button>
-             <Button variant="outline" className="w-full justify-start text-left h-auto py-3" onClick={() => toast({title: "Fitur Dalam Pengembangan", description: "Pengiriman pengumuman belum tersedia."})}>
-                <Bell className="mr-3 h-5 w-5" />
-                <div>
-                    <p className="font-semibold">Kirim Pengumuman</p>
-                    <p className="text-xs text-muted-foreground">Beritahu semua pengguna.</p>
-                  </div>
-            </Button>
-          </CardContent>
+         <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5 text-primary" /> Pengguna Bergabung Terbaru</CardTitle>
+                <CardDescription>5 pengguna terakhir yang terdaftar di sistem.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+                 {isLoadingUsers ? (
+                    <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                ) : recentlyJoinedUsers.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Nama</TableHead>
+                                <TableHead>Peran</TableHead>
+                                <TableHead>Tanggal</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {recentlyJoinedUsers.map(user => (
+                                <TableRow key={user.id}>
+                                    <TableCell className="font-medium">{user.fullName || user.name}</TableCell>
+                                    <TableCell>{ROLES[user.role]}</TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">
+                                        {user.createdAt ? format(parseISO(user.createdAt as string), 'dd MMM yyyy') : '-'}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                ) : (
+                    <p className="text-muted-foreground text-center pt-8">Tidak ada data pengguna.</p>
+                )}
+            </CardContent>
         </Card>
       </div>
     </div>
   );
 }
-
-    

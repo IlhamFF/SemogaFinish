@@ -1,13 +1,12 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { SklEntity } from "@/entities/skl.entity";
 import * as z from "zod";
 import { KATEGORI_SKL } from "@/types";
 import type { KategoriSklType } from "@/types";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const sklUpdateSchema = z.object({
   deskripsi: z.string().min(10, { message: "Deskripsi SKL minimal 10 karakter." }).optional(),
@@ -16,16 +15,17 @@ const sklUpdateSchema = z.object({
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });
 
-// GET /api/kurikulum/skl/[id] - Mendapatkan satu SKL
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -47,16 +47,17 @@ export async function GET(
   }
 }
 
-// PUT /api/kurikulum/skl/[id] - Memperbarui SKL
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat mengubah SKL." }, { status: 403 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -101,16 +102,17 @@ export async function PUT(
   }
 }
 
-// DELETE /api/kurikulum/skl/[id] - Menghapus SKL
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat menghapus SKL." }, { status: 403 });
+  }
 
   const { id } = params;
   if (!id) {

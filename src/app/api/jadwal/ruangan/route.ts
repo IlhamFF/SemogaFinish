@@ -1,11 +1,10 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { RuanganEntity } from "@/entities/ruangan.entity";
 import * as z from "zod";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const ruanganCreateSchema = z.object({
   nama: z.string().min(3, { message: "Nama ruangan minimal 3 karakter." }).max(255),
@@ -14,13 +13,15 @@ const ruanganCreateSchema = z.object({
   fasilitas: z.string().optional().nullable(),
 });
 
-// GET /api/jadwal/ruangan - Mendapatkan semua ruangan
-export async function GET() {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+export async function GET(request: NextRequest) {
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  // Semua user terautentikasi bisa melihat daftar ruangan
+  // if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  // }
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -33,13 +34,14 @@ export async function GET() {
   }
 }
 
-// POST /api/jadwal/ruangan - Membuat ruangan baru
 export async function POST(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat membuat ruangan." }, { status: 403 });
+  }
 
   try {
     const body = await request.json();
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error("Error creating ruangan:", error);
-    if (error.code === '23505') { // Unique violation
+    if (error.code === '23505') { 
         return NextResponse.json({ message: "Kode ruangan sudah ada (dari DB)." }, { status: 409 });
     }
     return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });

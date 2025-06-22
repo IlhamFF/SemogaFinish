@@ -1,14 +1,12 @@
 
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { TugasEntity } from "@/entities/tugas.entity";
 import * as z from "zod";
 import { formatISO } from 'date-fns';
 import type { FindManyOptions } from "typeorm";
-import type { User } from '@/types'; // Import User from your types for session user structure
+import { getAuthenticatedUser } from "@/lib/auth-utils"; // Import new auth util
 
 const tugasCreateSchema = z.object({
   judul: z.string().min(5, { message: "Judul tugas minimal 5 karakter." }),
@@ -17,51 +15,47 @@ const tugasCreateSchema = z.object({
   tenggat: z.date({ required_error: "Tanggal tenggat wajib diisi." }),
   deskripsi: z.string().optional().nullable(),
   namaFileLampiran: z.string().optional().nullable(),
-  // This field is not directly provided by client on create, but needed for type consistency
-  // It will be populated by uploaderId from session/token
-  uploaderId: z.string().uuid().optional(), 
+  // uploaderId is removed, will be taken from token
 });
 
 export async function GET(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification (e.g., all authenticated users can GET)
-  // const session = await getServerSession(authOptions); // REMOVED
-  // For demo, we'll simulate session or require an uploaderId from query if not using session
-  // This is NOT secure for production.
-  // if (!session || !session.user || !['siswa', 'guru', 'admin', 'superadmin'].includes(session.user.role)) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
-
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Akses ditolak. Tidak terautentikasi." }, { status: 401 });
+  }
+  
   try {
     const dataSource = await getInitializedDataSource();
     const tugasRepo = dataSource.getRepository(TugasEntity);
     
     const { searchParams } = new URL(request.url);
     const filterKelas = searchParams.get("kelas"); 
-    // const currentUserRole = session?.user?.role; // Hypothetical if session was available
-    // const currentUserId = session?.user?.id; // Hypothetical
-    // const currentUserKelas = session?.user?.kelasId; // Hypothetical
-
+    
     const queryOptions: FindManyOptions<TugasEntity> = {
       relations: ["uploader"],
       order: { tenggat: "ASC", createdAt: "DESC" } as any,
       where: {} as any,
     };
 
-    // TODO: Add role-based filtering when Firebase Auth is integrated on backend
-    // if (currentUserRole === 'guru') {
-    //     queryOptions.where.uploaderId = currentUserId;
-    // } else if (currentUserRole === 'siswa') {
-    //     if (!currentUserKelas) {
-    //         return NextResponse.json({ message: "Informasi kelas siswa tidak ditemukan." }, { status: 400 });
-    //     }
-    //     queryOptions.where.kelas = currentUserKelas;
-    // } else if ((currentUserRole === 'admin' || currentUserRole === 'superadmin') && filterKelas) {
-    //     queryOptions.where.kelas = filterKelas;
-    // }
-    if (filterKelas) { // Simplified filter for now
+    if (authenticatedUser.role === 'guru') {
+        queryOptions.where.uploaderId = authenticatedUser.id;
+        // Optionally, if a guru also wants to filter by class they teach for their own tasks
+        if (filterKelas) {
+             queryOptions.where.kelas = filterKelas;
+        }
+    } else if (authenticatedUser.role === 'siswa') {
+        // For siswa, they should only see tasks for their class
+        // This logic should ideally be derived from the user's profile (e.g., user.kelasId)
+        // For now, we assume the client might send a 'kelas' filter or we'd need to enhance `authenticatedUser` payload
+        const siswaKelas = searchParams.get("kelas_siswa") || (authenticatedUser as any).kelasId; // Or get from user object
+        if (!siswaKelas) {
+             return NextResponse.json({ message: "Informasi kelas siswa tidak ditemukan untuk filter tugas." }, { status: 400 });
+        }
+        queryOptions.where.kelas = siswaKelas;
+    } else if (['admin', 'superadmin'].includes(authenticatedUser.role) && filterKelas) {
         queryOptions.where.kelas = filterKelas;
     }
-
+    // If no specific role logic for filtering, it might fetch all, or based on other query params.
 
     const tugasList = await tugasRepo.find(queryOptions);
 
@@ -77,23 +71,17 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification for guru/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || !session.user || (session.user.role !== 'guru' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
-  
-  const body = await request.json();
-  const uploaderIdFromBody = body.uploaderId; // Attempt to get uploaderId from body (MOCK/DEMO)
-  // const uploaderId = session?.user?.id; // This would be the correct way if session was available
-  if (!uploaderIdFromBody) { // MOCK: Fallback for demo if not passed in body
-      console.warn("Warning: uploaderId not found in request body or session for POST /api/tugas. Using mock ID. THIS IS NOT SECURE.");
-      // For a real app, this should fail if uploaderId cannot be determined securely.
-      // return NextResponse.json({ message: "Uploader ID tidak ditemukan. Autentikasi diperlukan." }, { status: 401 });
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Akses ditolak. Tidak terautentikasi." }, { status: 401 });
   }
-  const uploaderIdToUse = uploaderIdFromBody || "mock-user-id-for-tugas"; // MOCK
+  if (!['guru', 'admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Peran tidak diizinkan." }, { status: 403 });
+  }
+  const uploaderId = authenticatedUser.id;
 
   try {
+    const body = await request.json();
     if (body.tenggat) {
         body.tenggat = new Date(body.tenggat);
     }
@@ -121,7 +109,7 @@ export async function POST(request: NextRequest) {
       deskripsi,
       namaFileLampiran,
       fileUrlLampiran: fileUrlLampiranSimulasi,
-      uploaderId: uploaderIdToUse, // Use the determined uploaderId
+      uploaderId,
     });
 
     const savedTugas = await tugasRepo.save(newTugas);

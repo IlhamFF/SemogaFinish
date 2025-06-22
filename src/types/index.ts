@@ -1,4 +1,3 @@
-
 import "reflect-metadata"; // Ensure this is the very first import
 import { KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR } from "@/lib/constants";
 // It's generally better to import the specific entity types if they are simple and don't cause circular dependencies
@@ -9,6 +8,9 @@ import type { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import type { UserEntity } from "@/entities/user.entity";
 import type { RuanganEntity } from "@/entities/ruangan.entity";
 import type { TestTipe as TestEntityType, TestStatus as TestStatusType } from "@/entities/test.entity";
+import type { TestSubmissionStatus as TestSubmissionStatusType } from "@/entities/test-submission.entity";
+import type { StatusKehadiran as StatusKehadiranTypeEntity } from "@/entities/absensi-siswa.entity";
+import type { SemesterTypeEntity } from "@/entities/nilai-semester-siswa.entity"; // Ditambahkan
 
 
 export type Role = 'admin' | 'guru' | 'siswa' | 'pimpinan' | 'superadmin';
@@ -29,8 +31,9 @@ export interface User {
   nis?: string | null;
   nip?: string | null;
   joinDate?: string | null;
-  kelas?: string | null; // For Siswa, this is their class name. For Admin User Form, it's string input.
-  mataPelajaran?: string | null; // For Guru, single string of subject names. For Admin User Form, string input.
+  kelasId?: string | null; 
+  kelas?: string | null;
+  mataPelajaran?: string | null; 
 }
 
 export interface NavItem {
@@ -173,7 +176,7 @@ export interface JadwalPelajaran {
   mapelId: string;
   mapel?: Pick<MataPelajaranEntity, 'id' | 'nama' | 'kode'>;
   guruId: string;
-  guru?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>; // Added email for display
+  guru?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email' | 'nip'>; 
   ruanganId: string;
   ruangan?: Pick<RuanganEntity, 'id' | 'nama' | 'kode'>;
   catatan?: string | null;
@@ -198,7 +201,29 @@ export interface Tugas {
   terkumpul?: number;
   totalSiswa?: number;
   status?: "Aktif" | "Ditutup" | "Draf";
+  nilai?: number | null; 
+  feedbackGuru?: string | null;
 }
+
+export type SubmissionStatus = "Menunggu Penilaian" | "Dinilai" | "Terlambat";
+
+export interface TugasSubmission {
+  id: string;
+  siswaId: string;
+  siswa?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email' | 'kelasId'>;
+  tugasId: string;
+  tugas?: Pick<Tugas, 'id' | 'judul' | 'mapel' | 'kelas' | 'uploaderId'>;
+  namaFileJawaban?: string | null;
+  fileUrlJawaban?: string | null;
+  catatanSiswa?: string | null;
+  dikumpulkanPada: string; // ISO String
+  status: SubmissionStatus;
+  nilai?: number | null;
+  feedbackGuru?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 
 // Re-exporting TestTipe and TestStatus from entity types for use in frontend
 export type TestTipe = TestEntityType;
@@ -219,6 +244,67 @@ export interface Test {
   uploader?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>;
   createdAt?: string;
   updatedAt?: string;
+  // For siswa - a way to know if they've started/finished
+  submissionId?: string | null; // ID of their TestSubmission if exists
+  statusPengerjaanSiswa?: "Belum Dikerjakan" | "Sedang Dikerjakan" | "Selesai" | "Dinilai";
+  nilai?: number | null; // Nilai siswa untuk test ini
+}
+
+export type TestSubmissionStatus = TestSubmissionStatusType;
+
+export interface TestSubmission {
+  id: string;
+  siswaId: string;
+  siswa?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email' | 'kelasId'>;
+  testId: string;
+  test?: Pick<Test, 'id' | 'judul' | 'mapel'>;
+  waktuMulai: string; // ISO String
+  waktuSelesai?: string | null; // ISO String
+  jawabanSiswa?: any; // JSONB to store answers, define more strictly if needed
+  nilai?: number | null;
+  status: TestSubmissionStatus;
+  catatanGuru?: string | null; // Added
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type StatusKehadiran = StatusKehadiranTypeEntity;
+
+export interface AbsensiSiswa {
+  id: string;
+  siswaId: string;
+  siswa?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email' | 'nis'>;
+  jadwalPelajaranId: string;
+  jadwalPelajaran?: Pick<JadwalPelajaran, 'id' | 'kelas' | 'mapel' | 'guru'>;
+  tanggalAbsensi: string; // YYYY-MM-DD
+  statusKehadiran: StatusKehadiran;
+  catatan?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type SemesterType = SemesterTypeEntity;
+
+export interface NilaiSemesterSiswa {
+  id: string;
+  siswaId: string;
+  siswa?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email' | 'nis' | 'kelasId'>;
+  mapelId: string;
+  mapel?: Pick<MataPelajaranEntity, 'id' | 'nama' | 'kode'>;
+  kelasId: string;
+  semester: SemesterType;
+  tahunAjaran: string;
+  nilaiTugas?: number | null;
+  nilaiUTS?: number | null;
+  nilaiUAS?: number | null;
+  nilaiHarian?: number | null;
+  nilaiAkhir?: number | null;
+  predikat?: string | null;
+  catatanGuru?: string | null;
+  dicatatOlehGuruId: string;
+  dicatatOlehGuru?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 
@@ -227,4 +313,3 @@ export {
     FASE_CP_CONST as FASE_CP,
     JENIS_MATERI_AJAR // Now correctly re-exporting the imported constant
 };
-

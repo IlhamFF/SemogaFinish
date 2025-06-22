@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/siswa/tugas/page": "app/(authenticated)/siswa/tugas/page.js"
+}

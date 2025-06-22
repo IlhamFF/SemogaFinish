@@ -1,5 +1,4 @@
-
-// Tidak perlu AuthProvider lagi di sini karena sudah ada di RootLayout
+// Tidak ada perubahan diperlukan di file ini, AppLayout sudah benar.
 import { AppLayout } from "@/components/layout/app-layout";
 
 export default function AuthenticatedLayout({

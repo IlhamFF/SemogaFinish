@@ -7,22 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
-import { FilePlus2, ListTodo, Edit3, CalendarClock, CheckSquare, PlusCircle, Search, Loader2, Trash2 } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FilePlus2, ListTodo, Edit3, CalendarClock, CheckSquare, PlusCircle, Search, Loader2, Trash2, User, ExternalLink, Download } from "lucide-react";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format, formatISO, parseISO } from "date-fns";
+import { format, formatISO, parseISO, isPast, formatDistanceToNow } from "date-fns";
 import { id as localeID } from 'date-fns/locale';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { MOCK_SUBJECTS, SCHOOL_CLASSES_PER_MAJOR_GRADE, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS } from "@/lib/constants";
-import type { Tugas } from "@/types"; // Import Tugas from global types
+import { SCHOOL_CLASSES_PER_MAJOR_GRADE, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS } from "@/lib/constants";
+import type { Tugas as TugasType, TugasSubmission, SubmissionStatus, JadwalPelajaran } from "@/types"; 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -31,9 +31,9 @@ const tugasSchema = z.object({
   judul: z.string().min(5, { message: "Judul tugas minimal 5 karakter." }),
   mapel: z.string({ required_error: "Mata pelajaran wajib dipilih." }),
   kelas: z.string({ required_error: "Kelas wajib dipilih." }),
-  tenggat: z.date({ required_error: "Tanggal tenggat wajib diisi." }), // Form uses Date object
+  tenggat: z.date({ required_error: "Tanggal tenggat wajib diisi." }), 
   deskripsi: z.string().optional().nullable(),
-  fileLampiranInput: z.any().optional(), // For file input in form
+  fileLampiranInput: z.any().optional(), 
 });
 
 type TugasFormValues = z.infer<typeof tugasSchema>;
@@ -43,16 +43,26 @@ export default function GuruTugasPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  const [tugasList, setTugasList] = useState<Tugas[]>([]);
+  const [tugasList, setTugasList] = useState<TugasType[]>([]);
   const [isLoadingTugas, setIsLoadingTugas] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterMapel, setFilterMapel] = useState("semua");
   const [filterKelas, setFilterKelas] = useState("semua");
   
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingTugas, setEditingTugas] = useState<Tugas | null>(null);
+  const [editingTugas, setEditingTugas] = useState<TugasType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tugasToDelete, setTugasToDelete] = useState<Tugas | null>(null);
+  const [tugasToDelete, setTugasToDelete] = useState<TugasType | null>(null);
+
+  const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
+  const [selectedTugasForGrading, setSelectedTugasForGrading] = useState<TugasType | null>(null);
+  const [submissionsForGrading, setSubmissionsForGrading] = useState<TugasSubmission[]>([]);
+  const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+  const [gradingValues, setGradingValues] = useState<Record<string, { nilai: string; feedbackGuru: string }>>({});
+  const [isGradingSubmitting, setIsGradingSubmitting] = useState<Record<string, boolean>>({});
+
+  const [teachingSubjects, setTeachingSubjects] = useState<string[]>([]);
+  const [isLoadingTeachingSubjects, setIsLoadingTeachingSubjects] = useState(true);
 
 
   const tugasForm = useForm<TugasFormValues>({
@@ -81,7 +91,7 @@ export default function GuruTugasPage() {
         const errorData = await response.json();
         throw new Error(errorData.message || "Gagal mengambil data tugas.");
       }
-      const data: Tugas[] = await response.json();
+      const data: TugasType[] = await response.json();
       setTugasList(data.map(t => ({...t, tenggat: t.tenggat ? parseISO(t.tenggat).toISOString() : new Date().toISOString() })));
     } catch (error: any) {
       toast({ title: "Error Tugas", description: error.message, variant: "destructive" });
@@ -89,12 +99,29 @@ export default function GuruTugasPage() {
       setIsLoadingTugas(false);
     }
   }, [user, toast]);
+  
+  const fetchTeachingSubjects = useCallback(async () => {
+    if (!user || !user.id) return;
+    setIsLoadingTeachingSubjects(true);
+    try {
+      const response = await fetch(`/api/jadwal/pelajaran?guruId=${user.id}`);
+      if (!response.ok) throw new Error("Gagal mengambil data jadwal mengajar.");
+      const jadwalList: JadwalPelajaran[] = await response.json();
+      const uniqueSubjects = [...new Set(jadwalList.map(j => j.mapel.nama).filter(Boolean))].sort();
+      setTeachingSubjects(uniqueSubjects);
+    } catch (error: any) {
+      toast({ title: "Error Data Mapel", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoadingTeachingSubjects(false);
+    }
+  }, [user, toast]);
 
   useEffect(() => {
     if (user && (user.role === 'guru' || user.role === 'superadmin')) {
       fetchTugas();
+      fetchTeachingSubjects();
     }
-  }, [user, fetchTugas]);
+  }, [user, fetchTugas, fetchTeachingSubjects]);
 
   useEffect(() => {
     if (isFormOpen) {
@@ -105,7 +132,7 @@ export default function GuruTugasPage() {
           kelas: editingTugas.kelas,
           tenggat: editingTugas.tenggat ? parseISO(editingTugas.tenggat) : new Date(),
           deskripsi: editingTugas.deskripsi || "",
-          fileLampiranInput: undefined, // File input cannot be pre-filled for security reasons
+          fileLampiranInput: undefined, 
         });
       } else {
         tugasForm.reset({ judul: "", mapel: undefined, kelas: undefined, tenggat: new Date(new Date().setDate(new Date().getDate() + 7)), deskripsi: "", fileLampiranInput: undefined });
@@ -121,20 +148,18 @@ export default function GuruTugasPage() {
   const handleFormSubmit = async (values: TugasFormValues) => {
     setIsSubmitting(true);
     
-    const payload: Partial<Tugas> & {tenggat: string, namaFileLampiran?: string | null} = {
+    const payload: Partial<TugasType> & {tenggat: string, namaFileLampiran?: string | null} = {
       judul: values.judul,
       mapel: values.mapel,
       kelas: values.kelas,
-      tenggat: formatISO(values.tenggat), // Convert Date to ISO string for API
+      tenggat: formatISO(values.tenggat), 
       deskripsi: values.deskripsi,
       namaFileLampiran: values.fileLampiranInput ? (values.fileLampiranInput as File).name : (editingTugas ? editingTugas.namaFileLampiran : null),
     };
     
-    // If not editing or if file is changed during edit, set namaFileLampiran from input
     if (!editingTugas || (editingTugas && values.fileLampiranInput)) {
         payload.namaFileLampiran = values.fileLampiranInput ? (values.fileLampiranInput as File).name : null;
     } else if (editingTugas && !values.fileLampiranInput) {
-        // If editing and no new file selected, retain the old file name
         payload.namaFileLampiran = editingTugas.namaFileLampiran;
     }
 
@@ -152,7 +177,7 @@ export default function GuruTugasPage() {
         const errorData = await response.json();
         throw new Error(errorData.message || `Gagal ${editingTugas ? 'memperbarui' : 'membuat'} tugas.`);
       }
-      toast({ title: "Berhasil!", description: `Tugas "${values.judul}" telah ${editingTugas ? 'diperbarui' : 'dibuat'}.` });
+      toast({ title: "Berhasil!", description: `Tugas "${values.judul}" telah ${editingTugas ? 'diperbarui' : 'ditambahkan'}.` });
       setIsFormOpen(false);
       setEditingTugas(null);
       fetchTugas();
@@ -163,12 +188,12 @@ export default function GuruTugasPage() {
     }
   };
   
-  const openFormDialog = (tugas?: Tugas) => {
+  const openFormDialog = (tugas?: TugasType) => {
     setEditingTugas(tugas || null);
     setIsFormOpen(true);
   }
 
-  const openDeleteDialog = (tugas: Tugas) => {
+  const openDeleteDialog = (tugas: TugasType) => {
     setTugasToDelete(tugas);
   };
 
@@ -201,13 +226,88 @@ export default function GuruTugasPage() {
   const uniqueMapelOptions = ["semua", ...new Set(tugasList.map(t => t.mapel).sort())];
   const uniqueKelasOptions = ["semua", ...new Set(tugasList.map(t => t.kelas).sort())];
 
-  const getStatusTugas = (tugas: Tugas): Tugas["status"] => {
-    // This is a simplified status logic for frontend display
-    // Real status would involve checking submissions, grading, etc.
-    if (new Date(tugas.tenggat) < new Date() && tugas.status !== "Ditutup") { // Assuming Draf is not an API status
-        return "Ditutup"; // Auto-close past due tasks for display if not explicitly closed
+  const getStatusTugas = (tugas: TugasType): TugasType["status"] => {
+    if (new Date(tugas.tenggat) < new Date() && tugas.status !== "Ditutup") {
+        return "Ditutup"; 
     }
-    return tugas.status || "Aktif"; // Default to Aktif if no status from API
+    return tugas.status || "Aktif"; 
+  };
+
+  const handleOpenGradingDialog = async (tugas: TugasType) => {
+    setSelectedTugasForGrading(tugas);
+    setIsLoadingSubmissions(true);
+    setIsGradingDialogOpen(true);
+    setGradingValues({}); // Reset grading values
+    try {
+      const response = await fetch(`/api/tugas/${tugas.id}/submissions`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengambil data pengumpulan.");
+      }
+      const submissions: TugasSubmission[] = await response.json();
+      setSubmissionsForGrading(submissions);
+      // Initialize gradingValues with existing data
+      const initialGradingValues: Record<string, { nilai: string; feedbackGuru: string }> = {};
+      submissions.forEach(sub => {
+        initialGradingValues[sub.id] = {
+          nilai: sub.nilai?.toString() || "",
+          feedbackGuru: sub.feedbackGuru || ""
+        };
+      });
+      setGradingValues(initialGradingValues);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setSubmissionsForGrading([]);
+    } finally {
+      setIsLoadingSubmissions(false);
+    }
+  };
+  
+  const handleGradingInputChange = (submissionId: string, field: 'nilai' | 'feedbackGuru', value: string) => {
+    setGradingValues(prev => ({
+      ...prev,
+      [submissionId]: {
+        ...prev[submissionId],
+        [field]: value,
+      }
+    }));
+  };
+
+  const handleGradeSubmission = async (submission: TugasSubmission) => {
+    const gradeData = gradingValues[submission.id];
+    if (!gradeData) {
+      toast({ title: "Data Tidak Lengkap", description: "Nilai atau feedback belum diisi.", variant: "destructive" });
+      return;
+    }
+    
+    const parsedNilai = parseFloat(gradeData.nilai);
+    if (isNaN(parsedNilai) || parsedNilai < 0 || parsedNilai > 100) {
+      toast({ title: "Nilai Tidak Valid", description: "Nilai harus antara 0 dan 100.", variant: "destructive" });
+      return;
+    }
+
+    setIsGradingSubmitting(prev => ({...prev, [submission.id]: true}));
+    try {
+      const response = await fetch(`/api/tugas/submissions/${submission.id}/grade`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nilai: parsedNilai, feedbackGuru: gradeData.feedbackGuru }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal menyimpan penilaian.");
+      }
+      toast({ title: "Penilaian Disimpan", description: `Nilai untuk ${submission.siswa?.fullName || submission.siswa?.name} telah disimpan.` });
+      setSubmissionsForGrading(prev => 
+        prev.map(sub => 
+          sub.id === submission.id ? { ...sub, nilai: parsedNilai, feedbackGuru: gradeData.feedbackGuru, status: "Dinilai" } : sub
+        )
+      );
+    } catch (error: any) {
+      toast({ title: "Error Penilaian", description: error.message, variant: "destructive" });
+    } finally {
+      setIsGradingSubmitting(prev => ({...prev, [submission.id]: false}));
+    }
   };
 
 
@@ -275,7 +375,6 @@ export default function GuruTugasPage() {
                     <TableHead>Judul Tugas</TableHead>
                     <TableHead>Mapel & Kelas</TableHead>
                     <TableHead>Tenggat</TableHead>
-                    <TableHead>Pengumpulan</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Tindakan</TableHead>
                   </TableRow>
@@ -294,14 +393,13 @@ export default function GuruTugasPage() {
                         <div className="text-xs text-muted-foreground">{tugas.kelas}</div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{format(parseISO(tugas.tenggat), "dd MMM yyyy, HH:mm", { locale: localeID })}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{tugas.terkumpul ?? 0}/{tugas.totalSiswa ?? 30}</TableCell> {/* Mocked */}
                       <TableCell>
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusTugas === "Aktif" ? "bg-green-100 text-green-800" : statusTugas === "Ditutup" ? "bg-gray-100 text-gray-800" : "bg-yellow-100 text-yellow-800"}`}>
                           {statusTugas}
                         </span>
                       </TableCell>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Button variant="ghost" size="sm" onClick={() => toast({title: "Fitur Dalam Pengembangan", description: "Fitur lihat pengumpulan tugas belum tersedia."})} className="mr-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleOpenGradingDialog(tugas)} className="mr-1">
                           <Search className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => openFormDialog(tugas)} className="mr-1">
@@ -323,42 +421,9 @@ export default function GuruTugasPage() {
               <p className="mt-1 text-sm text-muted-foreground">Filter tidak menemukan hasil atau belum ada tugas yang dibuat.</p>
             </div>
           )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl">
-                <CalendarClock className="mr-3 h-5 w-5 text-primary" />
-                Fitur Tambahan Manajemen Tugas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <Button variant="outline" onClick={() => toast({title:"Placeholder", description:"Bank Soal/Tugas belum diimplementasikan."})} className="justify-start text-left h-auto py-3">
-                <ListTodo className="mr-3 h-5 w-5" />
-                <div>
-                  <p className="font-semibold">Bank Soal/Tugas</p>
-                  <p className="text-xs text-muted-foreground">Gunakan template tugas.</p>
-                </div>
-              </Button>
-              <Button variant="outline" onClick={() => toast({title:"Placeholder", description:"Pengaturan Notifikasi belum diimplementasikan."})} className="justify-start text-left h-auto py-3">
-                <CheckSquare className="mr-3 h-5 w-5" />
-                 <div>
-                  <p className="font-semibold">Notifikasi Pengingat</p>
-                  <p className="text-xs text-muted-foreground">Atur pengingat untuk siswa.</p>
-                </div>
-              </Button>
-               <Button variant="outline" onClick={() => toast({title:"Placeholder", description:"Integrasi Penilaian belum diimplementasikan."})} className="justify-start text-left h-auto py-3">
-                <Edit3 className="mr-3 h-5 w-5" />
-                 <div>
-                  <p className="font-semibold">Integrasi Penilaian</p>
-                  <p className="text-xs text-muted-foreground">Hubungkan ke modul nilai.</p>
-                </div>
-              </Button>
-            </CardContent>
-          </Card>
         </CardContent>
       </Card>
 
-      {/* Dialog Form Tambah/Edit Tugas */}
       <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingTugas(null); }}>
         <DialogContent className="sm:max-w-lg">
             <DialogHeader>
@@ -369,8 +434,8 @@ export default function GuruTugasPage() {
                 <form onSubmit={tugasForm.handleSubmit(handleFormSubmit)} className="space-y-4 py-2">
                     <FormField control={tugasForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Tugas</FormLabel><FormControl><Input placeholder="Contoh: Latihan Soal Bab 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <FormField control={tugasForm.control} name="mapel" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih mapel" /></SelectTrigger></FormControl><SelectContent>{MOCK_SUBJECTS.map(subject => (<SelectItem key={subject} value={subject}>{subject}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-                        <FormField control={tugasForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas Ditugaskan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kelas" /></SelectTrigger></FormControl><SelectContent>{mockKelasList.map(kls => (<SelectItem key={kls} value={kls}>{kls}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                        <FormField control={tugasForm.control} name="mapel" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger>{isLoadingTeachingSubjects ? <Loader2 className="h-4 w-4 animate-spin" /> : <SelectValue placeholder="Pilih mapel" />}</SelectTrigger></FormControl><SelectContent>{teachingSubjects.map(subject => (<SelectItem key={subject} value={subject}>{subject}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                        <FormField control={tugasForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas Ditugaskan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kelas" /></SelectTrigger></FormControl><SelectContent><ScrollArea className="h-60">{mockKelasList.map(kls => (<SelectItem key={kls} value={kls}>{kls}</SelectItem>))}</ScrollArea></SelectContent></Select><FormMessage /></FormItem>)} />
                     </div>
                     <FormField control={tugasForm.control} name="tenggat" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Tanggal & Waktu Tenggat</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP HH:mm", { locale: localeID }) : <span>Pilih tanggal & waktu</span>}<CalendarClock className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /><div className="p-3 border-t border-border"><Input type="time" defaultValue={field.value ? format(field.value, "HH:mm") : "23:59"} onChange={(e) => { const time = e.target.value.split(':'); const newDate = new Date(field.value || new Date()); newDate.setHours(parseInt(time[0]), parseInt(time[1])); field.onChange(newDate); }} className="w-full"/></div></PopoverContent></Popover><FormMessage /></FormItem>)} />
                     <FormField control={tugasForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi Tugas (Opsional)</FormLabel><FormControl><Textarea placeholder="Instruksi detail untuk siswa..." {...field} value={field.value ?? ""} rows={3} /></FormControl><FormMessage /></FormItem>)} />
@@ -398,6 +463,92 @@ export default function GuruTugasPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Penilaian Tugas: {selectedTugasForGrading?.judul}</DialogTitle>
+            <DialogDescription>
+              Lihat pengumpulan siswa dan berikan nilai serta feedback. Mapel: {selectedTugasForGrading?.mapel}, Kelas: {selectedTugasForGrading?.kelas}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-grow overflow-y-auto py-4">
+            {isLoadingSubmissions ? (
+              <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+            ) : submissionsForGrading.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">Nama Siswa</TableHead>
+                    <TableHead>Dikumpulkan Pada</TableHead>
+                    <TableHead>File Jawaban</TableHead>
+                    <TableHead className="w-[100px]">Nilai (0-100)</TableHead>
+                    <TableHead>Feedback Guru</TableHead>
+                    <TableHead className="text-right w-[120px]">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {submissionsForGrading.map((sub) => (
+                    <TableRow key={sub.id}>
+                      <TableCell className="font-medium">{sub.siswa?.fullName || sub.siswa?.name || sub.siswaId}</TableCell>
+                      <TableCell>{format(parseISO(sub.dikumpulkanPada), "dd MMM yyyy, HH:mm", { locale: localeID })}</TableCell>
+                      <TableCell>
+                        {sub.fileUrlJawaban ? (
+                          <Button variant="link" size="sm" asChild className="p-0 h-auto">
+                            <a href={sub.fileUrlJawaban} target="_blank" rel="noopener noreferrer" className="text-xs">
+                              {sub.namaFileJawaban || "Lihat File"} <ExternalLink className="inline-block ml-1 h-3 w-3"/>
+                            </a>
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Tidak ada file</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0" max="100"
+                          value={gradingValues[sub.id]?.nilai || ""}
+                          onChange={(e) => handleGradingInputChange(sub.id, "nilai", e.target.value)}
+                          className="h-8 text-sm"
+                          disabled={isGradingSubmitting[sub.id] || sub.status === "Dinilai"}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Textarea
+                          value={gradingValues[sub.id]?.feedbackGuru || ""}
+                          onChange={(e) => handleGradingInputChange(sub.id, "feedbackGuru", e.target.value)}
+                          className="text-xs min-h-[40px]"
+                          rows={2}
+                          placeholder="Feedback singkat..."
+                          disabled={isGradingSubmitting[sub.id] || sub.status === "Dinilai"}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {sub.status !== "Dinilai" ? (
+                            <Button size="sm" onClick={() => handleGradeSubmission(sub)} disabled={isGradingSubmitting[sub.id]}>
+                            {isGradingSubmitting[sub.id] && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                            Simpan Nilai
+                            </Button>
+                        ) : (
+                            <span className="text-xs text-green-600 font-semibold">Sudah Dinilai</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-center text-muted-foreground py-6">Belum ada siswa yang mengumpulkan tugas ini.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+                <Button variant="outline">Tutup</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

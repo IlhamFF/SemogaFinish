@@ -1,13 +1,11 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { MateriAjarEntity } from "@/entities/materi-ajar.entity";
 import * as z from "zod";
 import { JENIS_MATERI_AJAR, type JenisMateriAjarType } from "@/types";
-import type { User } from '@/types'; // Import User from your types for session user structure
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const materiAjarUpdateSchema = z.object({
   judul: z.string().min(3, { message: "Judul minimal 3 karakter." }).max(255).optional(),
@@ -28,16 +26,14 @@ const materiAjarUpdateSchema = z.object({
     path: ["fileUrl"],
 });
 
-// GET /api/kurikulum/materi-ajar/[id] - Mendapatkan satu materi ajar
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'guru' && session.user.role !== 'superadmin' && session.user.role !== 'siswa')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -55,6 +51,9 @@ export async function GET(
     if (!materi) {
       return NextResponse.json({ message: "Materi ajar tidak ditemukan." }, { status: 404 });
     }
+    // Siswa hanya bisa lihat materi jika relevan dengan mapelnya (logika ini bisa di client atau diperketat di sini)
+    // Guru bisa lihat semua, atau hanya materi yang diuploadnya (tergantung kebutuhan)
+    // Admin/Superadmin bisa lihat semua
     return NextResponse.json({
         ...materi,
         uploader: materi.uploader ? { id: materi.uploader.id, name: materi.uploader.name, fullName: materi.uploader.fullName, email: materi.uploader.email } : undefined
@@ -65,18 +64,14 @@ export async function GET(
   }
 }
 
-// PUT /api/kurikulum/materi-ajar/[id] - Memperbarui materi ajar
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification
-  // const session = await getServerSession(authOptions); // REMOVED
-  // For now, assume any authenticated user (if check was present) or specific roles can update.
-  // This needs proper auth. For demo, we'll assume uploaderId check for guru.
-  // if (!session || !session.user || (session.user.role !== 'admin' && session.user.role !== 'guru' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -105,7 +100,7 @@ export async function PUT(
             if (validatedData.namaFileOriginal) {
               updateData.fileUrl = `/uploads/materi/${Date.now()}-${validatedData.namaFileOriginal.replace(/\s+/g, '_')}`;
             } else {
-              updateData.fileUrl = null; // Clear fileUrl if namaFileOriginal is cleared
+              updateData.fileUrl = null;
             }
         }
     } else if (validatedData.jenisMateri === "Link") {
@@ -137,8 +132,10 @@ export async function PUT(
     if (!existingMateri) {
         return NextResponse.json({ message: "Materi ajar tidak ditemukan." }, { status: 404 });
     }
-    // TODO: Add role-based authorization check here if session.user.role was available
-    // For example: if (session.user.role === 'guru' && existingMateri.uploaderId !== session.user.id) { ... }
+
+    if (authenticatedUser.role !== 'admin' && authenticatedUser.role !== 'superadmin' && existingMateri.uploaderId !== authenticatedUser.id) {
+      return NextResponse.json({ message: "Akses ditolak. Anda bukan pemilik materi ini." }, { status: 403 });
+    }
 
     const updateResult = await materiRepo.update(id, updateData);
 
@@ -158,16 +155,14 @@ export async function PUT(
   }
 }
 
-// DELETE /api/kurikulum/materi-ajar/[id] - Menghapus materi ajar
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || !session.user || (session.user.role !== 'admin' && session.user.role !== 'guru' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -182,8 +177,10 @@ export async function DELETE(
     if (!materiToDelete) {
         return NextResponse.json({ message: "Materi ajar tidak ditemukan." }, { status: 404 });
     }
-    // TODO: Add role-based authorization check here
-    // For example: if (session.user.role === 'guru' && materiToDelete.uploaderId !== session.user.id) { ... }
+    
+    if (authenticatedUser.role !== 'admin' && authenticatedUser.role !== 'superadmin' && materiToDelete.uploaderId !== authenticatedUser.id) {
+      return NextResponse.json({ message: "Akses ditolak. Anda bukan pemilik materi ini." }, { status: 403 });
+    }
     
     const deleteResult = await materiRepo.delete(id);
 

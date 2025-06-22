@@ -7,6 +7,7 @@ import type { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
 import type { SilabusEntity } from "./silabus.entity";
 import type { RppEntity } from "./rpp.entity";
 import type { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
+import type { NilaiSemesterSiswaEntity } from "./nilai-semester-siswa.entity"; // Ditambahkan
 
 // export type KategoriMapelType = typeof KATEGORI_MAPEL[number]; // Already defined
 
@@ -42,6 +43,9 @@ export class MataPelajaranEntity {
 
   @OneToMany("JadwalPelajaranEntity", (jadwal) => jadwal.mapel)
   jadwalPelajaranEntries?: JadwalPelajaranEntity[];
+
+  @OneToMany("NilaiSemesterSiswaEntity", (nilai) => nilai.mapel) // Relasi ke nilai siswa
+  nilaiSemesterSiswaEntries?: NilaiSemesterSiswaEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;

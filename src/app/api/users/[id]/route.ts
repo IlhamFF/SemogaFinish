@@ -1,12 +1,11 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // Removed
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // Removed
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import * as z from "zod";
 import type { Role } from "@/types";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const userUpdateSchema = z.object({
   role: z.enum(['admin', 'guru', 'siswa', 'pimpinan']).optional(),
@@ -23,32 +22,32 @@ const userUpdateSchema = z.object({
   avatarUrl: z.string().url({ message: "URL Avatar tidak valid." }).optional().nullable().or(z.literal('')),
   kelas: z.string().optional().nullable(), // Maps to kelasId
   mataPelajaran: z.string().optional().nullable(),
-  // firebaseUid should not be updated by admin frequently, only if linking an existing local profile
-  // firebaseUid: z.string().optional().nullable(),
 });
 
-// GET /api/users/[id] - Mendapatkan satu pengguna
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin
-  // const session = await getServerSession(authOptions); // Removed
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // Removed
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // Removed
-  // } // Removed
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  
+  const userIdToView = params.id;
 
-  const { id } = params;
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role) && userIdToView !== authenticatedUser.id) {
+    return NextResponse.json({ message: "Akses ditolak untuk melihat profil pengguna lain." }, { status: 403 });
+  }
 
   try {
     const dataSource = await getInitializedDataSource();
     const userRepo = dataSource.getRepository(UserEntity);
     const user = await userRepo.findOne({ 
-        where: { id },
+        where: { id: userIdToView },
         select: [ 
             "id", "name", "email", "emailVerified", "image", "role", "isVerified", 
             "fullName", "phone", "address", "birthDate", "bio", "nis", "nip", 
-            "joinDate", "kelasId", "mataPelajaran", "firebaseUid", "createdAt", "updatedAt" // Added firebaseUid
+            "joinDate", "kelasId", "mataPelajaran", "firebaseUid", "createdAt", "updatedAt"
         ]
     });
 
@@ -62,25 +61,21 @@ export async function GET(
   }
 }
 
-// PUT /api/users/[id] - Memperbarui profil pengguna lokal (admin only)
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin
-  // const session = await getServerSession(authOptions); // Removed
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // Removed
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // Removed
-  // } // Removed
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  
+  // PUT /api/users/[id] is strictly for admin/superadmin actions
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Operasi ini hanya untuk admin." }, { status: 403 });
+  }
 
-  // // Additional check: Admin cannot change their own role unless they are superadmin (or prevent self-role change entirely from this endpoint)
-  // if (params.id === session.user.id && session.user.role !== 'superadmin') { // Removed
-  //     const bodyAttempt = await request.json(); // Removed
-  //     if (bodyAttempt.role && bodyAttempt.role !== session.user.role) { // Removed
-  //       return NextResponse.json({ message: "Admin tidak dapat mengubah peran diri sendiri." }, { status: 403 }); // Removed
-  //     } // Removed
-  // } // Removed
-
+  const userIdToUpdate = params.id;
 
   try {
     const body = await request.json();
@@ -90,16 +85,40 @@ export async function PUT(
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
     
+    const dataSource = await getInitializedDataSource();
+    const userRepo = dataSource.getRepository(UserEntity);
+    const targetUser = await userRepo.findOneBy({ id: userIdToUpdate });
+
+    if (!targetUser) {
+      return NextResponse.json({ message: "Pengguna yang akan diupdate tidak ditemukan." }, { status: 404 });
+    }
+    
     const updateData: Partial<UserEntity> = {};
     const validatedData = validation.data;
 
-    if (validatedData.role) updateData.role = validatedData.role as Role;
-    if (validatedData.isVerified !== undefined) {
-        updateData.isVerified = validatedData.isVerified;
-        if (validatedData.isVerified) updateData.emailVerified = new Date();
-        else updateData.emailVerified = null; // Explicitly nullify if un-verifying
+    // Role change logic
+    if (validatedData.role) {
+      if (targetUser.role === 'superadmin' && validatedData.role !== 'superadmin') {
+        return NextResponse.json({ message: "Peran Superadmin tidak dapat diubah." }, { status: 403 });
+      }
+      if (targetUser.role === 'admin' && authenticatedUser.role !== 'superadmin' && validatedData.role !== 'admin') {
+        return NextResponse.json({ message: "Admin hanya dapat diubah perannya oleh Superadmin." }, { status: 403 });
+      }
+      if (userIdToUpdate === authenticatedUser.id && authenticatedUser.role !== 'superadmin' && validatedData.role !== authenticatedUser.role) {
+          return NextResponse.json({ message: "Admin tidak dapat mengubah peran diri sendiri." }, { status: 403 });
+      }
+      updateData.role = validatedData.role as Role;
     }
-    if (validatedData.fullName) updateData.fullName = validatedData.fullName;
+
+    // Verification status change logic
+    if (validatedData.isVerified !== undefined) {
+      updateData.isVerified = validatedData.isVerified;
+      if (validatedData.isVerified) updateData.emailVerified = new Date();
+      else updateData.emailVerified = null;
+    }
+
+    // Other profile data
+    if (validatedData.fullName !== undefined) updateData.fullName = validatedData.fullName;
     if (validatedData.name !== undefined) updateData.name = validatedData.name;
     if (validatedData.phone !== undefined) updateData.phone = validatedData.phone;
     if (validatedData.address !== undefined) updateData.address = validatedData.address;
@@ -111,27 +130,24 @@ export async function PUT(
     if (validatedData.avatarUrl !== undefined) updateData.image = validatedData.avatarUrl;
     if (validatedData.kelas !== undefined) updateData.kelasId = validatedData.kelas;
     if (validatedData.mataPelajaran !== undefined) updateData.mataPelajaran = [validatedData.mataPelajaran];
-    // firebaseUid is not updated here by admin directly, handled at creation or by a specific linking process
+
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ message: "Tidak ada data untuk diperbarui." }, { status: 400 });
     }
 
-    const dataSource = await getInitializedDataSource();
-    const userRepo = dataSource.getRepository(UserEntity);
-
-    const updateResult = await userRepo.update(params.id, updateData);
+    const updateResult = await userRepo.update(userIdToUpdate, updateData);
 
     if (updateResult.affected === 0) {
       return NextResponse.json({ message: "Pengguna tidak ditemukan untuk diperbarui." }, { status: 404 });
     }
 
     const updatedUser = await userRepo.findOne({
-        where: { id: params.id },
+        where: { id: userIdToUpdate },
         select: [
             "id", "name", "email", "emailVerified", "image", "role", "isVerified", 
             "fullName", "phone", "address", "birthDate", "bio", "nis", "nip", 
-            "joinDate", "kelasId", "mataPelajaran", "firebaseUid", "createdAt", "updatedAt" // Added firebaseUid
+            "joinDate", "kelasId", "mataPelajaran", "firebaseUid", "createdAt", "updatedAt"
         ]
     });
     return NextResponse.json(updatedUser);
@@ -142,55 +158,53 @@ export async function PUT(
   }
 }
 
-// DELETE /api/users/[id] - Menghapus pengguna (admin only)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin
-  // const session = await getServerSession(authOptions); // Removed
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // Removed
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // Removed
-  // } // Removed
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat menghapus pengguna." }, { status: 403 });
+  }
 
-  // // Prevent self-deletion and admin deleting other admins (unless superadmin)
-  // if (params.id === session.user.id) { // Removed
-  //   return NextResponse.json({ message: "Tidak dapat menghapus akun diri sendiri." }, { status: 400 }); // Removed
-  // } // Removed
+  const userIdToDelete = params.id;
+
+  if (userIdToDelete === authenticatedUser.id) {
+    return NextResponse.json({ message: "Tidak dapat menghapus akun diri sendiri." }, { status: 400 });
+  }
 
   try {
     const dataSource = await getInitializedDataSource();
     const userRepo = dataSource.getRepository(UserEntity);
     
-    const userToDelete = await userRepo.findOneBy({ id: params.id });
+    const userToDelete = await userRepo.findOneBy({ id: userIdToDelete });
     if (!userToDelete) {
       return NextResponse.json({ message: "Pengguna tidak ditemukan." }, { status: 404 });
     }
-    // // Add refined role deletion logic here if session is available
-    // if (session) { // Check if session exists before using session.user
-    //     if (userToDelete.role === 'admin' && session.user.role !== 'superadmin') {
-    //         return NextResponse.json({ message: "Admin tidak dapat menghapus admin lain." }, { status: 403 });
-    //     }
-    //     if (userToDelete.role === 'superadmin') {
-    //         return NextResponse.json({ message: "Superadmin tidak dapat dihapus." }, { status: 403 });
-    //     }
-    // }
+    
+    if (userToDelete.role === 'superadmin') {
+        return NextResponse.json({ message: "Superadmin tidak dapat dihapus." }, { status: 403 });
+    }
+    // Admin tidak bisa menghapus admin lain, kecuali updater adalah superadmin
+    if (userToDelete.role === 'admin' && authenticatedUser.role !== 'superadmin') {
+        return NextResponse.json({ message: "Admin hanya bisa dihapus oleh Superadmin." }, { status: 403 });
+    }
 
-
-    const deleteResult = await userRepo.delete(params.id);
+    const deleteResult = await userRepo.delete(userIdToDelete);
 
     if (deleteResult.affected === 0) {
+      // This case should be rare if findOneBy succeeded, but good for completeness
       return NextResponse.json({ message: "Pengguna tidak ditemukan untuk dihapus." }, { status: 404 });
     }
     
-    // TODO: Delete user from Firebase Authentication as well using Firebase Admin SDK
-    // if (userToDelete.firebaseUid) {
-    //   // admin.auth().deleteUser(userToDelete.firebaseUid)...
-    // }
-
-    return NextResponse.json({ message: "Profil pengguna lokal berhasil dihapus. Akun Firebase mungkin perlu dihapus secara manual." });
+    return NextResponse.json({ message: "Profil pengguna lokal berhasil dihapus." });
   } catch (error) {
     console.error("Error deleting user:", error);
     return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
   }
 }
+
+    

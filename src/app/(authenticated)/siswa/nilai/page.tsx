@@ -1,44 +1,59 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Badge } from "@/components/ui/badge";
+import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from "@/hooks/use-auth";
-import { Award, FileSignature, TrendingUp, Download, Eye } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Award, FileSignature, TrendingUp, Download, Eye, UserCircle, CalendarDays, CheckCircle, Info, BookUser, Loader2 } from "lucide-react";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import type { NilaiSemesterSiswa } from '@/types';
 
-interface NilaiMataPelajaran {
-  id: string;
-  mapel: string;
-  guru: string;
-  nilaiAkhir: number;
-  predikat: string;
-  kkm: number;
-  kehadiran?: number; // persentase
-  catatan?: string;
-}
+const mockKehadiran = {
+  hadir: 100,
+  izin: 2,
+  sakit: 1,
+  alpha: 0,
+  totalHariEfektif: 103
+};
 
-const mockNilai: NilaiMataPelajaran[] = [
-  { id: "NIL001", mapel: "Matematika", guru: "Bu Ani", nilaiAkhir: 88, predikat: "A-", kkm: 75, kehadiran: 98 },
-  { id: "NIL002", mapel: "Fisika", guru: "Pak Eko", nilaiAkhir: 75, predikat: "B", kkm: 75, kehadiran: 95 },
-  { id: "NIL003", mapel: "Bahasa Indonesia", guru: "Pak Budi", nilaiAkhir: 92, predikat: "A", kkm: 70, kehadiran: 100 },
-  { id: "NIL004", mapel: "Kimia", guru: "Bu Rina", nilaiAkhir: 80, predikat: "B+", kkm: 75, kehadiran: 90, catatan: "Perlu ditingkatkan pemahaman pada bab Redoks." },
-  { id: "NIL005", mapel: "Bahasa Inggris", guru: "Ms. Jane", nilaiAkhir: 85, predikat: "A-", kkm: 70, kehadiran: 97 },
-];
-
-const chartData = mockNilai.map(n => ({ name: n.mapel, nilai: n.nilaiAkhir, kkm: n.kkm }));
 const chartConfig = {
-  nilai: { label: "Nilai Akhir", color: "hsl(var(--primary))" },
-  kkm: { label: "KKM", color: "hsl(var(--destructive))" },
+  nilaiAkhir: { label: "Nilai Akhir", color: "hsl(var(--primary))" },
 } satisfies ChartConfig;
-
 
 export default function SiswaNilaiPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
+
+  const [semesterGrades, setSemesterGrades] = useState<NilaiSemesterSiswa[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchGrades = useCallback(async () => {
+    if (!user) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/penilaian/semester/me');
+      if (!response.ok) {
+        throw new Error("Gagal mengambil data nilai semester.");
+      }
+      const data: NilaiSemesterSiswa[] = await response.json();
+      setSemesterGrades(data);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, toast]);
+
+  useEffect(() => {
+    fetchGrades();
+  }, [fetchGrades]);
+
 
   if (!user || (user.role !== 'siswa' && user.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Siswa untuk melihat halaman ini.</p>;
@@ -51,43 +66,87 @@ export default function SiswaNilaiPage() {
     alert(`Fungsi "${action}" ${detail ? `untuk ${detail} ` : ''}belum diimplementasikan.`);
   };
 
-  const ipk = mockNilai.length > 0 ? (mockNilai.reduce((acc, curr) => acc + curr.nilaiAkhir, 0) / mockNilai.length).toFixed(2) : "N/A";
+  const { averageGrade, totalGradedItems, chartData } = useMemo(() => {
+    const validGrades = semesterGrades.filter(item => typeof item.nilaiAkhir === 'number');
+    const total = validGrades.reduce((acc, curr) => acc + (curr.nilaiAkhir ?? 0), 0);
+    const avg = validGrades.length > 0 ? (total / validGrades.length).toFixed(2) : "N/A";
+    const chart = validGrades.map(item => ({ name: `${item.mapel?.nama} (${item.semester.substring(0,1)}${item.tahunAjaran.substring(2,4)})`, nilaiAkhir: item.nilaiAkhir }));
+    return { averageGrade: avg, totalGradedItems: validGrades.length, chartData: chart };
+  }, [semesterGrades]);
+  
+  const rataRataKehadiran = useMemo(() => {
+    return mockKehadiran.totalHariEfektif > 0 
+      ? ((mockKehadiran.hadir / mockKehadiran.totalHariEfektif) * 100).toFixed(1) + "%"
+      : "N/A";
+  }, []);
+  
+  const getPredikatBadgeVariant = (predikat: string | null | undefined): "default" | "secondary" | "destructive" | "outline" => {
+    switch (predikat) {
+      case "A": return "default";
+      case "B": return "secondary";
+      case "C": return "outline";
+      case "D":
+      case "E": return "destructive";
+      default: return "outline";
+    }
+  };
+
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-headline font-semibold flex items-center">
-        <Award className="mr-3 h-8 w-8 text-primary" />
-        Nilai & Rapor Saya
-      </h1>
-      <p className="text-muted-foreground">Lihat rekapitulasi nilai, kemajuan akademik, dan unduh rapor Anda.</p>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
+        <div>
+          <h1 className="text-3xl font-headline font-semibold flex items-center">
+            <Award className="mr-3 h-8 w-8 text-primary" />
+            Nilai & Rapor Saya
+          </h1>
+          <p className="text-muted-foreground">Lihat rekapitulasi nilai, kemajuan akademik, dan unduh rapor Anda.</p>
+        </div>
+        <Button onClick={() => handlePlaceholderAction("Unduh Rapor PDF")} variant="outline" className="w-full md:w-auto">
+            <Download className="mr-2 h-4 w-4" /> Unduh Rapor (PDF)
+        </Button>
+      </div>
+      
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-xl">Informasi Siswa</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+          <div><UserCircle className="inline-block mr-2 h-4 w-4 text-muted-foreground" /><strong>Nama:</strong> {user.fullName || user.name || "Siswa"}</div>
+          <div><Info className="inline-block mr-2 h-4 w-4 text-muted-foreground" /><strong>NIS:</strong> {user.nis || "-"}</div>
+          <div><BookUser className="inline-block mr-2 h-4 w-4 text-muted-foreground" /><strong>Kelas:</strong> {user.kelasId || "-"}</div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="shadow-md">
           <CardHeader className="pb-2">
-            <CardDescription>Indeks Prestasi Kumulatif (IPK)</CardDescription>
-            <CardTitle className="text-4xl text-primary">{ipk}</CardTitle>
+            <CardDescription>Rata-rata Nilai Keseluruhan</CardDescription>
+            <CardTitle className="text-4xl text-primary">{isLoading ? <Loader2 className="h-8 w-8 animate-spin" /> : averageGrade}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xs text-muted-foreground">Semester Genap 2023/2024</div>
+            <div className="text-xs text-muted-foreground">Dari {totalGradedItems} mata pelajaran yang dinilai</div>
           </CardContent>
         </Card>
          <Card className="shadow-md md:col-span-2">
           <CardHeader className="pb-2">
-            <CardDescription>Ringkasan Akademik</CardDescription>
-            <CardTitle className="text-2xl">Semester Ini</CardTitle>
+            <CardDescription>Ringkasan Akademik & Kehadiran</CardDescription>
+            <CardTitle className="text-2xl">Data Saat Ini</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 text-sm">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm pt-2">
             <div>
-                <p className="text-muted-foreground">Mata Pelajaran Lulus KKM:</p>
-                <p className="font-semibold">{mockNilai.filter(n => n.nilaiAkhir >= n.kkm).length} dari {mockNilai.length}</p>
+                <p className="text-muted-foreground">Total Mapel Dinilai:</p>
+                <p className="font-semibold text-lg">{isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : `${totalGradedItems} Mapel`}</p>
             </div>
-             <div>
-                <p className="text-muted-foreground">Rata-rata Kehadiran:</p>
-                <p className="font-semibold">
-                    {mockNilai.filter(n => n.kehadiran !== undefined).length > 0 
-                     ? (mockNilai.reduce((acc, curr) => acc + (curr.kehadiran || 0), 0) / mockNilai.filter(n => n.kehadiran !== undefined).length).toFixed(1) + "%"
-                     : "N/A"}
-                </p>
+            <div className="space-y-1">
+                <p className="text-muted-foreground">Rekap Kehadiran (Mock):</p>
+                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                    <Badge variant="default" className="bg-green-500 hover:bg-green-600">Hadir: {mockKehadiran.hadir}</Badge>
+                    <Badge variant="secondary">Izin: {mockKehadiran.izin}</Badge>
+                    <Badge variant="outline">Sakit: {mockKehadiran.sakit}</Badge>
+                    <Badge variant="destructive">Alpha: {mockKehadiran.alpha}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">Total Hari Efektif: {mockKehadiran.totalHariEfektif} ({rataRataKehadiran} hadir)</p>
             </div>
           </CardContent>
         </Card>
@@ -95,88 +154,77 @@ export default function SiswaNilaiPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Grafik Pencapaian Nilai</CardTitle>
-          <CardDescription>Perbandingan nilai akhir Anda dengan Kriteria Ketuntasan Minimal (KKM) per mata pelajaran.</CardDescription>
+          <CardTitle>Grafik Nilai Akhir per Mata Pelajaran</CardTitle>
+          <CardDescription>Perbandingan nilai akhir Anda dari setiap mata pelajaran yang telah dinilai.</CardDescription>
         </CardHeader>
         <CardContent className="h-[350px]">
-          <ChartContainer config={chartConfig} className="w-full h-full">
-            <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: -20 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="hsl(var(--foreground))" fontSize={10} interval={0} angle={-30} textAnchor="end" height={60} />
-              <YAxis tickLine={false} axisLine={false} stroke="hsl(var(--foreground))" fontSize={12} />
-              <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }}/>
-              <Legend />
-              <Bar dataKey="nilai" fill="var(--color-nilai)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="kkm" fill="var(--color-kkm)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ChartContainer>
+          {isLoading ? (
+             <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
+          ) : chartData.length > 0 ? (
+              <ChartContainer config={chartConfig} className="w-full h-full">
+                <ResponsiveContainer>
+                    <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: -20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="hsl(var(--foreground))" fontSize={10} interval={0} angle={-30} textAnchor="end" height={70} />
+                    <YAxis tickLine={false} axisLine={false} stroke="hsl(var(--foreground))" fontSize={12} domain={[0, 100]} />
+                    <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }}/>
+                    <Bar dataKey="nilaiAkhir" fill="var(--color-nilaiAkhir)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+          ) : (
+             <p className="text-center text-muted-foreground pt-10">Belum ada data nilai semester untuk ditampilkan di grafik.</p>
+          )}
         </CardContent>
       </Card>
 
       <Card className="shadow-lg">
         <CardHeader>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-                <div>
-                    <CardTitle>Rincian Nilai Mata Pelajaran</CardTitle>
-                    <CardDescription>Detail nilai akhir per mata pelajaran untuk semester saat ini.</CardDescription>
-                </div>
-                 <Button onClick={() => handlePlaceholderAction("Unduh Rapor PDF")} variant="outline">
-                    <Download className="mr-2 h-4 w-4" /> Unduh Rapor (PDF)
-                </Button>
-            </div>
+            <CardTitle>Rincian Nilai Semester</CardTitle>
+            <CardDescription>Detail nilai dari setiap mata pelajaran yang telah dinilai oleh guru.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Mata Pelajaran</TableHead>
-                  <TableHead>Guru</TableHead>
-                  <TableHead className="text-center">Nilai Akhir</TableHead>
-                  <TableHead className="text-center">Predikat</TableHead>
-                  <TableHead className="text-center">KKM</TableHead>
-                  <TableHead className="text-center">Kehadiran</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-right">Detail</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockNilai.map((nilai) => (
-                  <TableRow key={nilai.id} className={nilai.nilaiAkhir < nilai.kkm ? "bg-destructive/10" : ""}>
-                    <TableCell className="font-medium">{nilai.mapel}</TableCell>
-                    <TableCell>{nilai.guru}</TableCell>
-                    <TableCell className="text-center font-semibold">{nilai.nilaiAkhir}</TableCell>
-                    <TableCell className="text-center">{nilai.predikat}</TableCell>
-                    <TableCell className="text-center">{nilai.kkm}</TableCell>
-                    <TableCell className="text-center">{nilai.kehadiran !== undefined ? `${nilai.kehadiran}%` : '-'}</TableCell>
-                    <TableCell className="text-center">
-                        <Badge variant={nilai.nilaiAkhir >= nilai.kkm ? "default" : "destructive"} className={nilai.nilaiAkhir >= nilai.kkm ? "bg-green-500 hover:bg-green-600" : ""}>
-                            {nilai.nilaiAkhir >= nilai.kkm ? "Tuntas" : "Belum Tuntas"}
-                        </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => handlePlaceholderAction("Lihat Detail Nilai", nilai.mapel)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          {mockNilai.find(n => n.catatan) && (
-            <div className="mt-6 space-y-2">
-                <h3 className="text-md font-semibold">Catatan dari Guru:</h3>
-                {mockNilai.filter(n => n.catatan).map(n => (
-                    <Card key={`note-${n.id}`} className="p-3 bg-muted/30">
-                        <p className="text-sm font-medium">{n.mapel} ({n.guru}):</p>
-                        <p className="text-xs text-muted-foreground">{n.catatan}</p>
-                    </Card>
-                ))}
-            </div>
-          )}
+          <ScrollArea className="max-h-[500px] overflow-y-auto">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-20"><Loader2 className="h-8 w-8 animate-spin" /></div>
+            ) : semesterGrades.length > 0 ? (
+                <Table>
+                  <TableHeader className="sticky top-0 bg-card z-10">
+                    <TableRow>
+                      <TableHead>Mata Pelajaran</TableHead>
+                      <TableHead>Semester</TableHead>
+                      <TableHead>Tahun Ajaran</TableHead>
+                      <TableHead className="text-center">Nilai Akhir</TableHead>
+                      <TableHead className="text-center">Predikat</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {semesterGrades.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.mapel?.nama || "N/A"}</TableCell>
+                        <TableCell>{item.semester}</TableCell>
+                        <TableCell>{item.tahunAjaran}</TableCell>
+                        <TableCell className="text-center font-semibold text-lg">{item.nilaiAkhir ?? "-"}</TableCell>
+                        <TableCell className="text-center">
+                            {item.predikat ? <Badge variant={getPredikatBadgeVariant(item.predikat)}>{item.predikat}</Badge> : "-"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => handlePlaceholderAction("Lihat Detail Nilai", item.mapel?.nama)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+            ) : (
+                <p className="text-center text-muted-foreground py-10">Anda belum memiliki nilai semester yang tercatat.</p>
+            )}
+          </ScrollArea>
         </CardContent>
       </Card>
     </div>
   );
 }
+

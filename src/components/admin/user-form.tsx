@@ -19,10 +19,10 @@ import { Loader2, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isValid } from 'date-fns';
 import { id as localeID } from 'date-fns/locale';
+import { Switch } from "../ui/switch";
 
 const userFormSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
-  // Password is now optional for editing, required for creation (handled by page logic)
   password: z.string().min(6, { message: "Kata sandi minimal 6 karakter." }).optional().or(z.literal('')),
   role: z.enum(['admin', 'guru', 'siswa', 'pimpinan'], { required_error: "Peran wajib diisi." }),
   name: z.string().min(2, { message: "Nama panggilan minimal 2 karakter."}).optional().nullable(),
@@ -104,7 +104,7 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
           joinDate: parsedJoinDate || undefined,
           avatarUrl: editingUser.avatarUrl || "",
           kelas: editingUser.kelas || "",
-          mataPelajaran: editingUser.mataPelajaran || "",
+          mataPelajaran: Array.isArray(editingUser.mataPelajaran) ? editingUser.mataPelajaran.join(', ') : editingUser.mataPelajaran || "",
           isVerified: editingUser.isVerified,
         });
       } else {
@@ -119,17 +119,19 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
   }, [editingUser, form, isOpen]);
 
   const handleFormSubmit = async (values: UserFormValues) => {
-    const submitValues = {
-      ...values,
-      birthDate: values.birthDate ? values.birthDate : undefined,
-      joinDate: values.joinDate ? values.joinDate : undefined,
-    } as any; 
+    const submitValues: any = { ...values };
 
-    if (submitValues.birthDate && submitValues.birthDate instanceof Date) {
-        submitValues.birthDate = format(submitValues.birthDate, 'yyyy-MM-dd');
+    if (values.role === 'guru' && typeof values.mataPelajaran === 'string') {
+        submitValues.mataPelajaran = [values.mataPelajaran];
+    } else if (values.role !== 'guru') {
+        submitValues.mataPelajaran = null;
     }
-    if (submitValues.joinDate && submitValues.joinDate instanceof Date) {
-        submitValues.joinDate = format(submitValues.joinDate, 'yyyy-MM-dd');
+
+    if (values.birthDate && values.birthDate instanceof Date) {
+        submitValues.birthDate = format(values.birthDate, 'yyyy-MM-dd');
+    }
+    if (values.joinDate && values.joinDate instanceof Date) {
+        submitValues.joinDate = format(values.joinDate, 'yyyy-MM-dd');
     }
     
     await onSubmit(submitValues, editingUser);
@@ -141,7 +143,7 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
         <DialogHeader>
           <DialogTitle>{editingUser ? "Edit Pengguna" : "Buat Pengguna Lokal Baru"}</DialogTitle>
           <DialogDescription>
-            {editingUser ? "Perbarui detail pengguna." : "Isi detail untuk membuat profil pengguna lokal baru. Autentikasi akan dihandle oleh Firebase."}
+            {editingUser ? "Perbarui detail pengguna." : "Isi detail untuk membuat profil pengguna lokal baru."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -167,14 +169,14 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="pengguna@contoh.com" {...field} disabled={!!editingUser && !form.formState.defaultValues?.email} />
+                      <Input placeholder="pengguna@contoh.com" {...field} disabled={!!editingUser} />
                     </FormControl>
-                    {editingUser && !form.formState.defaultValues?.email && <FormDescription>Email tidak dapat diubah setelah profil dibuat.</FormDescription>}
+                    {editingUser && <FormDescription>Email tidak dapat diubah.</FormDescription>}
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              {!editingUser && ( // Only show password field for new user creation by admin
+              {!editingUser && (
                 <FormField
                     control={form.control}
                     name="password"
@@ -184,7 +186,7 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
                         <FormControl>
                         <Input type="password" placeholder="••••••••" {...field} />
                         </FormControl>
-                        <FormDescription>Pengguna akan diminta mengubah ini saat login pertama (Idealnya). Untuk Firebase, pengguna akan dibuat di Firebase secara terpisah.</FormDescription>
+                        <FormDescription>Pengguna akan diminta mengubah ini nanti.</FormDescription>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -235,7 +237,7 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
                   <FormItem>
                     <FormLabel>Nama Panggilan (Opsional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nama Panggilan" {...field} />
+                      <Input placeholder="Nama Panggilan" {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -387,8 +389,9 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
                         <FormItem>
                             <FormLabel>Mata Pelajaran yang Diampu</FormLabel>
                             <FormControl>
-                            <Input placeholder="Contoh: Matematika" {...field} value={field.value ?? ""} />
+                            <Input placeholder="Contoh: Matematika, Fisika" {...field} value={field.value ?? ""} />
                             </FormControl>
+                            <FormDescription>Pisahkan dengan koma jika lebih dari satu.</FormDescription>
                             <FormMessage />
                         </FormItem>
                         )}
@@ -426,7 +429,6 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
                     )}
                 />
             </div>
-            {editingUser && ( 
               <FormField
                 control={form.control}
                 name="isVerified"
@@ -435,21 +437,18 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
                     <div className="space-y-0.5">
                       <FormLabel>Status Verifikasi Lokal</FormLabel>
                       <FormDescription>
-                        Aktifkan jika profil lokal ini sudah terverifikasi (misalnya, Firebase email verified).
+                        Aktifkan jika profil lokal ini sudah terverifikasi.
                       </FormDescription>
                     </div>
                     <FormControl>
-                        <Input 
-                            type="checkbox" 
-                            checked={field.value} 
-                            onChange={field.onChange}
-                            className="h-5 w-5 ml-auto"
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
                         />
                     </FormControl>
                   </FormItem>
                 )}
               />
-            )}
 
 
             <DialogFooter className="pt-4">

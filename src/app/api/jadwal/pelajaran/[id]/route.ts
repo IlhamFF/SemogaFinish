@@ -1,8 +1,6 @@
 
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { JadwalPelajaranEntity } from "@/entities/jadwal-pelajaran.entity";
 import { UserEntity } from "@/entities/user.entity";
@@ -10,8 +8,8 @@ import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import { RuanganEntity } from "@/entities/ruangan.entity";
 import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import * as z from "zod";
-import { FindOptionsWhere, In, Not } from "typeorm"; // Make sure Not is imported
-
+import { FindOptionsWhere, In, Not } from "typeorm"; 
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const jadwalPelajaranUpdateSchema = z.object({
   hari: z.string().min(1, "Hari wajib diisi.").optional(),
@@ -34,13 +32,13 @@ async function checkKonflikUpdate(
 
   const { hari, kelas, slotWaktuId, guruId, ruanganId } = data;
 
-  let konflik = await jadwalRepo.findOne({ where: { hari, kelas, slotWaktuId, id: Not(jadwalId) } }); // Use Not here
+  let konflik = await jadwalRepo.findOne({ where: { hari, kelas, slotWaktuId, id: Not(jadwalId) } });
   if (konflik) return `Kelas ${kelas} sudah memiliki jadwal lain pada ${hari}, slot waktu tersebut.`;
 
-  konflik = await jadwalRepo.findOne({ where: { hari, guruId, slotWaktuId, id: Not(jadwalId) } }); // Use Not here
+  konflik = await jadwalRepo.findOne({ where: { hari, guruId, slotWaktuId, id: Not(jadwalId) } });
   if (konflik) return `Guru tersebut sudah mengajar di kelas lain (${konflik.kelas}) pada ${hari}, slot waktu tersebut.`;
   
-  konflik = await jadwalRepo.findOne({ where: { hari, ruanganId, slotWaktuId, id: Not(jadwalId) } }); // Use Not here
+  konflik = await jadwalRepo.findOne({ where: { hari, ruanganId, slotWaktuId, id: Not(jadwalId) } });
   if (konflik) return `Ruangan tersebut sudah digunakan kelas lain (${konflik.kelas}) pada ${hari}, slot waktu tersebut.`;
 
   return null;
@@ -50,11 +48,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -72,6 +69,14 @@ export async function GET(
     if (!jadwal) {
       return NextResponse.json({ message: "Jadwal pelajaran tidak ditemukan." }, { status: 404 });
     }
+    // Additional check if non-admin should only see their relevant schedule
+    if (authenticatedUser.role === 'siswa' && jadwal.kelas !== authenticatedUser.kelasId) {
+        return NextResponse.json({ message: "Akses ditolak untuk jadwal kelas ini." }, { status: 403 });
+    }
+    if (authenticatedUser.role === 'guru' && jadwal.guruId !== authenticatedUser.id) {
+         return NextResponse.json({ message: "Akses ditolak untuk jadwal guru lain." }, { status: 403 });
+    }
+
      return NextResponse.json({
         ...jadwal,
         guru: jadwal.guru ? { id: jadwal.guru.id, name: jadwal.guru.name, fullName: jadwal.guru.fullName, email: jadwal.guru.email } : undefined
@@ -86,11 +91,13 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat mengubah jadwal." }, { status: 403 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -163,11 +170,13 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat menghapus jadwal." }, { status: 403 });
+  }
 
   const { id } = params;
   if (!id) {

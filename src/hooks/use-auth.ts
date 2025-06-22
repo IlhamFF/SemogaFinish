@@ -5,7 +5,7 @@ import React, { useState, useEffect, createContext, useContext, useCallback } fr
 import { useRouter } from 'next/navigation';
 import type { User, Role } from '@/types'; 
 import { useToast } from '@/hooks/use-toast';
-import { ROUTES, ROLES } from '@/lib/constants';
+import { ROUTES } from '@/lib/constants';
 
 interface AuthContextType {
   user: User | null;
@@ -13,13 +13,9 @@ interface AuthContextType {
   login: (email: string, passwordAttempt: string) => Promise<boolean>;
   register: (email: string, passwordAttempt: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  fetchUser: () => Promise<void>; // To re-fetch user state if needed
-  // The following are placeholders and would need backend APIs if kept for custom auth
-  // verifyUserEmail: (userIdToVerify?: string) => Promise<void>; 
-  // updateUserProfile: (userId: string, profileData: Partial<User>) => Promise<boolean>; 
-  // requestPasswordReset: (email: string) => Promise<string | null>; 
-  // resetPassword: (email: string, token: string, newPassword: string) => Promise<boolean>; 
-  // changePassword: (userId: string, currentPassword: string, newPassword: string) => Promise<boolean>; 
+  fetchUser: () => Promise<void>;
+  updateUserProfile: (userId: string, profileData: Partial<User>) => Promise<boolean>; 
+  changePassword: (userId: string, currentPassword: string, newPassword: string) => Promise<boolean>; 
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,7 +35,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(userData);
       } else {
         setUser(null);
-        // Don't show error toast for 401 on initial load
+        // Do not show an error toast for 401 on initial page load as it's expected for unauthenticated users.
         if (response.status !== 401) {
             const errorData = await response.json().catch(() => ({ message: "Gagal mengambil data pengguna." }));
             console.error("Fetch user failed:", errorData.message);
@@ -69,22 +65,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (!response.ok) {
         toast({ title: "Login Gagal", description: data.message || "Email atau kata sandi salah.", variant: "destructive" });
-        setIsLoading(false);
         return false;
       }
       
       setUser(data as User);
-      toast({ title: "Login Berhasil", description: `Selamat datang kembali, ${data.name || data.email}!` });
-      // Redirection logic will be handled by pages based on new user state
-      // Example: if (data.role === 'siswa' && !data.isVerified) router.push(ROUTES.VERIFY_EMAIL_PLACEHOLDER);
-      // else router.push(appropriateDashboard);
-      setIsLoading(false);
+      toast({ title: "Login Berhasil", description: `Selamat datang kembali, ${data.fullName || data.name || data.email}!` });
+      // Page redirection is handled by the login page component based on the new user state.
       return true;
     } catch (error) {
       console.error("Login fetch error:", error);
       toast({ title: "Login Gagal", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
-      setIsLoading(false);
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -100,19 +93,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (!response.ok) {
         toast({ title: "Pendaftaran Gagal", description: data.message || "Terjadi kesalahan.", variant: "destructive" });
-        setIsLoading(false);
         return false;
       }
       
-      toast({ title: "Pendaftaran Berhasil", description: "Akun Anda telah dibuat. Silakan login." });
+      toast({ title: "Pendaftaran Berhasil", description: "Akun Anda telah dibuat. Silakan periksa email Anda untuk verifikasi." });
       router.push(ROUTES.LOGIN); 
-      setIsLoading(false);
       return true;
     } catch (error) {
       console.error("Registration fetch error:", error);
       toast({ title: "Pendaftaran Gagal", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
-      setIsLoading(false);
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -130,12 +122,55 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Placeholder/Removed functions for simplicity with custom token auth
-  // const verifyUserEmail = async (userIdToVerify?: string) => { console.warn("verifyUserEmail not implemented for custom auth"); };
-  // const updateUserProfile = async (userId: string, profileData: Partial<User>) => { console.warn("updateUserProfile not implemented for custom auth"); return false; };
-  // const requestPasswordReset = async (email: string) => { console.warn("requestPasswordReset not implemented for custom auth"); return null; };
-  // const resetPassword = async (email: string, token: string, newPassword: string) => { console.warn("resetPassword not implemented for custom auth"); return false; };
-  // const changePassword = async (userId: string, currentPassword: string, newPassword: string) => { console.warn("changePassword not implemented for custom auth"); return false; };
+  const updateUserProfile = async (userId: string, profileData: Partial<User>): Promise<boolean> => {
+    // This function is for users updating their own profile from the settings page.
+    const endpoint = userId === user?.id ? '/api/users/me/profile' : `/api/users/${userId}`;
+    // Admin updates go through the user management page, not this hook directly.
+    if (endpoint === `/api/users/${userId}`) {
+        console.warn("useAuth.updateUserProfile is for self-updates only. Admin updates should use a different flow.");
+        return false;
+    }
+
+    try {
+        const response = await fetch(endpoint, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(profileData),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            toast({ title: "Update Profil Gagal", description: data.message || "Terjadi kesalahan.", variant: "destructive" });
+            return false;
+        }
+        toast({ title: "Profil Diperbarui", description: "Informasi profil Anda telah berhasil disimpan." });
+        setUser(data as User); // Update user state with new data
+        return true;
+    } catch (e) {
+        toast({ title: "Update Profil Gagal", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
+        return false;
+    }
+  };
+
+  const changePassword = async (userId: string, currentPassword: string, newPassword: string): Promise<boolean> => {
+      try {
+        const response = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentPassword, newPassword }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            toast({ title: "Ubah Kata Sandi Gagal", description: data.message, variant: "destructive" });
+            return false;
+        }
+        toast({ title: "Berhasil!", description: "Kata sandi Anda telah berhasil diubah." });
+        return true;
+      } catch (e) {
+          toast({ title: "Ubah Kata Sandi Gagal", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
+          return false;
+      }
+  };
+
 
   return (
     <AuthContext.Provider value={{ 
@@ -145,11 +180,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       register, 
       logout, 
       fetchUser,
-      // verifyUserEmail,
-      // updateUserProfile,
-      // requestPasswordReset,
-      // resetPassword,
-      // changePassword
+      updateUserProfile,
+      changePassword
     }}>
       {children}
     </AuthContext.Provider>

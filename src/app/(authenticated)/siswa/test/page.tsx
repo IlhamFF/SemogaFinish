@@ -1,7 +1,7 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -87,7 +87,13 @@ export default function SiswaTestPage() {
         <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
     ) : listTests.length > 0 ? (
       <ul className="space-y-4">
-        {listTests.map(test => (
+        {listTests.map(test => {
+          const now = new Date();
+          const startTime = parseISO(test.tanggal);
+          const endTime = new Date(startTime.getTime() + test.durasi * 60 * 1000);
+          const isTakable = (test.status === "Berlangsung" || test.status === "Terjadwal") && now >= startTime && now <= endTime;
+
+          return (
           <li key={test.id}>
             <Card className="shadow-sm hover:shadow-md transition-shadow">
               <CardHeader>
@@ -115,45 +121,30 @@ export default function SiswaTestPage() {
                         <p className="font-semibold">Jumlah Soal:</p>
                         <p className="text-muted-foreground">{test.jumlahSoal || '-'}</p>
                     </div>
-                    {/* {test.status === "Dinilai" && test.nilai !== undefined && ( // 'nilai' field not in TestType yet
-                         <div>
-                            <p className="font-semibold">Nilai:</p>
-                            <p className="text-foreground font-bold text-lg">{test.nilai}</p>
-                        </div>
-                    )} */}
                 </div>
                 
-                {test.status === "Berlangsung" && (
-                  <Button 
-                    className="w-full sm:w-auto" 
-                    onClick={() => handlePlaceholderAction("Mulai Test", test.id)}
-                  >
-                    <PlayCircle className="mr-2 h-4 w-4" /> Mulai Test
+                {isTakable ? (
+                  <Button asChild className="w-full sm:w-auto">
+                    <Link href={`/siswa/test/${test.id}/take`}>
+                      <PlayCircle className="mr-2 h-4 w-4" />
+                      {test.status === "Berlangsung" ? "Lanjutkan Test" : "Mulai Test"}
+                    </Link>
                   </Button>
-                )}
-                {test.status === "Terjadwal" && new Date() > parseISO(test.tanggal) && ( 
-                     <p className="text-sm text-yellow-600">Menunggu test dimulai oleh pengawas/sistem.</p>
-                )}
-                 {test.status === "Terjadwal" && new Date() < parseISO(test.tanggal) && (
-                     <p className="text-sm text-muted-foreground">Test akan tersedia pada waktunya.</p>
-                )}
-                {test.status === "Dinilai" && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="w-full sm:w-auto" 
-                    onClick={() => handlePlaceholderAction("Lihat Detail Hasil", test.id)}
-                  >
+                ) : test.status === "Terjadwal" && now < startTime ? (
+                  <p className="text-sm text-muted-foreground">Test akan tersedia pada waktunya.</p>
+                ) : test.status === "Dinilai" ? (
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => handlePlaceholderAction("Lihat Detail Hasil", test.id)}>
                     Lihat Detail Hasil
                   </Button>
-                )}
-                 {(test.status === "Menunggu Hasil" || test.status === "Selesai") && (
-                     <p className="text-sm text-yellow-600">Hasil sedang diproses atau menunggu penilaian. Mohon tunggu.</p>
-                )}
+                ) : (test.status === "Menunggu Hasil" || test.status === "Selesai") ? (
+                  <p className="text-sm text-yellow-600">Hasil sedang diproses atau menunggu penilaian. Mohon tunggu.</p>
+                ) : test.status !== "Draf" && now > endTime ? (
+                  <p className="text-sm text-destructive">Waktu test telah berakhir.</p>
+                ) : null}
               </CardContent>
             </Card>
           </li>
-        ))}
+        )})}
       </ul>
     ) : (
       <div className="text-center py-10 text-muted-foreground">
@@ -202,4 +193,3 @@ export default function SiswaTestPage() {
     </div>
   );
 }
-

@@ -1,13 +1,12 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import * as z from "zod";
 import { KATEGORI_MAPEL } from "@/lib/constants";
 import type { KategoriMapelType } from "@/entities/mata-pelajaran.entity";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const mataPelajaranUpdateSchema = z.object({
   nama: z.string().min(5, "Nama minimal 5 karakter.").max(255, "Nama maksimal 255 karakter.").optional(),
@@ -17,16 +16,18 @@ const mataPelajaranUpdateSchema = z.object({
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });
 
-// GET /api/mapel/[id] - Mendapatkan satu mata pelajaran
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  // Semua role terautentikasi bisa GET by ID
+  // if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  // }
 
   const { id } = params;
   if (!id) {
@@ -48,16 +49,17 @@ export async function GET(
   }
 }
 
-// PUT /api/mapel/[id] - Memperbarui mata pelajaran
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat mengubah mata pelajaran." }, { status: 403 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -100,16 +102,17 @@ export async function PUT(
   }
 }
 
-// DELETE /api/mapel/[id] - Menghapus mata pelajaran
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat menghapus mata pelajaran." }, { status: 403 });
+  }
 
   const { id } = params;
   if (!id) {

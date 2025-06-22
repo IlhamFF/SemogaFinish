@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/guru/dashboard/page": "app/(authenticated)/guru/dashboard/page.js"
+}

@@ -1,14 +1,11 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { SilabusEntity } from "@/entities/silabus.entity";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import * as z from "zod";
-import { format } from 'date-fns';
-import type { User } from '@/types'; // Import User from your types for session user structure
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const silabusUpdateSchema = z.object({
   judul: z.string().min(5, { message: "Judul silabus minimal 5 karakter." }).max(255).optional(),
@@ -20,16 +17,14 @@ const silabusUpdateSchema = z.object({
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });
 
-// GET /api/kurikulum/silabus/[id] - Mendapatkan satu silabus
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin' && session.user.role !== 'guru')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -47,7 +42,10 @@ export async function GET(
     if (!silabus) {
       return NextResponse.json({ message: "Silabus tidak ditemukan." }, { status: 404 });
     }
-    // TODO: Add role-based authorization check here if session is available.
+    
+    if (!['admin', 'superadmin'].includes(authenticatedUser.role) && silabus.uploaderId !== authenticatedUser.id) {
+        return NextResponse.json({ message: "Akses ditolak. Anda bukan pemilik silabus ini." }, { status: 403 });
+    }
 
     return NextResponse.json({
         ...silabus,
@@ -60,16 +58,14 @@ export async function GET(
   }
 }
 
-// PUT /api/kurikulum/silabus/[id] - Memperbarui silabus
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || !session.user || (session.user.role !== 'admin' && session.user.role !== 'superadmin' && session.user.role !== 'guru')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -120,8 +116,10 @@ export async function PUT(
     if (!existingSilabus) {
         return NextResponse.json({ message: "Silabus tidak ditemukan." }, { status: 404 });
     }
-    // TODO: Add role-based authorization check here (e.g., guru only edits their own)
-    // if (session.user.role === 'guru' && existingSilabus.uploaderId !== session.user.id) { ... }
+    
+    if (!['admin', 'superadmin'].includes(authenticatedUser.role) && existingSilabus.uploaderId !== authenticatedUser.id) {
+        return NextResponse.json({ message: "Akses ditolak. Anda bukan pemilik silabus ini." }, { status: 403 });
+    }
 
     const updateResult = await silabusRepo.update(id, updateData);
 
@@ -142,16 +140,14 @@ export async function PUT(
   }
 }
 
-// DELETE /api/kurikulum/silabus/[id] - Menghapus silabus
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // TODO: Implement server-side Firebase token verification
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || !session.user || (session.user.role !== 'admin' && session.user.role !== 'superadmin' && session.user.role !== 'guru')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
 
   const { id } = params;
   if (!id) {
@@ -166,8 +162,10 @@ export async function DELETE(
     if (!silabusToDelete) {
         return NextResponse.json({ message: "Silabus tidak ditemukan." }, { status: 404 });
     }
-    // TODO: Add role-based authorization check here
-    // if (session.user.role === 'guru' && silabusToDelete.uploaderId !== session.user.id) { ... }
+    
+    if (!['admin', 'superadmin'].includes(authenticatedUser.role) && silabusToDelete.uploaderId !== authenticatedUser.id) {
+        return NextResponse.json({ message: "Akses ditolak. Anda bukan pemilik silabus ini." }, { status: 403 });
+    }
     
     const deleteResult = await silabusRepo.delete(id);
 

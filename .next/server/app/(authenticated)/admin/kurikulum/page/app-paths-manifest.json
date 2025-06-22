@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/admin/kurikulum/page": "app/(authenticated)/admin/kurikulum/page.js"
+}

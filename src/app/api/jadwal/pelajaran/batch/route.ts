@@ -1,8 +1,6 @@
 
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { JadwalPelajaranEntity } from "@/entities/jadwal-pelajaran.entity";
 import { UserEntity } from "@/entities/user.entity";
@@ -10,8 +8,8 @@ import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import { RuanganEntity } from "@/entities/ruangan.entity";
 import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import * as z from "zod";
-import { In, Not } from "typeorm"; // Make sure Not is imported
-
+import { In, Not } from "typeorm"; 
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const jadwalPelajaranCreateSchema = z.object({
   hari: z.string().min(1, "Hari wajib diisi."),
@@ -47,11 +45,13 @@ async function checkKonflikBatch(
 }
 
 export async function POST(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat membuat jadwal batch." }, { status: 403 });
+  }
 
   try {
     const body = await request.json();
@@ -87,19 +87,13 @@ export async function POST(request: NextRequest) {
     const validGuruIds = new Set(existingGurus.map(g => g.id));
     const validRuanganIds = new Set(existingRuangans.map(r => r.id));
 
-    const groupedItems: Record<string, Record<string, typeof jadwalItems>> = {};
-    for (const item of jadwalItems) {
-        if (!groupedItems[item.kelas]) groupedItems[item.kelas] = {};
-        if (!groupedItems[item.kelas][item.hari]) groupedItems[item.kelas][item.hari] = [];
-        groupedItems[item.kelas][item.hari].push(item);
-    }
-
     for (const item of jadwalItems) {
         if (!validSlotIds.has(item.slotWaktuId)) { results.push({ item, success: false, error: `Slot Waktu ID ${item.slotWaktuId} tidak valid.` }); continue; }
         if (!validMapelIds.has(item.mapelId)) { results.push({ item, success: false, error: `Mapel ID ${item.mapelId} tidak valid.` }); continue; }
         if (!validGuruIds.has(item.guruId)) { results.push({ item, success: false, error: `Guru ID ${item.guruId} tidak valid atau bukan guru.` }); continue; }
         if (!validRuanganIds.has(item.ruanganId)) { results.push({ item, success: false, error: `Ruangan ID ${item.ruanganId} tidak valid.` }); continue; }
 
+        // Consider fetching existingJadwalForThisClassDay within the loop if classes/days vary significantly, or pre-fetch if manageable.
         const existingJadwalForThisClassDay = await jadwalRepo.find({ where: { kelas: item.kelas, hari: item.hari }});
         const konflik = await checkKonflikBatch(dataSource, item, existingJadwalForThisClassDay);
         if (konflik) {

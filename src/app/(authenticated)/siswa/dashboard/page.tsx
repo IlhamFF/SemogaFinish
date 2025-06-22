@@ -3,22 +3,15 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Book, CheckSquare, CalendarClock, Award, CalendarDays, ClipboardCheck, BookOpen as BookOpenIcon, FileText as FileTextIcon, Loader2 } from "lucide-react";
+import { Book, CalendarDays, ClipboardCheck, BookOpen as BookOpenIcon, Loader2, BarChart, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 import type { JadwalPelajaran, Tugas as TugasType, Test as TestType } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { isPast, parseISO } from "date-fns";
-
-// Frontend status derivation for Tugas
-type TugasSiswaStatus = "Belum Dikerjakan" | "Terlambat" | "Sudah Dikumpulkan" | "Dinilai";
-const getTugasSiswaStatus = (tugas: TugasType): TugasSiswaStatus => {
-    if (tugas.nilai) return "Dinilai";
-    if (isPast(parseISO(tugas.tenggat))) return "Terlambat";
-    return "Belum Dikerjakan";
-};
+import { isPast, parseISO, format, isFuture } from "date-fns";
+import { id as localeID } from 'date-fns/locale';
+import { Badge } from "@/components/ui/badge";
 
 export default function SiswaDashboardPage() {
   const { user } = useAuth();
@@ -54,9 +47,6 @@ export default function SiswaDashboardPage() {
     } catch (error) {
       console.error("Error fetching dashboard data siswa:", error);
       toast({ title: "Gagal Memuat Data", description: "Tidak dapat mengambil data dasbor.", variant: "destructive" });
-      setJadwalList([]);
-      setTugasList([]);
-      setTestList([]);
     } finally {
       setIsLoading(false);
     }
@@ -68,49 +58,56 @@ export default function SiswaDashboardPage() {
 
   const siswaStats = useMemo(() => {
     const uniqueSubjects = new Set(jadwalList.map(j => j.mapel?.nama).filter(Boolean));
-    const tugasHarusDikumpulkan = tugasList.filter(t => {
-        const status = getTugasSiswaStatus(t);
-        return status === "Belum Dikerjakan" || status === "Terlambat";
-    }).length;
+    const tugasHarusDikumpulkan = tugasList.filter(t => !isPast(parseISO(t.tenggat))).length;
     const testMendatang = testList.filter(t => t.status === "Terjadwal" || t.status === "Berlangsung").length;
 
     return [
-      { title: "Kursus & Jadwal", value: isLoading ? <Loader2 className="h-5 w-5 animate-spin"/> : uniqueSubjects.size.toString(), icon: CalendarDays, color: "text-primary", href: ROUTES.SISWA_JADWAL, description: isLoading ? "Memuat..." : `${uniqueSubjects.size} mata pelajaran terjadwal` },
-      { title: "Tugas Saya", value: isLoading ? <Loader2 className="h-5 w-5 animate-spin"/> : tugasHarusDikumpulkan.toString(), icon: ClipboardCheck, color: "text-red-500", href: ROUTES.SISWA_TUGAS, description: isLoading ? "Memuat..." : `${tugasHarusDikumpulkan} tugas perlu dikerjakan` },
-      { title: "Materi Pelajaran", value: isLoading ? <Loader2 className="h-5 w-5 animate-spin"/> : "Akses", icon: BookOpenIcon, color: "text-green-500", href: ROUTES.SISWA_MATERI, description: isLoading ? "Memuat..." : "Lihat semua materi" },
-      { title: "Test & Ujian", value: isLoading ? <Loader2 className="h-5 w-5 animate-spin"/> : testMendatang.toString(), icon: Award, color: "text-yellow-500", href: ROUTES.SISWA_NILAI, description: isLoading ? "Memuat..." : `${testMendatang} test akan datang/berlangsung`},
+      { title: "Mata Pelajaran", value: isLoading ? <Loader2 className="h-5 w-5 animate-spin"/> : uniqueSubjects.size.toString(), icon: Book, color: "text-primary", href: ROUTES.SISWA_JADWAL, description: "Total mata pelajaran" },
+      { title: "Tugas Aktif", value: isLoading ? <Loader2 className="h-5 w-5 animate-spin"/> : tugasHarusDikumpulkan.toString(), icon: ClipboardCheck, color: "text-red-500", href: ROUTES.SISWA_TUGAS, description: "Tugas yang belum tenggat" },
+      { title: "Test Mendatang", value: isLoading ? <Loader2 className="h-5 w-5 animate-spin"/> : testMendatang.toString(), icon: AlertTriangle, color: "text-yellow-500", href: ROUTES.SISWA_TEST, description: "Test/Ujian yang akan datang"},
+      { title: "Materi & Nilai", value: isLoading ? <Loader2 className="h-5 w-5 animate-spin"/> : "Akses", icon: BookOpenIcon, color: "text-green-500", href: ROUTES.SISWA_MATERI, description: "Lihat materi & nilai"},
     ];
   }, [jadwalList, tugasList, testList, isLoading]);
+  
+  const jadwalHariIni = useMemo(() => {
+    if (isLoading) return [];
+    const dayName = format(new Date(), "eeee", { locale: localeID });
+    return jadwalList
+      .filter(j => j.hari === dayName)
+      .sort((a,b) => (a.slotWaktu?.waktuMulai || "").localeCompare(b.slotWaktu?.waktuMulai || ""));
+  }, [jadwalList, isLoading]);
+
+  const tugasDanTestMendatang = useMemo(() => {
+    if (isLoading) return [];
+    const combined = [
+        ...tugasList.filter(t => isFuture(parseISO(t.tenggat))).map(t => ({ type: 'Tugas', data: t, date: t.tenggat })),
+        ...testList.filter(t => t.status === 'Terjadwal' && isFuture(parseISO(t.tanggal))).map(t => ({ type: 'Test', data: t, date: t.tanggal }))
+    ];
+    return combined.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(0, 5);
+  }, [tugasList, testList, isLoading]);
 
 
   if (!user || (user.role !== 'siswa' && user.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Siswa untuk melihat halaman ini.</p>;
   }
   
-  if (user && !user.isVerified && !isLoading) { // Check user explicitly, not isLoading for this part
+  if (user && !user.isVerified && !isLoading) {
      return (
         <div className="flex flex-col items-center justify-center h-full text-center p-6">
             <Card className="w-full max-w-md shadow-lg">
-                <CardHeader>
-                    <CardTitle className="text-2xl text-primary">Verifikasi Email Diperlukan</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-2xl text-primary">Verifikasi Email Diperlukan</CardTitle></CardHeader>
                 <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                        Akun Anda belum diverifikasi. Silakan periksa email Anda untuk tautan verifikasi atau hubungi administrator.
-                    </p>
-                    <Link href={ROUTES.VERIFY_EMAIL}>
-                        <Button>Ke Halaman Verifikasi</Button>
-                    </Link>
+                    <p className="text-muted-foreground mb-4">Akun Anda belum diverifikasi. Silakan periksa email Anda.</p>
+                    <Link href={ROUTES.VERIFY_EMAIL}><Button>Ke Halaman Verifikasi</Button></Link>
                 </CardContent>
             </Card>
         </div>
      );
   }
   
-  if (isLoading && !user) { // Initial loading before user is determined
+  if (isLoading) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
-
 
   return (
     <div className="space-y-6">
@@ -135,51 +132,58 @@ export default function SiswaDashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Tenggat Waktu Mendatang</CardTitle>
-            <CardDescription>Tugas dan ujian yang harus segera dikerjakan.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3">
-              <li className="flex items-center justify-between p-3 rounded-md bg-primary/5 border border-primary/20">
-                <div>
-                  <h4 className="font-semibold text-primary">Matematika - Kuis Bab 5</h4>
-                  <p className="text-xs text-muted-foreground">Batas Waktu: Besok, 23:59</p>
-                </div>
-                <Link href={ROUTES.SISWA_TEST} className="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-600 hover:bg-red-200">
-                  Kerjakan
-                </Link>
-              </li>
-              <li className="flex items-center justify-between p-3 rounded-md bg-secondary/20 border border-secondary/40">
-                 <div>
-                  <h4 className="font-semibold">Fisika - Pengumpulan Laporan Lab</h4>
-                  <p className="text-xs text-muted-foreground">Batas Waktu: Dalam 3 hari</p>
-                </div>
-                 <Link href={ROUTES.SISWA_TUGAS} className="text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
-                  Upload
-                </Link>
-              </li>
-            </ul>
-          </CardContent>
+         <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle className="flex items-center"><CalendarDays className="mr-2 h-5 w-5 text-primary" /> Jadwal Hari Ini</CardTitle>
+                <CardDescription>Sesi pelajaran Anda untuk hari {format(new Date(), "eeee, dd MMM yyyy", { locale: localeID })}.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-64 overflow-y-auto">
+                 {isLoading ? (
+                    <div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                ) : jadwalHariIni.length > 0 ? (
+                    <ul className="space-y-3">
+                        {jadwalHariIni.map(j => (
+                            <li key={j.id} className="text-sm p-3 bg-muted/50 rounded-md">
+                                <p className="font-semibold text-primary">{j.mapel?.nama}</p>
+                                <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>Guru: {j.guru?.fullName || j.guru?.name}</span>
+                                    <span>Ruang: {j.ruangan?.nama}</span>
+                                    <span>{j.slotWaktu?.waktuMulai} - {j.slotWaktu?.waktuSelesai}</span>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">Tidak ada jadwal pelajaran hari ini.</div>
+                )}
+            </CardContent>
         </Card>
         <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Pengumuman Terbaru</CardTitle>
-            <CardDescription>Informasi penting dari sekolah atau guru.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-                <div className="p-3 rounded-md bg-accent/10 border border-accent/30">
-                    <h4 className="font-semibold text-accent-foreground">Jadwal Ujian Akhir Semester</h4>
-                    <p className="text-xs text-muted-foreground mt-1">Jadwal UAS telah dirilis. Silakan cek di bagian Test & Ujian.</p>
-                </div>
-                 <div className="p-3 rounded-md bg-muted/50 border">
-                    <h4 className="font-semibold">Libur Nasional</h4>
-                    <p className="text-xs text-muted-foreground mt-1">Kegiatan belajar mengajar diliburkan pada tanggal 17 Agustus.</p>
-                </div>
-            </div>
-          </CardContent>
+            <CardHeader>
+            <CardTitle className="flex items-center"><BookOpenIcon className="mr-2 h-5 w-5 text-primary" /> Tugas & Test Mendatang</CardTitle>
+            <CardDescription>Aktivitas terdekat yang perlu Anda perhatikan.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-64 overflow-y-auto">
+                {isLoading ? (
+                    <div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                ) : tugasDanTestMendatang.length > 0 ? (
+                     <ul className="space-y-3">
+                        {tugasDanTestMendatang.map(item => (
+                            <li key={`${item.type}-${item.data.id}`} className="text-sm p-3 bg-muted/50 rounded-md">
+                                 <p className="font-semibold">{item.data.judul}</p>
+                                <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>{item.data.mapel}</span>
+                                    <Badge variant={item.type === 'Tugas' ? 'destructive' : 'secondary'}>
+                                        {item.type === 'Tugas' ? 'Tenggat' : 'Jadwal'}: {format(parseISO(item.date), 'dd MMM')}
+                                    </Badge>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">Tidak ada tugas atau test yang akan datang.</div>
+                )}
+            </CardContent>
         </Card>
       </div>
     </div>

@@ -1,10 +1,11 @@
 
 import "reflect-metadata"; // Ensure this is the very first import
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, OneToMany } from "typeorm";
 import type { SlotWaktuEntity } from "./slot-waktu.entity";
 import type { MataPelajaranEntity } from "./mata-pelajaran.entity";
 import type { UserEntity } from "./user.entity";
 import type { RuanganEntity } from "./ruangan.entity";
+import type { AbsensiSiswaEntity } from "./absensi-siswa.entity";
 
 @Entity({ name: "jadwal_pelajaran" })
 // Mencegah kelas yang sama memiliki dua jadwal berbeda pada slot waktu yang sama di hari yang sama
@@ -53,6 +54,9 @@ export class JadwalPelajaranEntity {
   
   @Column({ type: "text", nullable: true })
   catatan?: string | null;
+
+  @OneToMany("AbsensiSiswaEntity", (absensi) => absensi.jadwalPelajaran)
+  absensiSiswaEntries?: AbsensiSiswaEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;

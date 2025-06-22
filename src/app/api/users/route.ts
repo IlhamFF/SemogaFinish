@@ -1,18 +1,14 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // Removed
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // Removed
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
-// import bcrypt from "bcryptjs"; // Removed - password handled by Firebase
 import * as z from "zod";
 import type { Role } from "@/types";
-import { ROLES } from "@/lib/constants";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const userCreateSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
-  // password: z.string().min(6, { message: "Kata sandi minimal 6 karakter." }), // Password tidak dihandle di sini lagi
   role: z.enum(['admin', 'guru', 'siswa', 'pimpinan'], { required_error: "Peran wajib diisi." }),
   fullName: z.string().min(2, { message: "Nama lengkap minimal 2 karakter."}),
   name: z.string().min(2, { message: "Nama panggilan minimal 2 karakter."}).optional().nullable(),
@@ -24,19 +20,22 @@ const userCreateSchema = z.object({
   nip: z.string().optional().nullable(),
   joinDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Format tanggal bergabung YYYY-MM-DD" }).optional().nullable(),
   avatarUrl: z.string().url({ message: "URL Avatar tidak valid." }).optional().nullable().or(z.literal('')),
-  kelas: z.string().optional().nullable(), // This will map to kelasId in entity
+  kelas: z.string().optional().nullable(), 
   mataPelajaran: z.string().optional().nullable(), 
-  isVerified: z.boolean().optional().default(false), // Default to false, can be overridden
-  firebaseUid: z.string().optional().nullable(), // Added firebaseUid
+  isVerified: z.boolean().optional().default(false),
+  firebaseUid: z.string().optional().nullable(), 
+  // Password tidak lagi dihandle di sini, dihandle oleh Firebase Auth saat pembuatan akun Firebase.
+  // Jika admin membuat profil lokal untuk akun Firebase yang sudah ada, passwordHash tidak perlu.
 });
 
-// GET /api/users - Mendapatkan semua pengguna (admin only)
 export async function GET(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification
-  // const session = await getServerSession(authOptions); // Removed
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // Removed
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // Removed
-  // } // Removed
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat melihat daftar pengguna." }, { status: 403 });
+  }
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -45,7 +44,7 @@ export async function GET(request: NextRequest) {
       select: [ 
         "id", "name", "email", "emailVerified", "image", "role", "isVerified", 
         "fullName", "phone", "address", "birthDate", "bio", "nis", "nip", 
-        "joinDate", "kelasId", "mataPelajaran", "firebaseUid", "createdAt", "updatedAt" // Added firebaseUid
+        "joinDate", "kelasId", "mataPelajaran", "firebaseUid", "createdAt", "updatedAt"
       ],
       order: { createdAt: "DESC" }
     });
@@ -56,15 +55,16 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/users - Membuat profil pengguna lokal baru (oleh admin atau setelah registrasi Firebase)
 export async function POST(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification for admin/system calls
-  // const session = await getServerSession(authOptions); // Removed
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // Removed
-  //   // Allow if coming from register flow (no session yet, but identified by a different mechanism if needed)
-  //   // For now, assume if it's a POST, it's either admin or trusted register flow
-  //   // return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // Removed
-  // } // Removed
+  const authenticatedUser = getAuthenticatedUser(request);
+  // Diperketat: Hanya admin/superadmin yang bisa membuat profil pengguna baru melalui endpoint ini.
+  // Registrasi oleh pengguna sendiri melalui /api/auth/register.
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat membuat pengguna baru." }, { status: 403 });
+  }
 
   try {
     const body = await request.json();
@@ -90,17 +90,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Password is no longer handled here, it's managed by Firebase Auth.
-    // const hashedPassword = await bcrypt.hash(password, 10); // Removed
-
+    // Password tidak di-hash di sini, karena akun dibuat/dikelola oleh Firebase Auth.
+    // Jika ini adalah pembuatan profil lokal untuk akun Firebase yang sudah ada,
+    // passwordHash tidak diperlukan di UserEntity lokal.
     const newUserEntity = userRepo.create({
       email,
-      // passwordHash: hashedPassword, // Removed
-      firebaseUid: firebaseUid, // Store Firebase UID
+      firebaseUid: firebaseUid, 
       role: role as Role,
       fullName: fullName,
       name: name || email.split('@')[0],
-      isVerified: profileData.isVerified, // isVerified now comes from payload (e.g., false from register, true if admin creates)
+      isVerified: profileData.isVerified, 
       emailVerified: profileData.isVerified ? new Date() : null,
       image: profileData.avatarUrl || undefined,
       phone: profileData.phone,
@@ -112,16 +111,17 @@ export async function POST(request: NextRequest) {
       joinDate: profileData.joinDate || new Date().toISOString().split('T')[0],
       kelasId: profileData.kelas, 
       mataPelajaran: profileData.mataPelajaran ? [profileData.mataPelajaran] : undefined,
+      // passwordHash: "dummy_hash_for_local_profile_if_no_firebase", // Atau null jika firebaseUid selalu ada
     });
 
     const savedUser = await userRepo.save(newUserEntity);
     
-    // const { passwordHash, ...userResponse } = savedUser; // passwordHash already removed from entity for response
-    return NextResponse.json(savedUser, { status: 201 });
+    const { passwordHash, ...userResponse } = savedUser; // Hilangkan passwordHash dari respons
+    return NextResponse.json(userResponse, { status: 201 });
 
   } catch (error: any) {
     console.error("Error creating user profile:", error);
-     if (error.code === '23505') { // Unique constraint violation
+     if (error.code === '23505') { 
         let field = "Email atau Firebase UID";
         if (error.detail?.includes("email")) field = "Email";
         else if (error.detail?.includes("firebaseUid")) field = "Firebase UID";

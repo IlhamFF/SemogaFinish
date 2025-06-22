@@ -1,8 +1,6 @@
 
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { JadwalPelajaranEntity } from "@/entities/jadwal-pelajaran.entity";
 import { UserEntity } from "@/entities/user.entity";
@@ -11,6 +9,7 @@ import { RuanganEntity } from "@/entities/ruangan.entity";
 import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import * as z from "zod";
 import { FindOptionsWhere, In } from "typeorm";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const jadwalPelajaranCreateSchema = z.object({
   hari: z.string().min(1, "Hari wajib diisi."),
@@ -69,11 +68,13 @@ async function checkKonflik(
 }
 
 export async function POST(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat membuat jadwal." }, { status: 403 });
+  }
 
   try {
     const body = await request.json();
@@ -118,16 +119,33 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification (e.g., all authenticated users can GET)
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
 
   const { searchParams } = new URL(request.url);
   const filters: FindOptionsWhere<JadwalPelajaranEntity> = {};
-  if (searchParams.get("kelas")) filters.kelas = searchParams.get("kelas")!;
-  if (searchParams.get("guruId")) filters.guruId = searchParams.get("guruId")!;
+  
+  // Admin dan superadmin dapat filter bebas
+  if (['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    if (searchParams.get("kelas")) filters.kelas = searchParams.get("kelas")!;
+    if (searchParams.get("guruId")) filters.guruId = searchParams.get("guruId")!;
+  } else if (authenticatedUser.role === 'guru') {
+    filters.guruId = authenticatedUser.id; // Guru hanya lihat jadwalnya sendiri
+    if (searchParams.get("kelas")) filters.kelas = searchParams.get("kelas")!; // Guru bisa filter kelas yang diajarnya
+  } else if (authenticatedUser.role === 'siswa') {
+    if (!(authenticatedUser as any).kelasId) { // Assuming kelasId is available for siswa in token/user object
+        return NextResponse.json({ message: "Informasi kelas siswa tidak ditemukan." }, { status: 400 });
+    }
+    filters.kelas = (authenticatedUser as any).kelasId; // Siswa hanya lihat jadwal kelasnya
+  } else if (authenticatedUser.role === 'pimpinan') {
+    // Pimpinan mungkin punya akses lebih luas atau berdasarkan filter tertentu
+    if (searchParams.get("kelas")) filters.kelas = searchParams.get("kelas")!;
+    if (searchParams.get("guruId")) filters.guruId = searchParams.get("guruId")!;
+  }
+
+
   if (searchParams.get("ruanganId")) filters.ruanganId = searchParams.get("ruanganId")!;
   if (searchParams.get("hari")) filters.hari = searchParams.get("hari")!;
   if (searchParams.get("mapelId")) filters.mapelId = searchParams.get("mapelId")!;

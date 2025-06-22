@@ -13,10 +13,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth"; 
-import { APP_NAME, ROLES, ROUTES } from "@/lib/constants"; // ROUTES from constants
-import { USER_NAV_ITEMS } from "@/lib/navigation"; // USER_NAV_ITEMS from navigation
+import { APP_NAME, ROLES, ROUTES } from "@/lib/constants";
+import { USER_NAV_ITEMS } from "@/lib/navigation";
 import { ChevronDown, LogOut, UserCircle, Settings } from "lucide-react";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle"; // Import ThemeToggle
 
 export function AppHeader() {
   const { user, logout } = useAuth(); 
@@ -44,6 +45,7 @@ export function AppHeader() {
       </div>
       
       <div className="ml-auto flex items-center gap-4">
+        <ThemeToggle /> 
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

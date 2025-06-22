@@ -1,13 +1,12 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
-// import { getServerSession } from "next-auth/next"; // REMOVED
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // REMOVED
 import { getInitializedDataSource } from "@/lib/data-source";
 import { SklEntity } from "@/entities/skl.entity";
 import * as z from "zod";
 import { KATEGORI_SKL } from "@/types"; 
 import type { KategoriSklType } from "@/types";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 const sklCreateSchema = z.object({
   kode: z.string().min(2, { message: "Kode SKL minimal 2 karakter." }).max(50, { message: "Kode SKL maksimal 50 karakter."}),
@@ -15,13 +14,14 @@ const sklCreateSchema = z.object({
   kategori: z.enum(KATEGORI_SKL, { required_error: "Kategori SKL wajib dipilih." }),
 });
 
-// GET /api/kurikulum/skl - Mendapatkan semua SKL
-export async function GET() {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+export async function GET(request: NextRequest) {
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -34,13 +34,14 @@ export async function GET() {
   }
 }
 
-// POST /api/kurikulum/skl - Membuat SKL baru
 export async function POST(request: NextRequest) {
-  // TODO: Implement server-side Firebase token verification for admin/superadmin
-  // const session = await getServerSession(authOptions); // REMOVED
-  // if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) { // REMOVED
-  //   return NextResponse.json({ message: "Akses ditolak." }, { status: 403 }); // REMOVED
-  // } // REMOVED
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat membuat SKL." }, { status: 403 });
+  }
 
   try {
     const body = await request.json();

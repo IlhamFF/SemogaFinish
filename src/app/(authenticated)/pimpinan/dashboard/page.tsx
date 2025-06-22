@@ -2,147 +2,96 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, TrendingUp, BookOpenCheck, BarChartHorizontalBig, Star, CheckCircle, Loader2 } from "lucide-react";
+import { Users, TrendingUp, BookOpenCheck, BarChartHorizontalBig, Loader2, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
-import { MOCK_SUBJECTS } from "@/lib/constants"; // SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, SCHOOL_CLASSES_PER_MAJOR_GRADE (not used directly for grades here)
 import React, { useMemo, useEffect, useState, useCallback } from "react";
-import type { User as AppUser } from "@/types"; // Renamed to AppUser to avoid conflict
+import type { User as AppUser, Role } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { ROLES } from "@/lib/constants";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-interface StudentMockGrade {
-  studentId: string;
-  studentName: string;
-  studentClass: string;
-  grades: { subject: string; score: number }[];
-  average: number;
+interface AkademikData {
+  rataRataKelas: { name: string; rataRata: number }[];
+  peringkatSiswa: { nama: string; kelas: string; rataRata: number }[];
 }
 
-const generateMockStudentGrades = (allAppUsers: AppUser[]): StudentMockGrade[] => {
-  const siswaUsers = allAppUsers.filter(u => u.role === 'siswa' && u.isVerified && u.kelas);
-  
-  return siswaUsers.map(siswa => {
-    const studentSubjects = MOCK_SUBJECTS.slice(0, Math.floor(Math.random() * 5) + 8); // 8 to 12 subjects
-    const grades = studentSubjects.map(subject => ({
-      subject,
-      score: Math.floor(Math.random() * 41) + 60, // Score between 60 and 100
-    }));
-    const average = grades.length > 0 ? grades.reduce((sum, g) => sum + g.score, 0) / grades.length : 0;
-    return {
-      studentId: siswa.id,
-      studentName: siswa.fullName || siswa.name || siswa.email || "Siswa Tanpa Nama",
-      studentClass: siswa.kelas!,
-      grades,
-      average: parseFloat(average.toFixed(2)),
-    };
-  });
-};
-
-
 export default function PimpinanDashboardPage() {
-  const { user: currentUserAuth } = useAuth(); // Renamed to avoid conflict with 'user' from fetched users
+  const { user: currentUserAuth } = useAuth();
   const { toast } = useToast();
   const [allUsers, setAllUsers] = useState<AppUser[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [akademikData, setAkademikData] = useState<AkademikData>({ rataRataKelas: [], peringkatSiswa: [] });
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [allMataPelajaranCount, setAllMataPelajaranCount] = useState(0);
 
-  const fetchAllUsers = useCallback(async () => {
-    setIsLoadingUsers(true);
+  const fetchAllData = useCallback(async () => {
+    setIsLoadingData(true);
     try {
-      const response = await fetch('/api/users');
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Gagal mengambil data pengguna.");
-      }
-      const data = await response.json();
-      setAllUsers(data);
+      const [usersRes, mapelRes, akademikRes] = await Promise.all([
+        fetch('/api/users'),
+        fetch('/api/mapel'),
+        fetch('/api/laporan/akademik')
+      ]);
+      
+      if (!usersRes.ok) throw new Error("Gagal mengambil data pengguna.");
+      if (!mapelRes.ok) throw new Error("Gagal mengambil data mata pelajaran.");
+      if (!akademikRes.ok) throw new Error("Gagal mengambil data laporan akademik.");
+
+      const usersData = await usersRes.json();
+      setAllUsers(usersData);
+      const mapelData = await mapelRes.json();
+      setAllMataPelajaranCount(mapelData.length);
+      const akademikData = await akademikRes.json();
+      setAkademikData(akademikData);
+
     } catch (error: any) {
-      toast({ title: "Error Data Pengguna", description: error.message, variant: "destructive" });
-      setAllUsers([]);
+      toast({ title: "Error Data Dasbor", description: error.message, variant: "destructive" });
     } finally {
-      setIsLoadingUsers(false);
+      setIsLoadingData(false);
     }
   }, [toast]);
 
   useEffect(() => {
     if (currentUserAuth && (currentUserAuth.role === 'pimpinan' || currentUserAuth.role === 'superadmin')) {
-      fetchAllUsers();
+      fetchAllData();
+    } else {
+        setIsLoadingData(false);
     }
-  }, [currentUserAuth, fetchAllUsers]);
-
-
-  const mockStudentGradesData: StudentMockGrade[] = useMemo(() => {
-      if(allUsers.length > 0) {
-          return generateMockStudentGrades(allUsers);
-      }
-      return [];
-  }, [allUsers]);
-
-  const classAverages = useMemo(() => {
-    if (mockStudentGradesData.length === 0) return [];
-    const classData: { [key: string]: { totalScore: number; count: number } } = {};
-    mockStudentGradesData.forEach(student => {
-      if (!student.studentClass) return; // Skip if studentClass is not defined
-      if (!classData[student.studentClass]) {
-        classData[student.studentClass] = { totalScore: 0, count: 0 };
-      }
-      classData[student.studentClass].totalScore += student.average;
-      classData[student.studentClass].count++;
-    });
-    return Object.entries(classData)
-      .map(([className, data]) => ({
-        name: className,
-        rataRata: data.count > 0 ? parseFloat((data.totalScore / data.count).toFixed(2)) : 0,
-      }))
-      .sort((a, b) => b.rataRata - a.rataRata); // Sort by average desc
-  }, [mockStudentGradesData]);
-  
-  const chartConfigClassAvg = {
-    rataRata: {
-      label: "Rata-rata Nilai",
-      color: "hsl(var(--primary))",
-    },
-  } satisfies ChartConfig;
-
-  const overallRankedStudents = useMemo(() => 
-    [...mockStudentGradesData].sort((a, b) => b.average - a.average)
-  , [mockStudentGradesData]);
-
-  const getClassRankings = (className: string) => {
-    return mockStudentGradesData
-      .filter(s => s.studentClass === className)
-      .sort((a, b) => b.average - a.average);
-  };
-
-  const exampleClassesForRanking = useMemo(() => {
-    const allClasses = [...new Set(mockStudentGradesData.map(s => s.studentClass).filter(Boolean))];
-    return allClasses.slice(0, 2); 
-  }, [mockStudentGradesData]);
-
+  }, [currentUserAuth, fetchAllData]);
 
   const pimpinanStats = useMemo(() => {
     const totalSiswa = allUsers.filter(u => u.role === 'siswa').length;
     const totalGuru = allUsers.filter(u => u.role === 'guru').length;
     const totalKelas = new Set(allUsers.filter(u => u.role === 'siswa' && u.kelas).map(u => u.kelas)).size;
+    const rataRataSekolah = akademikData.rataRataKelas.length > 0
+      ? (akademikData.rataRataKelas.reduce((acc, curr) => acc + curr.rataRata, 0) / akademikData.rataRataKelas.length).toFixed(2)
+      : 0;
     
     return [
-      { title: "Total Siswa", value: isLoadingUsers ? <Loader2 className="h-5 w-5 animate-spin" /> : totalSiswa.toString(), icon: Users, color: "text-primary", change: `SMA Az-Bail` },
-      { title: "Total Guru", value: isLoadingUsers ? <Loader2 className="h-5 w-5 animate-spin" /> : totalGuru.toString(), icon: Users, color: "text-green-500", change: "Tenaga Pengajar" },
-      { title: "Jumlah Kelas", value: isLoadingUsers ? <Loader2 className="h-5 w-5 animate-spin" /> : totalKelas.toString(), icon: BookOpenCheck, color: "text-yellow-500", change: "IPA & IPS" },
-      { title: "Tingkat Kelulusan (Simulasi)", value: "95%", icon: CheckCircle, color: "text-indigo-500", change: "Target: 90%" },
+      { title: "Total Siswa Aktif", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : totalSiswa.toString(), icon: Users, color: "text-primary" },
+      { title: "Total Guru", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : totalGuru.toString(), icon: Users, color: "text-green-500" },
+      { title: "Jumlah Kelas", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : totalKelas.toString(), icon: BookOpenCheck, color: "text-yellow-500" },
+      { title: "Nilai Rata-rata Sekolah", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : rataRataSekolah.toString(), icon: TrendingUp, color: "text-indigo-500" },
     ];
-  }, [allUsers, isLoadingUsers]);
+  }, [allUsers, isLoadingData, akademikData]);
+  
+  
+  const chartConfigClassDist = {
+    rataRata: {
+      label: "Rata-Rata Nilai",
+      color: "hsl(var(--primary))",
+    },
+  } satisfies ChartConfig;
 
 
   if (!currentUserAuth || (currentUserAuth.role !== 'pimpinan' && currentUserAuth.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Pimpinan untuk melihat halaman ini.</p>;
   }
   
-  if (isLoadingUsers && allUsers.length === 0) {
-    return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /> <span className="ml-3">Memuat data pengguna...</span></div>;
+  if (isLoadingData) {
+    return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /> <span className="ml-3">Memuat data dasbor...</span></div>;
   }
-
 
   return (
     <div className="space-y-6">
@@ -158,7 +107,6 @@ export default function PimpinanDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{card.value}</div>
-              <p className="text-xs text-muted-foreground">{card.change}</p>
             </CardContent>
           </Card>
         ))}
@@ -169,48 +117,25 @@ export default function PimpinanDashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <BarChartHorizontalBig className="mr-2 h-5 w-5 text-primary" />
-              Rata-rata Nilai per Kelas (Simulasi)
+              Performa Rata-rata per Kelas
             </CardTitle>
-            <CardDescription>Visualisasi dan tabel rata-rata nilai akhir siswa per kelas.</CardDescription>
+            <CardDescription>Perbandingan nilai rata-rata akhir dari semua mata pelajaran di setiap kelas.</CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoadingUsers && classAverages.length === 0 ? (
-                 <div className="flex justify-center items-center h-[300px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /><span className="ml-2">Menghitung rata-rata...</span></div>
-            ) : classAverages.length > 0 ? (
-              <>
-                <div className="h-[300px] mb-6">
-                  <ChartContainer config={chartConfigClassAvg} className="w-full h-full">
-                    <BarChart data={classAverages} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            {akademikData.rataRataKelas.length > 0 ? (
+              <div className="h-[400px]">
+                  <ChartContainer config={chartConfigClassDist} className="w-full h-full">
+                    <BarChart data={akademikData.rataRataKelas} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis type="number" domain={[0, 100]} stroke="hsl(var(--foreground))" fontSize={12} />
+                      <XAxis type="number" stroke="hsl(var(--foreground))" fontSize={12} domain={[0, 100]} />
                       <YAxis dataKey="name" type="category" stroke="hsl(var(--foreground))" fontSize={10} width={80} interval={0} />
                       <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }}/>
-                      <Legend />
                       <Bar dataKey="rataRata" fill="var(--color-rataRata)" radius={[0, 4, 4, 0]} barSize={15} />
                     </BarChart>
                   </ChartContainer>
                 </div>
-                <div className="max-h-[200px] overflow-y-auto">
-                    <Table>
-                        <TableHeader>
-                        <TableRow>
-                            <TableHead>Kelas</TableHead>
-                            <TableHead className="text-right">Rata-rata Nilai</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {classAverages.map((item) => (
-                            <TableRow key={item.name}>
-                            <TableCell className="font-medium">{item.name}</TableCell>
-                            <TableCell className="text-right font-semibold">{item.rataRata.toFixed(2)}</TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                </div>
-              </>
             ) : (
-              <p className="text-muted-foreground text-center py-4">Data rata-rata kelas belum tersedia atau tidak ada siswa.</p>
+              <p className="text-muted-foreground text-center py-4">Data nilai rata-rata kelas belum tersedia.</p>
             )}
           </CardContent>
         </Card>
@@ -218,81 +143,39 @@ export default function PimpinanDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Star className="mr-2 h-5 w-5 text-yellow-500" />
-              Peringkat Siswa Terbaik (Keseluruhan - Simulasi)
+              <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
+              Peringkat Teratas Siswa
             </CardTitle>
-            <CardDescription>10 siswa dengan rata-rata nilai tertinggi di seluruh sekolah.</CardDescription>
+            <CardDescription>5 siswa dengan nilai rata-rata keseluruhan tertinggi.</CardDescription>
           </CardHeader>
-          <CardContent>
-             {isLoadingUsers && overallRankedStudents.length === 0 ? (
-                <div className="flex justify-center items-center h-[300px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /><span className="ml-2">Memuat peringkat...</span></div>
-            ) : overallRankedStudents.length > 0 ? (
-              <div className="max-h-[500px] overflow-y-auto">
+          <CardContent className="h-[400px]">
+             {akademikData.peringkatSiswa.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[50px]">Rank</TableHead>
+                      <TableHead>Peringkat</TableHead>
                       <TableHead>Nama Siswa</TableHead>
                       <TableHead>Kelas</TableHead>
                       <TableHead className="text-right">Rata-rata</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {overallRankedStudents.slice(0, 10).map((student, index) => (
-                      <TableRow key={student.studentId}>
-                        <TableCell className="font-medium">{index + 1}</TableCell>
-                        <TableCell>{student.studentName}</TableCell>
-                        <TableCell>{student.studentClass}</TableCell>
-                        <TableCell className="text-right font-semibold">{student.average.toFixed(2)}</TableCell>
+                    {akademikData.peringkatSiswa.map((siswa, index) => (
+                      <TableRow key={siswa.nama}>
+                        <TableCell className="font-bold text-lg">{index + 1}</TableCell>
+                        <TableCell>{siswa.nama}</TableCell>
+                        <TableCell>{siswa.kelas}</TableCell>
+                        <TableCell className="text-right font-medium text-primary">{(+siswa.rataRata).toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              </div>
             ) : (
-              <p className="text-muted-foreground text-center py-4">Data peringkat siswa belum tersedia atau tidak ada siswa.</p>
+              <p className="text-muted-foreground text-center py-4">Data peringkat siswa belum tersedia.</p>
             )}
           </CardContent>
         </Card>
       </div>
-
-      {exampleClassesForRanking.map(className => (
-        <Card key={className} className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Peringkat Siswa Kelas: {className} (Simulasi)</CardTitle>
-            <CardDescription>Siswa dengan rata-rata nilai tertinggi di kelas {className}.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {getClassRankings(className).length > 0 ? (
-                 <div className="max-h-[300px] overflow-y-auto">
-                    <Table>
-                        <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[50px]">Rank</TableHead>
-                            <TableHead>Nama Siswa</TableHead>
-                            <TableHead className="text-right">Rata-rata</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {getClassRankings(className).slice(0, 10).map((student, index) => (
-                            <TableRow key={student.studentId}>
-                            <TableCell className="font-medium">{index + 1}</TableCell>
-                            <TableCell>{student.studentName}</TableCell>
-                            <TableCell className="text-right font-semibold">{student.average.toFixed(2)}</TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-4">Data peringkat untuk kelas {className} belum tersedia.</p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
     </div>
   );
 }
-
-
-    

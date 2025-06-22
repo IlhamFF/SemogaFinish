@@ -9,11 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import type { User, Role } from "@/types";
 import { ROLES } from "@/lib/constants";
-import { UserPlus, CheckCircle, ShieldAlert, Loader2, Search, UploadCloud } from "lucide-react";
+import { UserPlus, CheckCircle, ShieldAlert, Loader2, Search } from "lucide-react";
 import { UserForm } from "@/components/admin/user-form";
 import { UserTableActions } from "@/components/admin/user-table-actions";
 import { useToast } from "@/hooks/use-toast";
@@ -24,12 +23,11 @@ type UserFormValues = Parameters<typeof UserForm>[0]["onSubmit"] extends (data: 
 
 
 export default function AdminUsersPage() {
-  const { user: currentUserAuth, isLoading: authIsLoading, updateSession } = useAuth();
+  const { user: currentUserAuth, isLoading: authIsLoading, fetchUser: updateSession } = useAuth();
   const { toast } = useToast();
 
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isImportUserDialogOpen, setIsImportUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [pageLoading, setPageLoading] = useState(true); 
   
@@ -37,7 +35,6 @@ export default function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [kelasFilter, setKelasFilter] = useState<string>("semua");
   const [mataPelajaranFilter, setMataPelajaranFilter] = useState<string>("semua");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setPageLoading(true);
@@ -50,11 +47,10 @@ export default function AdminUsersPage() {
       const data = await response.json();
       setAllUsers(data.map((u: any) => ({
         ...u,
-        // Pastikan birthDate dan joinDate adalah string ISO jika dari DB
         birthDate: u.birthDate ? format(parseISO(u.birthDate), 'yyyy-MM-dd') : null,
         joinDate: u.joinDate ? format(parseISO(u.joinDate), 'yyyy-MM-dd') : null,
         mataPelajaran: Array.isArray(u.mataPelajaran) ? u.mataPelajaran.join(', ') : u.mataPelajaran,
-        kelas: u.kelasId || u.kelas, // Use kelasId as kelas
+        kelas: u.kelasId || u.kelas, 
       })));
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Tidak dapat memuat pengguna.", variant: "destructive" });
@@ -151,24 +147,14 @@ export default function AdminUsersPage() {
     const method = currentlyEditingUser ? 'PUT' : 'POST';
     
     let payload: any = { ...data };
-    if (payload.birthDate && payload.birthDate instanceof Date) {
-      payload.birthDate = format(payload.birthDate, 'yyyy-MM-dd');
-    }
-    if (payload.joinDate && payload.joinDate instanceof Date) {
-      payload.joinDate = format(payload.joinDate, 'yyyy-MM-dd');
-    }
-
+    
     if (method === 'PUT') {
-      const { email, password, ...updatePayload } = payload; // Email and password not sent for PUT via this form. Password changed elsewhere.
+      const { email, password, ...updatePayload } = payload; 
       payload = updatePayload;
       if (!payload.password && currentlyEditingUser) delete payload.password;
     } else {
-      // For POST, ensure password is included if provided, or handle default if not
       if (!payload.password) {
-        // For Firebase, password is required at Firebase user creation.
-        // For local profiles, this form doesn't create Firebase users directly.
-        // This form is for LOCAL profile management by admin.
-        delete payload.password; // Don't send empty password to local user creation API
+        delete payload.password; 
       }
     }
 
@@ -191,29 +177,6 @@ export default function AdminUsersPage() {
       setPageLoading(false);
     }
   };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setSelectedFile(event.target.files[0]);
-    } else {
-      setSelectedFile(null);
-    }
-  };
-
-  const handleImportSubmit = () => { 
-    if (!selectedFile) {
-      toast({ title: "Tidak Ada File", description: "Silakan pilih file untuk diimpor.", variant: "destructive" });
-      return;
-    }
-    setPageLoading(true);
-    setTimeout(() => {
-      setPageLoading(false);
-      toast({ title: "Simulasi Impor Berhasil", description: `File "${selectedFile.name}" telah (disimulasikan) diimpor. Profil pengguna baru akan ditambahkan.` });
-      setIsImportUserDialogOpen(false);
-      setSelectedFile(null); 
-      fetchUsers(); 
-    }, 1500);
-  };
   
   const uniqueKelas = useMemo(() => {
     const kls = new Set(allUsers.filter(u => u.role === 'siswa' && u.kelas).map(u => u.kelas!));
@@ -221,7 +184,11 @@ export default function AdminUsersPage() {
   }, [allUsers]);
 
   const uniqueMataPelajaran = useMemo(() => {
-    const mp = new Set(allUsers.filter(u => u.role === 'guru' && u.mataPelajaran).map(u => u.mataPelajaran!));
+    const mp = new Set(allUsers
+        .filter(u => u.role === 'guru' && u.mataPelajaran)
+        .flatMap(u => (u.mataPelajaran as string).split(',').map(s => s.trim()))
+        .filter(Boolean) 
+    );
     return ["semua", ...Array.from(mp).sort()];
   }, [allUsers]);
 
@@ -233,7 +200,7 @@ export default function AdminUsersPage() {
                               (user.fullName && user.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
                               (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase()));
       const kelasMatch = activeTab !== 'siswa' || kelasFilter === "semua" || user.kelas === kelasFilter;
-      const mataPelajaranMatch = activeTab !== 'guru' || mataPelajaranFilter === "semua" || user.mataPelajaran === mataPelajaranFilter;
+      const mataPelajaranMatch = activeTab !== 'guru' || mataPelajaranFilter === "semua" || (user.mataPelajaran && user.mataPelajaran.includes(mataPelajaranFilter));
       
       return roleMatch && searchTermMatch && kelasMatch && mataPelajaranMatch;
     });
@@ -253,12 +220,9 @@ export default function AdminUsersPage() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-headline font-semibold">Manajemen Profil Pengguna Lokal</h1>
-          <p className="text-muted-foreground">Lihat, buat, dan kelola profil pengguna lokal di sistem. Akun autentikasi dibuat terpisah di Firebase.</p>
+          <p className="text-muted-foreground">Lihat, buat, dan kelola profil pengguna lokal di sistem.</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setIsImportUserDialogOpen(true)} variant="outline" disabled={pageLoading}>
-            <UploadCloud className="mr-2 h-4 w-4" /> Impor Profil Lokal
-          </Button>
           <Button onClick={handleCreateUser} disabled={pageLoading}>
             <UserPlus className="mr-2 h-4 w-4" /> Buat Profil Lokal Baru
           </Button>
@@ -392,36 +356,6 @@ export default function AdminUsersPage() {
         editingUser={editingUser}
         isLoading={pageLoading}
       />
-
-      <Dialog open={isImportUserDialogOpen} onOpenChange={setIsImportUserDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Impor Profil Pengguna Lokal</DialogTitle>
-            <DialogDescription>
-              Unggah file CSV atau Excel untuk menambahkan beberapa profil pengguna lokal sekaligus.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <Input 
-              type="file" 
-              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-              onChange={handleFileChange}
-              disabled={pageLoading}
-            />
-            {selectedFile && <p className="text-xs text-muted-foreground">File terpilih: {selectedFile.name}</p>}
-            <p className="text-xs text-muted-foreground">
-              Pastikan format file sesuai. <a href="/contoh_template_impor_profil.csv" download className="text-primary hover:underline">Unduh contoh template CSV</a>.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsImportUserDialogOpen(false)} disabled={pageLoading}>Batal</Button>
-            <Button onClick={handleImportSubmit} disabled={pageLoading || !selectedFile}>
-              {pageLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Impor dari File
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

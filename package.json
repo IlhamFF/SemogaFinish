@@ -1,9 +1,10 @@
+
 {
   "name": "nextn",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 9006",
+    "dev": "next dev --turbopack",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
@@ -48,6 +49,7 @@
     "lucide-react": "^0.475.0",
     "next": "15.3.3",
     "next-auth": "^5.0.0-beta.18",
+    "next-themes": "^0.3.0",
     "nodemailer": "^6.9.14",
     "patch-package": "^8.0.0",
     "pg": "^8.12.0",
