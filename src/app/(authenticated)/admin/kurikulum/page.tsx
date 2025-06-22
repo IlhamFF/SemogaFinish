@@ -184,29 +184,155 @@ export default function AdminKurikulumPage() {
   const openMateriForm = (materi?: MateriAjar) => { setCurrentEditingMateri(materi || null); setIsMateriFormOpen(true); }
   const handleMateriSubmit = async (values: MateriAjarClientFormValues) => { setIsMateriSubmitting(true); const payload: Partial<MateriAjar> = { judul: values.judul, deskripsi: values.deskripsi, mapelNama: values.mapelNama, jenisMateri: values.jenisMateri as JenisMateriAjarType, }; if (values.jenisMateri === "File") { if (values.fileInput && values.fileInput.name) { payload.namaFileOriginal = values.fileInput.name; } } else if (values.jenisMateri === "Link") { payload.fileUrl = values.externalUrl; payload.namaFileOriginal = null; } const url = currentEditingMateri ? `/api/kurikulum/materi-ajar/${currentEditingMateri.id}` : '/api/kurikulum/materi-ajar'; const method = currentEditingMateri ? 'PUT' : 'POST'; try { const response = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menyimpan materi ajar'); } toast({ title: "Berhasil!", description: `Materi "${values.judul}" ${currentEditingMateri ? 'diperbarui' : 'ditambahkan'}.` }); setIsMateriFormOpen(false); setCurrentEditingMateri(null); fetchMateriAjarData(); } catch (error: any) { toast({ title: "Error Materi", description: error.message, variant: "destructive" }); } finally { setIsMateriSubmitting(false); } };
   const openDeleteMateriDialog = (materi: MateriAjar) => setMateriToDelete(materi);
-  const handleDeleteMateriConfirm = async () => { if (materiToDelete) { setIsMateriSubmitting(true); try { const response = await fetch(`/api/kurikulum/materi-ajar/${materiToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus materi ajar');} toast({ title: "Dihapus!", description: `Materi "${materiToDelete.judul}" dihapus.` }); fetchMateriAjarData(); } catch (error: any) { toast({ title: "Error Materi", description: error.message, variant: "destructive" }); } finally { setIsMateriSubmitting(false); setMateriToDelete(null); } } };
+  const handleDeleteMateriConfirm = async () => {
+    if (materiToDelete) {
+      setIsMateriSubmitting(true);
+      try {
+        const response = await fetch(`/api/kurikulum/materi-ajar/${materiToDelete.id}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Gagal menghapus materi ajar');
+        }
+        toast({ title: "Dihapus!", description: `Materi "${materiToDelete.judul}" dihapus.` });
+        fetchMateriAjarData();
+      } catch (error: any) {
+        toast({ title: "Error Materi", description: error.message, variant: "destructive" });
+      } finally {
+        setIsMateriSubmitting(false);
+        setMateriToDelete(null);
+      }
+    }
+  };
   const openSKLForm = (skl?: SKL) => { setEditingSKL(skl || null); setIsSKLFormOpen(true); };
   const handleSKLFormSubmit = async (values: SKLFormValues) => { setIsSKLSubmitting(true); const url = editingSKL ? `/api/kurikulum/skl/${editingSKL.id}` : '/api/kurikulum/skl'; const method = editingSKL ? 'PUT' : 'POST'; const payload = editingSKL ? { deskripsi: values.deskripsi, kategori: values.kategori } : values; try { const response = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menyimpan SKL'); } toast({ title: "Berhasil!", description: `SKL ${values.kode || editingSKL?.kode} ${editingSKL ? 'diperbarui' : 'ditambahkan'}.` }); setIsSKLFormOpen(false); setEditingSKL(null); fetchSklData(); } catch (error: any) { toast({ title: "Error SKL", description: error.message, variant: "destructive" }); } finally { setIsSKLSubmitting(false); } };
   const openDeleteSKLDialog = (skl: SKL) => setSklToDelete(skl);
-  const handleDeleteSKLConfirm = async () => { if (sklToDelete) { setIsSKLSubmitting(true); try { const response = await fetch(`/api/kurikulum/skl/${sklToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus SKL'); } toast({ title: "Dihapus!", description: `SKL ${sklToDelete.kode} dihapus.` }); fetchSklData(); } catch (error: any) { toast({ title: "Error SKL", description: error.message, variant: "destructive" }); } finally { setIsSKLSubmitting(false); setSklToDelete(null); } } };
+  const handleDeleteSKLConfirm = async () => {
+    if (sklToDelete) {
+      setIsSKLSubmitting(true);
+      try {
+        const response = await fetch(`/api/kurikulum/skl/${sklToDelete.id}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Gagal menghapus SKL');
+        }
+        toast({ title: "Dihapus!", description: `SKL ${sklToDelete.kode} dihapus.` });
+        fetchSklData();
+      } catch (error: any) {
+        toast({ title: "Error SKL", description: error.message, variant: "destructive" });
+      } finally {
+        setIsSKLSubmitting(false);
+        setSklToDelete(null);
+      }
+    }
+  };
   const openCPForm = (cp?: CapaianPembelajaran) => { setEditingCP(cp || null); setIsCPFormOpen(true); };
   const handleCPFormSubmit = async (values: CPFormValues) => { setIsCPSubmitting(true); const url = editingCP ? `/api/kurikulum/cp/${editingCP.id}` : '/api/kurikulum/cp'; const method = editingCP ? 'PUT' : 'POST'; const payload = editingCP ? { deskripsi: values.deskripsi, fase: values.fase, elemen: values.elemen } : values; try { const response = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menyimpan CP'); } toast({ title: "Berhasil!", description: `CP ${values.kode || editingCP?.kode} ${editingCP ? 'diperbarui' : 'ditambahkan'}.` }); setIsCPFormOpen(false); setEditingCP(null); fetchCpData(); } catch (error: any) { toast({ title: "Error CP", description: error.message, variant: "destructive" }); } finally { setIsCPSubmitting(false); } };
   const openDeleteCPDialog = (cp: CapaianPembelajaran) => setCpToDelete(cp);
-  const handleDeleteCPConfirm = async () => { if (cpToDelete) { setIsCPSubmitting(true); try { const response = await fetch(`/api/kurikulum/cp/${cpToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus CP'); } toast({ title: "Dihapus!", description: `CP ${cpToDelete.kode} dihapus.` }); fetchCpData(); } catch (error: any) { toast({ title: "Error CP", description: error.message, variant: "destructive" }); } finally { setIsCPSubmitting(false); setCpToDelete(null); } } };
+  const handleDeleteCPConfirm = async () => {
+    if (cpToDelete) {
+      setIsCPSubmitting(true);
+      try {
+        const response = await fetch(`/api/kurikulum/cp/${cpToDelete.id}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Gagal menghapus CP');
+        }
+        toast({ title: "Dihapus!", description: `CP ${cpToDelete.kode} dihapus.` });
+        fetchCpData();
+      } catch (error: any) {
+        toast({ title: "Error CP", description: error.message, variant: "destructive" });
+      } finally {
+        setIsCPSubmitting(false);
+        setCpToDelete(null);
+      }
+    }
+  };
   const handleKategoriMateriSubmit = async (values: KategoriMateriFormValues) => { setIsKategoriMateriSubmitting(true); try { const response = await fetch('/api/kurikulum/materi-kategori', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menyimpan kategori'); } toast({ title: "Berhasil!", description: `Kategori "${values.nama}" ditambahkan.` }); kategoriMateriForm.reset(); fetchKategoriMateriData(); } catch (error: any) { toast({ title: "Error Kategori", description: error.message, variant: "destructive" }); } finally { setIsKategoriMateriSubmitting(false); } };
   const openDeleteKategoriMateriDialog = (kategori: MateriKategori) => setKategoriMateriToDelete(kategori);
-  const handleDeleteKategoriMateriConfirm = async () => { if (kategoriMateriToDelete) { setIsKategoriMateriSubmitting(true); try { const response = await fetch(`/api/kurikulum/materi-kategori/${kategoriMateriToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus kategori'); } toast({ title: "Dihapus!", description: `Kategori "${kategoriMateriToDelete.nama}" dihapus.` }); fetchKategoriMateriData(); } catch (error: any) { toast({ title: "Error Kategori", description: error.message, variant: "destructive" }); } finally { setIsKategoriMateriSubmitting(false); setKategoriMateriToDelete(null); } } };
+  const handleDeleteKategoriMateriConfirm = async () => {
+    if (kategoriMateriToDelete) {
+      setIsKategoriMateriSubmitting(true);
+      try {
+        const response = await fetch(`/api/kurikulum/materi-kategori/${kategoriMateriToDelete.id}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Gagal menghapus kategori');
+        }
+        toast({ title: "Dihapus!", description: `Kategori "${kategoriMateriToDelete.nama}" dihapus.` });
+        fetchKategoriMateriData();
+      } catch (error: any) {
+        toast({ title: "Error Kategori", description: error.message, variant: "destructive" });
+      } finally {
+        setIsKategoriMateriSubmitting(false);
+        setKategoriMateriToDelete(null);
+      }
+    }
+  };
   const handleStrukturKurikulumSubmit = async (values: StrukturKurikulumClientFormValues) => { setIsStrukturSubmitting(true); try { const payload = { ...values, tingkat: selectedTingkat, jurusan: selectedJurusan }; const response = await fetch('/api/kurikulum/struktur', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menambahkan mapel.'); } toast({ title: "Berhasil!", description: `Mata pelajaran ditambahkan ke struktur.` }); fetchStrukturKurikulumData(selectedTingkat, selectedJurusan); setIsStrukturKurikulumFormOpen(false); strukturKurikulumForm.reset({mapelId: undefined, alokasiJam: 0, guruPengampuId: undefined}); } catch (error: any) { toast({ title: "Error Struktur", description: error.message, variant: "destructive" }); } finally { setIsStrukturSubmitting(false); } };
   const openDeleteStrukturItemDialog = (item: StrukturKurikulumItem) => setStrukturItemToDelete(item);
-  const handleDeleteStrukturItemConfirm = async () => { if (strukturItemToDelete) { setIsStrukturSubmitting(true); try { const response = await fetch(`/api/kurikulum/struktur/${strukturItemToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus item.'); } toast({ title: "Dihapus!", description: `Item "${strukturItemToDelete.namaMapel}" dihapus.` }); fetchStrukturKurikulumData(selectedTingkat, selectedJurusan); } catch (error: any) { toast({ title: "Error Hapus", description: error.message, variant: "destructive" }); } finally { setIsStrukturSubmitting(false); setStrukturItemToDelete(null); } } };
+  const handleDeleteStrukturItemConfirm = async () => {
+    if (strukturItemToDelete) {
+      setIsStrukturSubmitting(true);
+      try {
+        const response = await fetch(`/api/kurikulum/struktur/${strukturItemToDelete.id}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Gagal menghapus item.');
+        }
+        toast({ title: "Dihapus!", description: `Item "${strukturItemToDelete.namaMapel}" dihapus.` });
+        fetchStrukturKurikulumData(selectedTingkat, selectedJurusan);
+      } catch (error: any) {
+        toast({ title: "Error Hapus", description: error.message, variant: "destructive" });
+      } finally {
+        setIsStrukturSubmitting(false);
+        setStrukturItemToDelete(null);
+      }
+    }
+  };
   const openSilabusForm = (silabus?: Silabus) => { setCurrentEditingSilabus(silabus || null); setIsSilabusFormOpen(true); };
   const handleSilabusSubmit = async (values: SilabusFormValues) => { setIsSilabusSubmitting(true); const payload: Partial<Silabus> = { ...values, namaFileOriginal: values.file ? (values.file as File).name : undefined }; const url = currentEditingSilabus ? `/api/kurikulum/silabus/${currentEditingSilabus.id}` : '/api/kurikulum/silabus'; const method = currentEditingSilabus ? 'PUT' : 'POST'; try { const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menyimpan silabus'); } toast({title: "Berhasil!", description: `Silabus "${values.judul}" ${currentEditingSilabus ? 'diperbarui' : 'ditambahkan'}.`}); setIsSilabusFormOpen(false); setCurrentEditingSilabus(null); silabusForm.reset(); fetchSilabusData(); } catch (error: any) { toast({ title: "Error Silabus", description: error.message, variant: "destructive" }); } finally { setIsSilabusSubmitting(false); } };
   const openDeleteSilabusDialog = (silabus: Silabus) => setSilabusToDelete(silabus);
-  const handleDeleteSilabusConfirm = async () => { if (silabusToDelete) { setIsSilabusSubmitting(true); try { const response = await fetch(`/api/kurikulum/silabus/${silabusToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus silabus'); } toast({ title: "Dihapus!", description: `Silabus "${silabusToDelete.judul}" dihapus.` }); fetchSilabusData(); } catch (error: any) { toast({ title: "Error Silabus", description: error.message, variant: "destructive" }); } finally { setIsSilabusSubmitting(false); setSilabusToDelete(null); } } };
+  const handleDeleteSilabusConfirm = async () => {
+    if (silabusToDelete) {
+      setIsSilabusSubmitting(true);
+      try {
+        const response = await fetch(`/api/kurikulum/silabus/${silabusToDelete.id}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Gagal menghapus silabus');
+        }
+        toast({ title: "Dihapus!", description: `Silabus "${silabusToDelete.judul}" dihapus.` });
+        fetchSilabusData();
+      } catch (error: any) {
+        toast({ title: "Error Silabus", description: error.message, variant: "destructive" });
+      } finally {
+        setIsSilabusSubmitting(false);
+        setSilabusToDelete(null);
+      }
+    }
+  };
   const openRPPForm = (rpp?: RPP) => { setCurrentEditingRPP(rpp || null); setIsRPPFormOpen(true); };
   const handleRPPSubmit = async (values: RPPFormValues) => { setIsRPPSubmitting(true); const payload: Partial<RPP> = { ...values, namaFileOriginal: values.file ? (values.file as File).name : undefined }; const url = currentEditingRPP ? `/api/kurikulum/rpp/${currentEditingRPP.id}` : '/api/kurikulum/rpp'; const method = currentEditingRPP ? 'PUT' : 'POST'; try { const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menyimpan RPP'); } toast({title: "Berhasil!", description: `RPP "${values.judul}" ${currentEditingRPP ? 'diperbarui' : 'ditambahkan'}.`}); setIsRPPFormOpen(false); setCurrentEditingRPP(null); rppForm.reset(); fetchRppData(); } catch (error: any) { toast({ title: "Error RPP", description: error.message, variant: "destructive" }); } finally { setIsRPPSubmitting(false); } };
   const openDeleteRPPDialog = (rpp: RPP) => setRppToDelete(rpp);
-  const handleDeleteRPPConfirm = async () => { if (rppToDelete) { setIsRPPSubmitting(true); try { const response = await fetch(`/api/kurikulum/rpp/${rppToDelete.id}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus RPP'); } toast({ title: "Dihapus!", description: `RPP "${rppToDelete.judul}" dihapus.` }); fetchRppData(); } catch (error: any) { toast({ title: "Error RPP", description: error.message, variant: "destructive" }); } finally { setIsRPPSubmitting(false); setRppToDelete(null); } } };
+  const handleDeleteRPPConfirm = async () => {
+    if (rppToDelete) {
+      setIsRPPSubmitting(true);
+      try {
+        const response = await fetch(`/api/kurikulum/rpp/${rppToDelete.id}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Gagal menghapus RPP');
+        }
+        toast({ title: "Dihapus!", description: `RPP "${rppToDelete.judul}" dihapus.` });
+        fetchRppData();
+      } catch (error: any) {
+        toast({ title: "Error RPP", description: error.message, variant: "destructive" });
+      } finally {
+        setIsRPPSubmitting(false);
+        setRppToDelete(null);
+      }
+    }
+  };
 
   const currentStrukturList = strukturKurikulumData[`${selectedTingkat}-${selectedJurusan}`] || [];
 

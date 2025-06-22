@@ -77,6 +77,7 @@ const NAMA_HARI = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu
 export default function AdminJadwalPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [isRuanganDialogOpen, setIsRuanganDialogOpen] = useState(false);
   const [isRuanganFormOpen, setIsRuanganFormOpen] = useState(false);
   const [editingRuangan, setEditingRuangan] = useState<Ruangan | null>(null);
   const [ruanganToDelete, setRuanganToDelete] = useState<Ruangan | null>(null);

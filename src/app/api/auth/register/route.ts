@@ -61,11 +61,9 @@ export async function POST(request: NextRequest) {
     try {
       await sendVerificationEmail(newUser.email, newUser.fullName, verificationLink);
     } catch (emailError: any) {
-      console.error(`Register API: Failed to send verification email to ${newUser.email}.`, emailError);
-      // Depending on policy, you might want to still return success to user but log the failure,
-      // or roll back the user creation, or return an error.
-      // For now, we'll let it fail the request.
-      throw new Error(`Failed to send verification email: ${emailError.message}`);
+      // Non-fatal error. Log it but don't fail the entire registration process.
+      // The user can use the "resend verification" feature later.
+      console.error(`Register API: Non-fatal error. Failed to send verification email to ${newUser.email}. Error: ${emailError.message}`);
     }
     
     return NextResponse.json({ 
