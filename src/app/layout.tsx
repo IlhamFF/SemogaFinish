@@ -3,7 +3,7 @@
 
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider as CustomAuthProvider } from "@/hooks/use-auth"; 
+import { AuthProvider as CustomAuthProvider } from "@/components/providers/auth-provider"; 
 import { ThemeProvider } from "@/components/providers/theme-provider"; // Import ThemeProvider
 import { APP_NAME } from '@/lib/constants';
 
