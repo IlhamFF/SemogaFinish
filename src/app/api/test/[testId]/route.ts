@@ -21,21 +21,21 @@ const testUpdateSchema = z.object({
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: { testId: string } }) {
     const authenticatedUser = getAuthenticatedUser(request);
     if (!authenticatedUser) {
         return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
     }
 
-    const { id } = params;
-    if (!id) {
+    const { testId } = params;
+    if (!testId) {
         return NextResponse.json({ message: "ID test tidak valid." }, { status: 400 });
     }
 
     try {
         const dataSource = await getInitializedDataSource();
         const testRepo = dataSource.getRepository(TestEntity);
-        const test = await testRepo.findOne({ where: { id }, relations: ["uploader"] });
+        const test = await testRepo.findOne({ where: { id: testId }, relations: ["uploader"] });
 
         if (!test) {
             return NextResponse.json({ message: "Test tidak ditemukan." }, { status: 404 });
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         if (authenticatedUser.role === 'guru' && test.uploaderId !== authenticatedUser.id && !['admin', 'superadmin'].includes(authenticatedUser.role)) {
             return NextResponse.json({ message: "Akses ditolak untuk test ini." }, { status: 403 });
         }
-        if (authenticatedUser.role === 'siswa' && test.kelas !== (authenticatedUser as any).kelasId) { // Assuming kelasId is in token payload
+        if (authenticatedUser.role === 'siswa' && test.kelas !== (authenticatedUser as any).kelasId) {
             return NextResponse.json({ message: "Akses ditolak untuk test kelas ini." }, { status: 403 });
         }
         
@@ -59,14 +59,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: { testId: string } }) {
   const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
 
-  const { id } = params;
-  if (!id) {
+  const { testId } = params;
+  if (!testId) {
     return NextResponse.json({ message: "ID test tidak valid." }, { status: 400 });
   }
 
@@ -85,7 +85,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     
     const dataSource = await getInitializedDataSource();
     const testRepo = dataSource.getRepository(TestEntity);
-    const existingTest = await testRepo.findOneBy({ id });
+    const existingTest = await testRepo.findOneBy({ id: testId });
 
     if (!existingTest) {
       return NextResponse.json({ message: "Test tidak ditemukan." }, { status: 404 });
@@ -101,13 +101,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (updatePayload.tanggal) updateData.tanggal = updatePayload.tanggal;
 
 
-    const updateResult = await testRepo.update(id, updateData);
+    const updateResult = await testRepo.update(testId, updateData);
 
     if (updateResult.affected === 0) {
       return NextResponse.json({ message: "Gagal memperbarui test." }, { status: 404 });
     }
 
-    const updatedTest = await testRepo.findOne({ where: { id }, relations: ["uploader"] });
+    const updatedTest = await testRepo.findOne({ where: { id: testId }, relations: ["uploader"] });
     return NextResponse.json({
         ...updatedTest,
         tanggal: updatedTest ? formatISO(new Date(updatedTest.tanggal)) : null,
@@ -120,21 +120,21 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: { testId: string } }) {
   const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
 
-  const { id } = params;
-  if (!id) {
+  const { testId } = params;
+  if (!testId) {
     return NextResponse.json({ message: "ID test tidak valid." }, { status: 400 });
   }
 
   try {
     const dataSource = await getInitializedDataSource();
     const testRepo = dataSource.getRepository(TestEntity);
-    const testToDelete = await testRepo.findOneBy({ id });
+    const testToDelete = await testRepo.findOneBy({ id: testId });
 
     if (!testToDelete) {
       return NextResponse.json({ message: "Test tidak ditemukan." }, { status: 404 });
@@ -144,7 +144,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         return NextResponse.json({ message: "Akses ditolak. Anda bukan pemilik test ini." }, { status: 403 });
     }
 
-    const deleteResult = await testRepo.delete(id);
+    const deleteResult = await testRepo.delete(testId);
 
     if (deleteResult.affected === 0) {
       return NextResponse.json({ message: "Gagal menghapus test." }, { status: 404 });

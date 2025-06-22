@@ -18,21 +18,21 @@ const tugasUpdateSchema = z.object({
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: { tugasId: string } }) {
     const authenticatedUser = getAuthenticatedUser(request);
     if (!authenticatedUser) {
         return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
     }
 
-    const { id } = params;
-    if (!id) {
+    const { tugasId } = params;
+    if (!tugasId) {
         return NextResponse.json({ message: "ID tugas tidak valid." }, { status: 400 });
     }
 
     try {
         const dataSource = await getInitializedDataSource();
         const tugasRepo = dataSource.getRepository(TugasEntity);
-        const tugas = await tugasRepo.findOne({ where: { id }, relations: ["uploader"] });
+        const tugas = await tugasRepo.findOne({ where: { id: tugasId }, relations: ["uploader"] });
 
         if (!tugas) {
             return NextResponse.json({ message: "Tugas tidak ditemukan." }, { status: 404 });
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         if (authenticatedUser.role === 'guru' && tugas.uploaderId !== authenticatedUser.id && !['admin', 'superadmin'].includes(authenticatedUser.role)) {
             return NextResponse.json({ message: "Akses ditolak untuk tugas ini." }, { status: 403 });
         }
-        if (authenticatedUser.role === 'siswa' && tugas.kelas !== (authenticatedUser as any).kelasId) { // Assuming kelasId is in token payload
+        if (authenticatedUser.role === 'siswa' && tugas.kelas !== (authenticatedUser as any).kelasId) {
             return NextResponse.json({ message: "Akses ditolak untuk tugas kelas ini." }, { status: 403 });
         }
         
@@ -56,14 +56,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: { tugasId: string } }) {
   const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
 
-  const { id } = params;
-  if (!id) {
+  const { tugasId } = params;
+  if (!tugasId) {
     return NextResponse.json({ message: "ID tugas tidak valid." }, { status: 400 });
   }
 
@@ -82,7 +82,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     
     const dataSource = await getInitializedDataSource();
     const tugasRepo = dataSource.getRepository(TugasEntity);
-    const existingTugas = await tugasRepo.findOneBy({ id });
+    const existingTugas = await tugasRepo.findOneBy({ id: tugasId });
 
     if (!existingTugas) {
       return NextResponse.json({ message: "Tugas tidak ditemukan." }, { status: 404 });
@@ -103,13 +103,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         }
     }
 
-    const updateResult = await tugasRepo.update(id, updateData);
+    const updateResult = await tugasRepo.update(tugasId, updateData);
 
     if (updateResult.affected === 0) {
       return NextResponse.json({ message: "Gagal memperbarui tugas." }, { status: 404 });
     }
 
-    const updatedTugas = await tugasRepo.findOne({ where: { id }, relations: ["uploader"] });
+    const updatedTugas = await tugasRepo.findOne({ where: { id: tugasId }, relations: ["uploader"] });
     return NextResponse.json({
         ...updatedTugas,
         tenggat: updatedTugas ? formatISO(new Date(updatedTugas.tenggat)) : null,
@@ -122,21 +122,21 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: { tugasId: string } }) {
   const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
 
-  const { id } = params;
-  if (!id) {
+  const { tugasId } = params;
+  if (!tugasId) {
     return NextResponse.json({ message: "ID tugas tidak valid." }, { status: 400 });
   }
 
   try {
     const dataSource = await getInitializedDataSource();
     const tugasRepo = dataSource.getRepository(TugasEntity);
-    const tugasToDelete = await tugasRepo.findOneBy({ id });
+    const tugasToDelete = await tugasRepo.findOneBy({ id: tugasId });
 
     if (!tugasToDelete) {
       return NextResponse.json({ message: "Tugas tidak ditemukan." }, { status: 404 });
@@ -146,7 +146,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         return NextResponse.json({ message: "Akses ditolak. Anda bukan pemilik tugas ini." }, { status: 403 });
     }
 
-    const deleteResult = await tugasRepo.delete(id);
+    const deleteResult = await tugasRepo.delete(tugasId);
 
     if (deleteResult.affected === 0) {
       return NextResponse.json({ message: "Gagal menghapus tugas." }, { status: 404 });
