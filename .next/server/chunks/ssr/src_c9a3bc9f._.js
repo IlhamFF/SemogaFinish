@@ -390,7 +390,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$re
 ;
 ;
 ;
-const formSchema = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["object"])({
+const loginSchema = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["object"])({
     email: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["string"])().email({
         message: "Alamat email tidak valid."
     }),
@@ -398,14 +398,37 @@ const formSchema = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modu
         message: "Kata sandi minimal 6 karakter."
     })
 });
+const registerSchema = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["object"])({
+    fullName: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["string"])().min(3, {
+        message: "Nama lengkap minimal 3 karakter."
+    }),
+    email: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["string"])().email({
+        message: "Alamat email tidak valid."
+    }),
+    password: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["string"])().min(6, {
+        message: "Kata sandi minimal 6 karakter."
+    }),
+    nis: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["string"])().min(4, {
+        message: "NIS minimal 4 karakter."
+    }),
+    kelas: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["string"])().min(1, {
+        message: "Kelas wajib diisi."
+    })
+});
 function AuthForm({ mode }) {
-    const { login, register, isLoading: authIsLoading } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$auth$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useAuth"])(); // Renamed isLoading to authIsLoading
-    const [isSubmitting, setIsSubmitting] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false); // Local submitting state for the form
+    const { login, register, isLoading: authIsLoading } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$auth$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useAuth"])();
+    const [isSubmitting, setIsSubmitting] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
+    const currentSchema = mode === 'login' ? loginSchema : registerSchema;
     const form = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hook$2d$form$2f$dist$2f$index$2e$esm$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useForm"])({
-        resolver: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$hookform$2f$resolvers$2f$zod$2f$dist$2f$zod$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["zodResolver"])(formSchema),
+        resolver: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$hookform$2f$resolvers$2f$zod$2f$dist$2f$zod$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["zodResolver"])(currentSchema),
         defaultValues: {
             email: "",
-            password: ""
+            password: "",
+            ...mode === 'register' && {
+                fullName: "",
+                nis: "",
+                kelas: ""
+            }
         }
     });
     async function onSubmit(values) {
@@ -413,7 +436,7 @@ function AuthForm({ mode }) {
         if (mode === "login") {
             await login(values.email, values.password);
         } else {
-            await register(values.email, values.password);
+            await register(values);
         }
         setIsSubmitting(false);
     }
@@ -430,7 +453,7 @@ function AuthForm({ mode }) {
                             children: __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$constants$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["APP_NAME"]
                         }, void 0, false, {
                             fileName: "[project]/src/components/auth/auth-form.tsx",
-                            lineNumber: 53,
+                            lineNumber: 69,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardDescription"], {
@@ -438,13 +461,13 @@ function AuthForm({ mode }) {
                             children: mode === "login" ? "Masuk ke akun Anda" : "Buat akun baru"
                         }, void 0, false, {
                             fileName: "[project]/src/components/auth/auth-form.tsx",
-                            lineNumber: 54,
+                            lineNumber: 70,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/auth/auth-form.tsx",
-                    lineNumber: 52,
+                    lineNumber: 68,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -455,6 +478,48 @@ function AuthForm({ mode }) {
                                 onSubmit: form.handleSubmit(onSubmit),
                                 className: "space-y-6",
                                 children: [
+                                    mode === 'register' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormField"], {
+                                        control: form.control,
+                                        name: "fullName",
+                                        render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormItem"], {
+                                                children: [
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormLabel"], {
+                                                        children: "Nama Lengkap"
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                        lineNumber: 83,
+                                                        columnNumber: 23
+                                                    }, void 0),
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormControl"], {
+                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
+                                                            placeholder: "Nama lengkap Anda",
+                                                            ...field
+                                                        }, void 0, false, {
+                                                            fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                            lineNumber: 85,
+                                                            columnNumber: 25
+                                                        }, void 0)
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                        lineNumber: 84,
+                                                        columnNumber: 23
+                                                    }, void 0),
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
+                                                        fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                        lineNumber: 87,
+                                                        columnNumber: 23
+                                                    }, void 0)
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                lineNumber: 82,
+                                                columnNumber: 21
+                                            }, void 0)
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/components/auth/auth-form.tsx",
+                                        lineNumber: 78,
+                                        columnNumber: 17
+                                    }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormField"], {
                                         control: form.control,
                                         name: "email",
@@ -464,7 +529,7 @@ function AuthForm({ mode }) {
                                                         children: "Email"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/auth/auth-form.tsx",
-                                                        lineNumber: 66,
+                                                        lineNumber: 97,
                                                         columnNumber: 21
                                                     }, void 0),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormControl"], {
@@ -473,28 +538,28 @@ function AuthForm({ mode }) {
                                                             ...field
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/auth/auth-form.tsx",
-                                                            lineNumber: 68,
+                                                            lineNumber: 99,
                                                             columnNumber: 23
                                                         }, void 0)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/auth/auth-form.tsx",
-                                                        lineNumber: 67,
+                                                        lineNumber: 98,
                                                         columnNumber: 21
                                                     }, void 0),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
                                                         fileName: "[project]/src/components/auth/auth-form.tsx",
-                                                        lineNumber: 70,
+                                                        lineNumber: 101,
                                                         columnNumber: 21
                                                     }, void 0)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/auth/auth-form.tsx",
-                                                lineNumber: 65,
+                                                lineNumber: 96,
                                                 columnNumber: 19
                                             }, void 0)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/auth/auth-form.tsx",
-                                        lineNumber: 61,
+                                        lineNumber: 92,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormField"], {
@@ -506,7 +571,7 @@ function AuthForm({ mode }) {
                                                         children: "Kata Sandi"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/auth/auth-form.tsx",
-                                                        lineNumber: 79,
+                                                        lineNumber: 110,
                                                         columnNumber: 21
                                                     }, void 0),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormControl"], {
@@ -516,29 +581,122 @@ function AuthForm({ mode }) {
                                                             ...field
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/auth/auth-form.tsx",
-                                                            lineNumber: 81,
+                                                            lineNumber: 112,
                                                             columnNumber: 23
                                                         }, void 0)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/auth/auth-form.tsx",
-                                                        lineNumber: 80,
+                                                        lineNumber: 111,
                                                         columnNumber: 21
                                                     }, void 0),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
                                                         fileName: "[project]/src/components/auth/auth-form.tsx",
-                                                        lineNumber: 83,
+                                                        lineNumber: 114,
                                                         columnNumber: 21
                                                     }, void 0)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/auth/auth-form.tsx",
-                                                lineNumber: 78,
+                                                lineNumber: 109,
                                                 columnNumber: 19
                                             }, void 0)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/auth/auth-form.tsx",
-                                        lineNumber: 74,
+                                        lineNumber: 105,
                                         columnNumber: 15
+                                    }, this),
+                                    mode === 'register' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "grid grid-cols-2 gap-4",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormField"], {
+                                                control: form.control,
+                                                name: "nis",
+                                                render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormItem"], {
+                                                        children: [
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormLabel"], {
+                                                                children: "NIS"
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                                lineNumber: 125,
+                                                                columnNumber: 25
+                                                            }, void 0),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormControl"], {
+                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
+                                                                    placeholder: "Nomor Induk Siswa",
+                                                                    ...field
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                                    lineNumber: 127,
+                                                                    columnNumber: 27
+                                                                }, void 0)
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                                lineNumber: 126,
+                                                                columnNumber: 25
+                                                            }, void 0),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
+                                                                fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                                lineNumber: 129,
+                                                                columnNumber: 25
+                                                            }, void 0)
+                                                        ]
+                                                    }, void 0, true, {
+                                                        fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                        lineNumber: 124,
+                                                        columnNumber: 23
+                                                    }, void 0)
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                lineNumber: 120,
+                                                columnNumber: 19
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormField"], {
+                                                control: form.control,
+                                                name: "kelas",
+                                                render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormItem"], {
+                                                        children: [
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormLabel"], {
+                                                                children: "Kelas"
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                                lineNumber: 138,
+                                                                columnNumber: 25
+                                                            }, void 0),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormControl"], {
+                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
+                                                                    placeholder: "Contoh: X IPA 1",
+                                                                    ...field
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                                    lineNumber: 140,
+                                                                    columnNumber: 27
+                                                                }, void 0)
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                                lineNumber: 139,
+                                                                columnNumber: 25
+                                                            }, void 0),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
+                                                                fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                                lineNumber: 142,
+                                                                columnNumber: 25
+                                                            }, void 0)
+                                                        ]
+                                                    }, void 0, true, {
+                                                        fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                        lineNumber: 137,
+                                                        columnNumber: 23
+                                                    }, void 0)
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/auth/auth-form.tsx",
+                                                lineNumber: 133,
+                                                columnNumber: 19
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/auth/auth-form.tsx",
+                                        lineNumber: 119,
+                                        columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
                                         type: "submit",
@@ -549,25 +707,25 @@ function AuthForm({ mode }) {
                                                 className: "mr-2 h-4 w-4 animate-spin"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/auth/auth-form.tsx",
-                                                lineNumber: 88,
+                                                lineNumber: 149,
                                                 columnNumber: 53
                                             }, this),
                                             mode === "login" ? "Masuk" : "Buat Akun"
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/auth/auth-form.tsx",
-                                        lineNumber: 87,
+                                        lineNumber: 148,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/auth/auth-form.tsx",
-                                lineNumber: 60,
+                                lineNumber: 76,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/auth/auth-form.tsx",
-                            lineNumber: 59,
+                            lineNumber: 75,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -582,7 +740,7 @@ function AuthForm({ mode }) {
                                         children: "Daftar"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/auth/auth-form.tsx",
-                                        lineNumber: 97,
+                                        lineNumber: 158,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -590,7 +748,7 @@ function AuthForm({ mode }) {
                                         children: "|"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/auth/auth-form.tsx",
-                                        lineNumber: 100,
+                                        lineNumber: 161,
                                         columnNumber: 18
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -599,7 +757,7 @@ function AuthForm({ mode }) {
                                         children: "Lupa Kata Sandi?"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/auth/auth-form.tsx",
-                                        lineNumber: 101,
+                                        lineNumber: 162,
                                         columnNumber: 17
                                     }, this)
                                 ]
@@ -613,31 +771,31 @@ function AuthForm({ mode }) {
                                         children: "Masuk"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/auth/auth-form.tsx",
-                                        lineNumber: 108,
+                                        lineNumber: 169,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true)
                         }, void 0, false, {
                             fileName: "[project]/src/components/auth/auth-form.tsx",
-                            lineNumber: 93,
+                            lineNumber: 154,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/auth/auth-form.tsx",
-                    lineNumber: 58,
+                    lineNumber: 74,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/auth/auth-form.tsx",
-            lineNumber: 51,
+            lineNumber: 67,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/auth/auth-form.tsx",
-        lineNumber: 50,
+        lineNumber: 66,
         columnNumber: 5
     }, this);
 }
