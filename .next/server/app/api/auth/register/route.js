@@ -1,6 +1,6 @@
 const CHUNK_PUBLIC_PATH = "server/app/api/auth/register/route.js";
 const runtime = require("../../../../chunks/[turbopack]_runtime.js");
-runtime.loadChunk("server/chunks/[root-of-the-server]__1ec5443e._.js");
+runtime.loadChunk("server/chunks/[root-of-the-server]__a25ff74d._.js");
 runtime.loadChunk("server/chunks/node_modules_next_acd3fb9b._.js");
 runtime.loadChunk("server/chunks/node_modules_typeorm_query-builder_a0366d72._.js");
 runtime.loadChunk("server/chunks/node_modules_typeorm_driver_sqlserver_959cbaa5._.js");
