@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Users, BarChart3, Settings, LogOut, BookOpenText, 
     BookOpenCheck, CalendarDays, ClipboardList, Presentation, FilePlus2, UserCheck, 
     UploadCloud, ScrollText, GraduationCap, ClipboardCheck as ClipboardCheckSiswa, 
-    BookOpen, FileText as FileTextSiswa, Award 
+    BookOpen, FileText as FileTextSiswa, Award, BookCopy 
 } from 'lucide-react';
 import { ROUTES } from './constants'; // Import ROUTES from the separated constants file
 
@@ -23,6 +23,7 @@ export const NAV_LINKS_CONFIG: NavLink[] = [
   
   // Admin Links
   { href: ROUTES.ADMIN_USERS, label: 'Manajemen Pengguna', icon: Users, roles: ['admin', 'superadmin'] as Role[] },
+  { href: ROUTES.ADMIN_KELAS, label: 'Manajemen Kelas', icon: BookCopy, roles: ['admin', 'superadmin'] as Role[] },
   { href: ROUTES.ADMIN_KURIKULUM, label: 'Manajemen Kurikulum', icon: BookOpenCheck, roles: ['admin', 'superadmin'] as Role[] },
   { href: ROUTES.ADMIN_MATA_PELAJARAN, label: 'Manajemen Mapel', icon: ClipboardList, roles: ['admin', 'superadmin'] as Role[] },
   { href: ROUTES.ADMIN_JADWAL, label: 'Manajemen Jadwal', icon: CalendarDays, roles: ['admin', 'superadmin'] as Role[] },

@@ -15,33 +15,49 @@ import Link from "next/link";
 import { ROUTES, APP_NAME } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
 
-const formSchema = z.object({
+const loginSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
   password: z.string().min(6, { message: "Kata sandi minimal 6 karakter." }),
 });
+
+const registerSchema = z.object({
+  fullName: z.string().min(3, { message: "Nama lengkap minimal 3 karakter." }),
+  email: z.string().email({ message: "Alamat email tidak valid." }),
+  password: z.string().min(6, { message: "Kata sandi minimal 6 karakter." }),
+  nis: z.string().min(4, { message: "NIS minimal 4 karakter." }),
+  kelas: z.string().min(1, { message: "Kelas wajib diisi." }),
+});
+
 
 type AuthFormProps = {
   mode: "login" | "register";
 };
 
 export function AuthForm({ mode }: AuthFormProps) {
-  const { login, register, isLoading: authIsLoading } = useAuth(); // Renamed isLoading to authIsLoading
-  const [isSubmitting, setIsSubmitting] = React.useState(false); // Local submitting state for the form
+  const { login, register, isLoading: authIsLoading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  
+  const currentSchema = mode === 'login' ? loginSchema : registerSchema;
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<typeof currentSchema>>({
+    resolver: zodResolver(currentSchema),
     defaultValues: {
       email: "",
       password: "",
+      ...(mode === 'register' && {
+        fullName: "",
+        nis: "",
+        kelas: "",
+      }),
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof currentSchema>) {
     setIsSubmitting(true);
     if (mode === "login") {
       await login(values.email, values.password);
     } else {
-      await register(values.email, values.password);
+      await register(values as z.infer<typeof registerSchema>);
     }
     setIsSubmitting(false);
   }
@@ -58,6 +74,21 @@ export function AuthForm({ mode }: AuthFormProps) {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {mode === 'register' && (
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nama Lengkap</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nama lengkap Anda" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="email"
@@ -84,6 +115,36 @@ export function AuthForm({ mode }: AuthFormProps) {
                   </FormItem>
                 )}
               />
+              {mode === 'register' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="nis"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>NIS</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nomor Induk Siswa" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="kelas"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Kelas</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Contoh: X IPA 1" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={isSubmitting || authIsLoading}>
                 {(isSubmitting || authIsLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {mode === "login" ? "Masuk" : "Buat Akun"}
@@ -116,5 +177,3 @@ export function AuthForm({ mode }: AuthFormProps) {
     </div>
   );
 }
-
-    

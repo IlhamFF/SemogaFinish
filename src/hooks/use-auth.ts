@@ -1,14 +1,23 @@
+
 "use client";
 
 import { createContext, useContext } from 'react';
 import type { User } from '@/types';
+
+export interface RegisterData {
+  email: string;
+  password?: string;
+  fullName?: string;
+  nis?: string;
+  kelas?: string;
+}
 
 // This interface defines the shape of the context's value.
 export interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, passwordAttempt: string) => Promise<boolean>;
-  register: (email: string, passwordAttempt: string) => Promise<boolean>;
+  register: (registerData: RegisterData) => Promise<boolean>;
   logout: () => Promise<void>;
   fetchUser: () => Promise<void>;
   updateUserProfile: (userId: string, profileData: Partial<User>) => Promise<boolean>;

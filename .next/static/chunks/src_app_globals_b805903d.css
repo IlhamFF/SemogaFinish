@@ -625,6 +625,10 @@ body {
   margin-top: auto;
 }
 
+.mr-1\.5 {
+  margin-right: .375rem;
+}
+
 .block {
   display: block;
 }
@@ -2381,6 +2385,10 @@ body {
 
 .hover\:underline:hover {
   text-decoration-line: underline;
+}
+
+.hover\:no-underline:hover {
+  text-decoration-line: none;
 }
 
 .hover\:opacity-100:hover {

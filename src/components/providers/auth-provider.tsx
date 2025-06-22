@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -5,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { ROUTES } from '@/lib/constants';
-import { AuthContext } from '@/hooks/use-auth';
+import { AuthContext, type RegisterData } from '@/hooks/use-auth';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -66,13 +67,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [toast]);
 
-  const register = useCallback(async (email: string, passwordAttempt: string): Promise<boolean> => {
+  const register = useCallback(async (registerData: RegisterData): Promise<boolean> => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: passwordAttempt }),
+        body: JSON.stringify(registerData),
       });
       const data = await response.json();
 

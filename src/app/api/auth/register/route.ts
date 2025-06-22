@@ -10,8 +10,11 @@ import { sendVerificationEmail } from "@/lib/email-service";
 import type { Role } from "@/types";
 
 const registerSchema = z.object({
+  fullName: z.string().min(2, { message: "Nama lengkap minimal 2 karakter." }),
   email: z.string().email({ message: "Alamat email tidak valid." }),
   password: z.string().min(6, { message: "Kata sandi minimal 6 karakter." }),
+  nis: z.string().min(4, { message: "NIS minimal 4 karakter." }).optional().nullable(),
+  kelas: z.string().min(1, { message: "Kelas wajib diisi." }).optional().nullable(),
 });
 
 export async function POST(request: NextRequest) {
@@ -24,7 +27,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const { email, password } = validation.data;
+    const { email, password, fullName, nis, kelas } = validation.data;
 
     const dataSource = await getInitializedDataSource();
     const userRepo = dataSource.getRepository(UserEntity);
@@ -43,8 +46,10 @@ export async function POST(request: NextRequest) {
       passwordHash: hashedPassword,
       role: 'siswa' as Role,
       isVerified: false, 
-      name: email.split('@')[0], 
-      fullName: email.split('@')[0], 
+      name: fullName.split(' ')[0], // Use first name as default 'name'
+      fullName: fullName,
+      nis: nis,
+      kelasId: kelas,
       joinDate: new Date().toISOString().split('T')[0],
       emailVerificationToken: verificationToken,
       emailVerificationTokenExpires: verificationTokenExpires,

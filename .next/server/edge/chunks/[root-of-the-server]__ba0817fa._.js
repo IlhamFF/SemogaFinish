@@ -96,6 +96,7 @@ const ROUTES = {
     ADMIN_KURIKULUM: '/admin/kurikulum',
     ADMIN_MATA_PELAJARAN: '/admin/mata-pelajaran',
     ADMIN_JADWAL: '/admin/jadwal',
+    ADMIN_KELAS: '/admin/kelas',
     GURU_DASHBOARD: '/guru/dashboard',
     GURU_PENGAJARAN: '/guru/pengajaran',
     GURU_TUGAS: '/guru/tugas',
