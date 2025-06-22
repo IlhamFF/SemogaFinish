@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import * as z from "zod";
 import type { Role } from "@/types";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const userCreateSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),

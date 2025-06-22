@@ -61,7 +61,7 @@ export async function POST(
     submission.status = "Dinilai"; // Set status menjadi Dinilai
 
     await submissionRepo.save(submission);
-
+    
     // Ambil data yang sudah diperbarui dengan relasi siswa untuk respons
     const updatedSubmissionWithSiswa = await submissionRepo.findOne({
         where: { id: submission.id },

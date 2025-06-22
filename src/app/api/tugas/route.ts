@@ -6,7 +6,7 @@ import { TugasEntity } from "@/entities/tugas.entity";
 import * as z from "zod";
 import { formatISO } from 'date-fns';
 import type { FindManyOptions } from "typeorm";
-import { getAuthenticatedUser } from "@/lib/auth-utils"; // Import new auth util
+import { getAuthenticatedUser } from "@/lib/auth-utils-node"; // Import new auth util
 
 const tugasCreateSchema = z.object({
   judul: z.string().min(5, { message: "Judul tugas minimal 5 karakter." }),

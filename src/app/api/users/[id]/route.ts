@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import * as z from "zod";
 import type { Role } from "@/types";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const userUpdateSchema = z.object({
   role: z.enum(['admin', 'guru', 'siswa', 'pimpinan']).optional(),
@@ -206,5 +206,3 @@ export async function DELETE(
     return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
   }
 }
-
-    

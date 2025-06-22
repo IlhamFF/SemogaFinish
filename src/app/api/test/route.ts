@@ -1,3 +1,4 @@
+
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
@@ -5,7 +6,7 @@ import { TestEntity, type TestTipe, type TestStatus } from "@/entities/test.enti
 import * as z from "zod";
 import { formatISO } from 'date-fns';
 import type { FindManyOptions } from "typeorm";
-import { getAuthenticatedUser } from "@/lib/auth-utils"; // Import new auth util
+import { getAuthenticatedUser } from "@/lib/auth-utils-node"; // Import new auth util
 
 const testCreateSchema = z.object({
   judul: z.string().min(5, { message: "Judul test minimal 5 karakter." }),

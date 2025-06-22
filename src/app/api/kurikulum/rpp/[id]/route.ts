@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { RppEntity } from "@/entities/rpp.entity";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import * as z from "zod";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const rppUpdateSchema = z.object({
   judul: z.string().min(5, { message: "Judul RPP minimal 5 karakter." }).max(255).optional(),

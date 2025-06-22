@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { SilabusEntity } from "@/entities/silabus.entity";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import * as z from "zod";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const silabusUpdateSchema = z.object({
   judul: z.string().min(5, { message: "Judul silabus minimal 5 karakter." }).max(255).optional(),

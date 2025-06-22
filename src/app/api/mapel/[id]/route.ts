@@ -6,7 +6,7 @@ import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import * as z from "zod";
 import { KATEGORI_MAPEL } from "@/lib/constants";
 import type { KategoriMapelType } from "@/entities/mata-pelajaran.entity";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const mataPelajaranUpdateSchema = z.object({
   nama: z.string().min(5, "Nama minimal 5 karakter.").max(255, "Nama maksimal 255 karakter.").optional(),

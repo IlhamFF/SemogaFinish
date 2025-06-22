@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { MateriAjarEntity } from "@/entities/materi-ajar.entity";
 import * as z from "zod";
 import { JENIS_MATERI_AJAR, type JenisMateriAjarType } from "@/types";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const materiAjarUpdateSchema = z.object({
   judul: z.string().min(3, { message: "Judul minimal 3 karakter." }).max(255).optional(),

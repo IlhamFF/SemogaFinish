@@ -7,7 +7,7 @@ import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import { UserEntity } from "@/entities/user.entity";
 import * as z from "zod";
 import { SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS } from "@/lib/constants";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const strukturKurikulumCreateSchema = z.object({
   tingkat: z.enum(SCHOOL_GRADE_LEVELS as [string, ...string[]]),

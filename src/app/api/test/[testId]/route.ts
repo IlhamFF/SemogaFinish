@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { TestEntity, type TestTipe, type TestStatus } from "@/entities/test.entity";
 import * as z from "zod";
 import { formatISO } from 'date-fns';
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const testUpdateSchema = z.object({
   judul: z.string().min(5, { message: "Judul test minimal 5 karakter." }).optional(),

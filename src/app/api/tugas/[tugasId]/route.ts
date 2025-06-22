@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { TugasEntity } from "@/entities/tugas.entity";
 import * as z from "zod";
 import { formatISO } from 'date-fns';
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const tugasUpdateSchema = z.object({
   judul: z.string().min(5, { message: "Judul tugas minimal 5 karakter." }).optional(),

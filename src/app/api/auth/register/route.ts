@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import bcrypt from "bcryptjs";
 import * as z from "zod";
-import { generateSecureToken } from "@/lib/auth-utils";
+import { generateSecureToken } from "@/lib/auth-utils-node";
 import { sendVerificationEmail } from "@/lib/email-service";
 import type { Role } from "@/types";
 

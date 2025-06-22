@@ -1,18 +1,14 @@
 
-import jwt from 'jsonwebtoken';
-import cookie from 'cookie';
-import type { NextRequest, NextResponse } from 'next/server';
-import type { User, Role as AppRole } from '@/types';
-import crypto from 'crypto';
+import { jwtVerify } from 'jose';
+import type { NextRequest } from 'next/server';
+import type { Role as AppRole } from '@/types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-please-change-this';
-const JWT_EXPIRY = process.env.JWT_EXPIRY || '1d';
+// Key for 'jose' must be a Uint8Array.
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'your-super-secret-jwt-key-please-change-this'
+);
 export const TOKEN_NAME = 'auth_token';
 
-/**
- * Payload that will be encoded into the JWT token.
- * Contains essential, non-sensitive user data.
- */
 export interface UserPayload {
   id: string;
   email: string;
@@ -22,69 +18,27 @@ export interface UserPayload {
 }
 
 /**
- * Generates a JWT for a given user.
- * @param user The user object containing id, email, role, and verification status.
- * @returns A JWT string.
- */
-export function generateToken(user: Pick<User, 'id' | 'email' | 'role' | 'isVerified' | 'kelasId'>): string {
-  const payload: UserPayload = {
-    id: user.id,
-    email: user.email,
-    role: user.role,
-    isVerified: user.isVerified,
-    kelasId: user.kelasId,
-  };
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-}
-
-/**
- * Verifies a JWT and returns its payload if valid.
+ * Verifies a JWT using 'jose' and returns its payload if valid.
+ * This function is safe for the Edge runtime.
  * @param token The JWT string to verify.
- * @returns The decoded UserPayload or null if the token is invalid.
+ * @returns A promise that resolves to the decoded UserPayload or null.
  */
-export function verifyToken(token: string): UserPayload | null {
+export async function verifyToken(token: string): Promise<UserPayload | null> {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
-    return decoded;
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    // The payload from jwtVerify is a JWT.Payload object, which is indexable.
+    // We cast it to our UserPayload type.
+    return payload as unknown as UserPayload;
   } catch (error) {
-    console.error('Invalid token:', error);
+    // It's common for this to fail (e.g., expired token), so we don't need to log every error.
+    // console.error('Invalid token (Edge):', error);
     return null;
   }
 }
 
 /**
- * Sets the authentication token as a secure, HTTP-only cookie on a NextResponse.
- * @param res The NextResponse object to modify.
- * @param token The JWT string to set in the cookie.
- */
-export function setTokenCookie(res: NextResponse, token: string): void {
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV !== 'development',
-    maxAge: 60 * 60 * 24 * 1, // 1 day in seconds
-    path: '/',
-    sameSite: 'lax' as const,
-  };
-  res.headers.append('Set-Cookie', cookie.serialize(TOKEN_NAME, token, cookieOptions));
-}
-
-/**
- * Clears the authentication token cookie from a NextResponse.
- * @param res The NextResponse object to modify.
- */
-export function clearTokenCookie(res: NextResponse): void {
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV !== 'development',
-    expires: new Date(0), // Set expiry to a past date
-    path: '/',
-    sameSite: 'lax' as const,
-  };
-  res.headers.append('Set-Cookie', cookie.serialize(TOKEN_NAME, '', cookieOptions));
-}
-
-/**
  * Extracts the JWT from the cookies of a NextRequest.
+ * Safe for Edge runtime.
  * @param req The incoming NextRequest.
  * @returns The token string or null if not found.
  */
@@ -95,22 +49,13 @@ export function getTokenFromRequest(req: NextRequest): string | null {
 
 /**
  * Retrieves the authenticated user payload from the request token.
- * A convenient utility combining token extraction and verification.
- * @returns The UserPayload or null if the user is not authenticated.
+ * A convenient utility combining token extraction and verification for the Edge.
+ * @returns A promise that resolves to the UserPayload or null if the user is not authenticated.
  */
-export function getAuthenticatedUser(req: NextRequest): UserPayload | null {
+export async function getAuthenticatedUser(req: NextRequest): Promise<UserPayload | null> {
   const token = getTokenFromRequest(req);
   if (!token) {
     return null;
   }
-  return verifyToken(token);
-}
-
-/**
- * Generates a cryptographically secure random token.
- * @param length The desired byte length of the token.
- * @returns A hex-encoded secure token.
- */
-export function generateSecureToken(length = 32): string {
-  return crypto.randomBytes(length).toString('hex');
+  return await verifyToken(token);
 }

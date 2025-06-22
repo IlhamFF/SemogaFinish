@@ -23,66 +23,37 @@ var { g: global, __dirname } = __turbopack_context__;
 {
 __turbopack_context__.s({
     "TOKEN_NAME": (()=>TOKEN_NAME),
-    "clearTokenCookie": (()=>clearTokenCookie),
-    "generateToken": (()=>generateToken),
+    "getAuthenticatedUser": (()=>getAuthenticatedUser),
     "getTokenFromRequest": (()=>getTokenFromRequest),
-    "setTokenCookie": (()=>setTokenCookie),
     "verifyToken": (()=>verifyToken)
 });
-(()=>{
-    const e = new Error("Cannot find module 'jsonwebtoken'");
-    e.code = 'MODULE_NOT_FOUND';
-    throw e;
-})();
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$cookie$2f$index$2e$js__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/cookie/index.js [middleware-edge] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$jose$2f$dist$2f$browser$2f$jwt$2f$verify$2e$js__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/jose/dist/browser/jwt/verify.js [middleware-edge] (ecmascript)");
 ;
-;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-please-change-this';
-const JWT_EXPIRY = process.env.JWT_EXPIRY || '1d'; // e.g., 1 day
+// Key for 'jose' must be a Uint8Array.
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-super-secret-jwt-key-please-change-this');
 const TOKEN_NAME = 'auth_token';
-function generateToken(user) {
-    const payload = {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        isVerified: user.isVerified
-    };
-    return jwt.sign(payload, JWT_SECRET, {
-        expiresIn: JWT_EXPIRY
-    });
-}
-function verifyToken(token) {
+async function verifyToken(token) {
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        return decoded;
+        const { payload } = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$jose$2f$dist$2f$browser$2f$jwt$2f$verify$2e$js__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__["jwtVerify"])(token, JWT_SECRET);
+        // The payload from jwtVerify is a JWT.Payload object, which is indexable.
+        // We cast it to our UserPayload type.
+        return payload;
     } catch (error) {
-        console.error('Invalid token:', error);
+        // It's common for this to fail (e.g., expired token), so we don't need to log every error.
+        // console.error('Invalid token (Edge):', error);
         return null;
     }
-}
-function setTokenCookie(res, token) {
-    const cookieOptions = {
-        httpOnly: true,
-        secure: ("TURBOPACK compile-time value", "development") !== 'development',
-        maxAge: 60 * 60 * 24 * 1,
-        path: '/',
-        sameSite: 'lax'
-    };
-    res.headers.append('Set-Cookie', __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$cookie$2f$index$2e$js__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__["default"].serialize(TOKEN_NAME, token, cookieOptions));
-}
-function clearTokenCookie(res) {
-    const cookieOptions = {
-        httpOnly: true,
-        secure: ("TURBOPACK compile-time value", "development") !== 'development',
-        expires: new Date(0),
-        path: '/',
-        sameSite: 'lax'
-    };
-    res.headers.append('Set-Cookie', __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$cookie$2f$index$2e$js__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__["default"].serialize(TOKEN_NAME, '', cookieOptions));
 }
 function getTokenFromRequest(req) {
     const cookies = req.cookies.get(TOKEN_NAME);
     return cookies?.value || null;
+}
+async function getAuthenticatedUser(req) {
+    const token = getTokenFromRequest(req);
+    if (!token) {
+        return null;
+    }
+    return await verifyToken(token);
 }
 }}),
 "[project]/src/lib/constants.ts [middleware-edge] (ecmascript)": ((__turbopack_context__) => {
@@ -235,7 +206,7 @@ async function middleware(request) {
         return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$esm$2f$server$2f$web$2f$spec$2d$extension$2f$response$2e$js__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__["NextResponse"].next();
     }
     const token = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$auth$2d$utils$2e$ts__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__["getTokenFromRequest"])(request);
-    const userPayload = token ? (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$auth$2d$utils$2e$ts__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__["verifyToken"])(token) : null;
+    const userPayload = token ? await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$auth$2d$utils$2e$ts__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__["verifyToken"])(token) : null;
     const isProtectedPath = protectedPaths.some((path)=>pathname.startsWith(path));
     if (isProtectedPath) {
         if (!userPayload) {

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import * as z from "zod";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const slotWaktuUpdateSchema = z.object({
   namaSlot: z.string().min(3, { message: "Nama slot minimal 3 karakter." }).max(100).optional(),

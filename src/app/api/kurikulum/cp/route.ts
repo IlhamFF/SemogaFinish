@@ -6,7 +6,7 @@ import { CpEntity } from "@/entities/cp.entity";
 import * as z from "zod";
 import { FASE_CP } from "@/types"; 
 import type { FaseCpType } from "@/types";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const cpCreateSchema = z.object({
   kode: z.string().min(2, { message: "Kode CP minimal 2 karakter." }).max(100, { message: "Kode CP maksimal 100 karakter."}),

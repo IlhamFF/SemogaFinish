@@ -9,7 +9,7 @@ import { RuanganEntity } from "@/entities/ruangan.entity";
 import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import * as z from "zod";
 import { FindOptionsWhere, In, Not } from "typeorm"; 
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const jadwalPelajaranUpdateSchema = z.object({
   hari: z.string().min(1, "Hari wajib diisi.").optional(),

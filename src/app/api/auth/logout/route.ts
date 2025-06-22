@@ -1,7 +1,7 @@
 
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
-import { clearTokenCookie } from "@/lib/auth-utils";
+import { clearTokenCookie } from "@/lib/auth-utils-node";
 
 export async function POST(request: NextRequest) {
   try {

@@ -3,7 +3,7 @@ import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
-import { verifyToken, getTokenFromRequest } from "@/lib/auth-utils";
+import { verifyToken, getTokenFromRequest } from "@/lib/auth-utils-node";
 
 export async function GET(request: NextRequest) {
   try {

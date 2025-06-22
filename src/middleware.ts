@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const token = getTokenFromRequest(request);
-  const userPayload = token ? verifyToken(token) : null;
+  const userPayload = token ? await verifyToken(token) : null;
 
   const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path));
 

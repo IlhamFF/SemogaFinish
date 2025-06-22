@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { RuanganEntity } from "@/entities/ruangan.entity";
 import * as z from "zod";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const ruanganCreateSchema = z.object({
   nama: z.string().min(3, { message: "Nama ruangan minimal 3 karakter." }).max(255),

@@ -1,7 +1,7 @@
 
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 // Tidak ada interaksi DB untuk simulasi ini, jadi entitas tidak diimpor.
 
 export async function POST(request: NextRequest) {

@@ -3,7 +3,7 @@ import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
-import { generateSecureToken, getTokenFromRequest, verifyToken } from "@/lib/auth-utils";
+import { generateSecureToken, getTokenFromRequest, verifyToken } from "@/lib/auth-utils-node";
 import { sendVerificationEmail } from "@/lib/email-service"; // Import layanan email
 
 export async function POST(request: NextRequest) {

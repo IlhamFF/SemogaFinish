@@ -6,7 +6,7 @@ import { SklEntity } from "@/entities/skl.entity";
 import * as z from "zod";
 import { KATEGORI_SKL } from "@/types"; 
 import type { KategoriSklType } from "@/types";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const sklCreateSchema = z.object({
   kode: z.string().min(2, { message: "Kode SKL minimal 2 karakter." }).max(50, { message: "Kode SKL maksimal 50 karakter."}),

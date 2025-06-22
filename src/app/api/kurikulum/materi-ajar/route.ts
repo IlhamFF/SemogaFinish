@@ -6,7 +6,7 @@ import { MateriAjarEntity } from "@/entities/materi-ajar.entity";
 import * as z from "zod";
 import { JENIS_MATERI_AJAR, type JenisMateriAjarType } from "@/types";
 import { format } from 'date-fns';
-import { getAuthenticatedUser } from "@/lib/auth-utils"; // Import new auth util
+import { getAuthenticatedUser } from "@/lib/auth-utils-node"; // Import new auth util
 
 const materiAjarCreateSchema = z.object({
   judul: z.string().min(3, { message: "Judul minimal 3 karakter." }).max(255),

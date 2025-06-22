@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import bcrypt from "bcryptjs";
 import * as z from "zod";
-import { generateToken, setTokenCookie } from "@/lib/auth-utils";
+import { generateToken, setTokenCookie } from "@/lib/auth-utils-node";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import * as z from "zod";
-import { getAuthenticatedUser } from "@/lib/auth-utils"; // Use getAuthenticatedUser
+import { getAuthenticatedUser } from "@/lib/auth-utils-node"; // Use getAuthenticatedUser
 
 const profileUpdateSchema = z.object({
   fullName: z.string().min(2, { message: "Nama lengkap minimal 2 karakter."}).optional(),

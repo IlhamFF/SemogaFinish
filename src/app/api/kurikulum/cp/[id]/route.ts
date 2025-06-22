@@ -6,7 +6,7 @@ import { CpEntity } from "@/entities/cp.entity";
 import * as z from "zod";
 import { FASE_CP } from "@/types";
 import type { FaseCpType } from "@/types";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const cpUpdateSchema = z.object({
   deskripsi: z.string().min(10, { message: "Deskripsi CP minimal 10 karakter." }).optional(),

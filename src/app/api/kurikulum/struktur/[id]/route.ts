@@ -3,7 +3,7 @@ import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { StrukturKurikulumEntity } from "@/entities/struktur-kurikulum.entity";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 // GET and PUT for individual structure items are not typically used this way,
 // as structures are managed per tingkat/jurusan.

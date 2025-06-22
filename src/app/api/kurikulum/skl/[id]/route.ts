@@ -6,7 +6,7 @@ import { SklEntity } from "@/entities/skl.entity";
 import * as z from "zod";
 import { KATEGORI_SKL } from "@/types";
 import type { KategoriSklType } from "@/types";
-import { getAuthenticatedUser } from "@/lib/auth-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const sklUpdateSchema = z.object({
   deskripsi: z.string().min(10, { message: "Deskripsi SKL minimal 10 karakter." }).optional(),
