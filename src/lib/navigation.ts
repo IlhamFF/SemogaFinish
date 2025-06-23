@@ -18,7 +18,7 @@ export const NAV_LINKS_CONFIG: NavLink[] = [
   { href: ROUTES.ADMIN_DASHBOARD, label: 'Dasbor', icon: LayoutDashboard, roles: ['admin', 'superadmin'] as Role[] },
   { href: ROUTES.GURU_DASHBOARD, label: 'Dasbor', icon: LayoutDashboard, roles: ['guru'] as Role[] },
   { href: ROUTES.SISWA_DASHBOARD, label: 'Dasbor', icon: LayoutDashboard, roles: ['siswa'] as Role[] },
-  { href: ROUTES.PIMPINAN_DASHBOARD, label: 'Dasbor', icon: LayoutDashboard, roles: ['pimpinan'] as Role[] },
+  { href: ROUTES.PIMPINAN_DASHBOARD, label: 'Dasbor & Laporan', icon: LayoutDashboard, roles: ['pimpinan'] as Role[] },
   
   // Admin Links
   { href: ROUTES.ADMIN_USERS, label: 'Manajemen Pengguna', icon: Users, roles: ['admin', 'superadmin'] as Role[] },
@@ -41,9 +41,6 @@ export const NAV_LINKS_CONFIG: NavLink[] = [
   { href: ROUTES.SISWA_MATERI, label: 'Materi Pelajaran', icon: BookOpen, roles: ['siswa', 'superadmin'] as Role[] },
   { href: ROUTES.SISWA_TEST, label: 'Test & Ujian', icon: FileTextSiswa, roles: ['siswa', 'superadmin'] as Role[] },
   { href: ROUTES.SISWA_NILAI, label: 'Nilai & Rapor', icon: Award, roles: ['siswa', 'superadmin'] as Role[] },
-  
-  // Common Links
-  { href: ROUTES.DATA_VISUALIZATION, label: 'Visualisasi Data', icon: BarChart3, roles: ['admin', 'guru', 'siswa', 'pimpinan', 'superadmin'] as Role[] },
 ];
 
 export const USER_NAV_ITEMS = [
