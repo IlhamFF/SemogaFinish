@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import type { User, Role } from "@/types";
 import { ROLES } from "@/lib/constants";
-import { UserPlus, CheckCircle, ShieldAlert, Loader2, Search } from "lucide-react";
+import { UserPlus, CheckCircle, ShieldAlert, Loader2, Search, Upload } from "lucide-react";
 import { UserForm } from "@/components/admin/user-form";
 import { UserTableActions } from "@/components/admin/user-table-actions";
 import { useToast } from "@/hooks/use-toast";
@@ -178,6 +178,14 @@ export default function AdminUsersPage() {
     }
   };
   
+  const handleImportClick = () => {
+    toast({
+        title: "Fitur Impor (Simulasi)",
+        description: "Fitur ini dalam pengembangan. Format file yang diharapkan adalah CSV/Excel dengan kolom: fullName, email, role, nis (jika siswa), kelasId (jika siswa), nip (jika guru/pimpinan).",
+        duration: 7000
+    });
+  }
+
   const uniqueKelas = useMemo(() => {
     const kls = new Set(allUsers.filter(u => u.role === 'siswa' && u.kelas).map(u => u.kelas!));
     return ["semua", ...Array.from(kls).sort()];
@@ -223,6 +231,9 @@ export default function AdminUsersPage() {
           <p className="text-muted-foreground">Lihat, buat, dan kelola profil pengguna lokal di sistem.</p>
         </div>
         <div className="flex gap-2">
+           <Button onClick={handleImportClick} variant="outline" disabled={pageLoading}>
+            <Upload className="mr-2 h-4 w-4" /> Impor Pengguna
+          </Button>
           <Button onClick={handleCreateUser} disabled={pageLoading}>
             <UserPlus className="mr-2 h-4 w-4" /> Buat Profil Lokal Baru
           </Button>

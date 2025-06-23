@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -12,7 +13,7 @@ import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/hooks/use-auth";
-import { CalendarCheck, PlusCircle, Edit, Search, Loader2, Trash2, Save, Eraser, Building, Settings2, CalendarDays, Clock } from "lucide-react";
+import { CalendarCheck, PlusCircle, Edit, Search, Loader2, Trash2, Save, Eraser, Building, Settings2, CalendarDays, Clock, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Ruangan, SlotWaktu, MataPelajaran, User as AppUser, JadwalPelajaran } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -171,23 +172,40 @@ export default function AdminJadwalPage() {
   const handleDeleteJadwalEntry = async (entryId: string) => { if (entryId.startsWith('draft-')) { setJadwalPelajaranList(prev => prev.filter(j => j.id !== entryId)); toast({title: "Entri Dihapus dari Draf", description: "Entri jadwal telah dihapus dari daftar saat ini."}); return; } setIsJadwalPelajaranSubmitting(true); try { const response = await fetch(`/api/jadwal/pelajaran/${entryId}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus entri jadwal.'); } toast({ title: "Entri Dihapus!", description: "Entri jadwal telah dihapus dari database."}); if(selectedKelas && selectedHari) fetchJadwalPelajaran(selectedKelas, selectedHari); } catch (error: any) { toast({ title: "Error Hapus Entri", description: error.message, variant: "destructive" }); } finally { setIsJadwalPelajaranSubmitting(false); } };
   const handleClearJadwalKelasHari = async () => { if (!selectedKelas || !selectedHari) return; setIsJadwalPelajaranSubmitting(true); try { const response = await fetch(`/api/jadwal/pelajaran/by-criteria?kelas=${encodeURIComponent(selectedKelas)}&hari=${encodeURIComponent(selectedHari)}`, { method: 'DELETE', }); if (!response.ok && response.status !== 404) { const errorData = await response.json(); throw new Error(errorData.message || `Gagal membersihkan jadwal untuk ${selectedKelas} - ${selectedHari}.`); } toast({ title: "Jadwal Dikosongkan", description: `Semua jadwal untuk ${selectedKelas} - ${selectedHari} telah dihapus.`}); setJadwalPelajaranList([]); } catch (error: any) { toast({ title: "Error Kosongkan Jadwal", description: error.message, variant: "destructive" }); } finally { setIsJadwalPelajaranSubmitting(false); } };
 
+  const showPlaceholderToast = (featureName: string) => {
+    toast({
+      title: "Fitur Dalam Pengembangan",
+      description: `Fungsi "${featureName}" akan segera tersedia. Untuk saat ini, fitur impor hanya simulasi.`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-headline font-semibold">Manajemen Jadwal Pelajaran</h1>
-         <Button onClick={handleOpenBuatJadwalManual}>
-          <CalendarCheck className="mr-2 h-4 w-4" /> Buat Jadwal Manual
-        </Button>
+        <h1 className="text-3xl font-headline font-semibold">Pengelolaan Jadwal Terpusat</h1>
       </div>
       
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center"><CalendarDays className="mr-2 h-6 w-6 text-primary" />Pengelolaan Jadwal Terpusat</CardTitle>
-          <CardDescription>Atur slot waktu, ruangan, dan buat jadwal pelajaran manual per kelas.</CardDescription>
+          <CardTitle className="flex items-center"><Settings2 className="mr-2 h-6 w-6 text-primary" />Pembuatan & Konfigurasi Jadwal</CardTitle>
+          <CardDescription>Atur slot waktu, hari efektif, durasi pelajaran, dan buat jadwal per kelas atau tingkatan.</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button variant="outline" onClick={() => setIsKonfigurasiOpen(true)} className="justify-start text-left h-auto py-3"><Settings2 className="mr-3 h-5 w-5" /><div><p className="font-semibold">Konfigurasi Jam & Hari</p><p className="text-xs text-muted-foreground">Atur slot waktu dan hari efektif.</p></div></Button>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button variant="outline" onClick={() => setIsKonfigurasiOpen(true)} className="justify-start text-left h-auto py-3"><Clock className="mr-3 h-5 w-5" /><div><p className="font-semibold">Konfigurasi Jam & Hari</p><p className="text-xs text-muted-foreground">Atur slot waktu dan hari efektif.</p></div></Button>
+            <Button variant="outline" onClick={handleOpenBuatJadwalManual} className="justify-start text-left h-auto py-3"><CalendarCheck className="mr-3 h-5 w-5" /><div><p className="font-semibold">Buat Jadwal per Kelas</p><p className="text-xs text-muted-foreground">Susun jadwal untuk satu kelas.</p></div></Button>
+            <Button variant="outline" onClick={() => showPlaceholderToast("Impor Jadwal")} className="justify-start text-left h-auto py-3"><Upload className="mr-3 h-5 w-5" /><div><p className="font-semibold">Impor Jadwal</p><p className="text-xs text-muted-foreground">Unggah jadwal dari template.</p></div></Button>
+        </CardContent>
+      </Card>
+      
+       <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center"><Building className="mr-2 h-6 w-6 text-primary" />Alokasi Guru & Ruangan</CardTitle>
+          <CardDescription>Tetapkan guru pengampu untuk setiap mata pelajaran dan alokasikan ruangan kelas atau laboratorium.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button variant="outline" onClick={() => showPlaceholderToast("Ketersediaan Guru")} className="justify-start text-left h-auto py-3"><UsersIcon className="mr-3 h-5 w-5" /><div><p className="font-semibold">Ketersediaan Guru</p><p className="text-xs text-muted-foreground">Lihat dan atur jadwal guru.</p></div></Button>
             <Button variant="outline" onClick={() => setIsRuanganDialogOpen(true)} className="justify-start text-left h-auto py-3"><Building className="mr-3 h-5 w-5" /><div><p className="font-semibold">Manajemen Ruangan</p><p className="text-xs text-muted-foreground">Kelola daftar dan kapasitas.</p></div></Button>
+            <Button variant="outline" onClick={() => showPlaceholderToast("Deteksi Konflik")} className="justify-start text-left h-auto py-3"><Search className="mr-3 h-5 w-5" /><div><p className="font-semibold">Deteksi Konflik</p><p className="text-xs text-muted-foreground">Periksa bentrok jadwal.</p></div></Button>
         </CardContent>
       </Card>
 

@@ -1,9 +1,9 @@
-import "reflect-metadata"; 
+import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, OneToMany } from "typeorm";
-import type { SlotWaktuEntity } from "./slot-waktu.entity";
-import type { MataPelajaranEntity } from "./mata-pelajaran.entity";
-import type { UserEntity } from "./user.entity";
-import type { RuanganEntity } from "./ruangan.entity";
+import { SlotWaktuEntity } from "./slot-waktu.entity";
+import { MataPelajaranEntity } from "./mata-pelajaran.entity";
+import { UserEntity } from "./user.entity";
+import { RuanganEntity } from "./ruangan.entity";
 import type { AbsensiSiswaEntity } from "./absensi-siswa.entity";
 
 @Entity({ name: "jadwal_pelajaran" })
@@ -14,37 +14,37 @@ export class JadwalPelajaranEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @Column({ type: "varchar", length: 20 }) 
+  @Column({ type: "varchar", length: 20 })
   hari!: string;
 
-  @Column({ type: "varchar", length: 100 }) 
+  @Column({ type: "varchar", length: 100 })
   kelas!: string;
 
   @Column({ type: "uuid" })
   slotWaktuId!: string;
 
-  @ManyToOne("SlotWaktuEntity", (slot) => slot.jadwalPelajaranEntries, { onDelete: "CASCADE", eager: true })
+  @ManyToOne(() => SlotWaktuEntity, (slot) => slot.jadwalPelajaranEntries, { onDelete: "CASCADE", eager: true })
   @JoinColumn({ name: "slotWaktuId" })
   slotWaktu!: SlotWaktuEntity;
 
   @Column({ type: "uuid" })
   mapelId!: string;
 
-  @ManyToOne("MataPelajaranEntity", (mapel) => mapel.jadwalPelajaranEntries, { onDelete: "CASCADE", eager: true })
+  @ManyToOne(() => MataPelajaranEntity, (mapel) => mapel.jadwalPelajaranEntries, { onDelete: "CASCADE", eager: true })
   @JoinColumn({ name: "mapelId" })
   mapel!: MataPelajaranEntity;
 
   @Column({ type: "uuid" })
   guruId!: string;
 
-  @ManyToOne("UserEntity", (user) => user.jadwalMengajar, { onDelete: "CASCADE", eager: true })
+  @ManyToOne(() => UserEntity, (user) => user.jadwalMengajar, { onDelete: "CASCADE", eager: true })
   @JoinColumn({ name: "guruId" })
   guru!: UserEntity;
 
   @Column({ type: "uuid" })
   ruanganId!: string;
 
-  @ManyToOne("RuanganEntity", (ruangan) => ruangan.jadwalPelajaranEntries, { onDelete: "CASCADE", eager: true })
+  @ManyToOne(() => RuanganEntity, (ruangan) => ruangan.jadwalPelajaranEntries, { onDelete: "CASCADE", eager: true })
   @JoinColumn({ name: "ruanganId" })
   ruangan!: RuanganEntity;
   

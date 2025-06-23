@@ -161,23 +161,204 @@ export default function AdminKurikulumPage() {
   const [isRPPSubmitting, setIsRPPSubmitting] = useState(false);
   const rppForm = useForm<RPPFormValues>({ resolver: zodResolver(rppSchema), defaultValues: { judul: "", mapelId: undefined, kelas: "", pertemuanKe: 1, materiPokok: "", kegiatanPembelajaran: "", penilaian: "", file: undefined }});
 
-  const fetchSklData = useCallback(async () => { setIsLoadingSkl(true); try { const res = await fetch('/api/kurikulum/skl'); if (!res.ok) throw new Error('Gagal mengambil data SKL'); setSklList(await res.json()); } catch (e: any) { toast({ title: "Error SKL", description: e.message || "Tidak dapat memuat SKL.", variant: "destructive" }); } finally { setIsLoadingSkl(false); } }, [toast]);
-  const fetchCpData = useCallback(async () => { setIsLoadingCp(true); try { const res = await fetch('/api/kurikulum/cp'); if (!res.ok) throw new Error('Gagal mengambil data CP'); setCpList(await res.json()); } catch (e: any) { toast({ title: "Error CP", description: e.message || "Tidak dapat memuat CP.", variant: "destructive" }); } finally { setIsLoadingCp(false); } }, [toast]);
-  const fetchKategoriMateriData = useCallback(async () => { setIsLoadingKategoriMateri(true); try { const res = await fetch('/api/kurikulum/materi-kategori'); if (!res.ok) throw new Error('Gagal mengambil kategori'); setKategoriMateriList(await res.json()); } catch (e: any) { toast({ title: "Error Kategori", description: e.message, variant: "destructive" }); } finally { setIsLoadingKategoriMateri(false); } }, [toast]);
-  const fetchMateriAjarData = useCallback(async () => { setIsLoadingMateriList(true); try { const res = await fetch('/api/kurikulum/materi-ajar'); if (!res.ok) throw new Error('Gagal mengambil materi'); setMateriList(await res.json()); } catch (e: any) { toast({ title: "Error Materi Ajar", description: e.message, variant: "destructive" }); } finally { setIsLoadingMateriList(false); } }, [toast]);
-  const fetchMataPelajaranOptions = useCallback(async () => { try { const res = await fetch('/api/mapel'); if (!res.ok) throw new Error('Gagal mengambil mapel'); setMataPelajaranOptions(await res.json()); } catch (e: any) { toast({ title: "Error Mapel", description: e.message, variant: "destructive" }); }}, [toast]);
-  const fetchGuruOptions = useCallback(async () => { try { const res = await fetch('/api/users?role=guru'); if (!res.ok) throw new Error('Gagal mengambil guru'); setGuruOptions(await res.json()); } catch (e: any) { toast({ title: "Error Guru", description: e.message, variant: "destructive" }); }}, [toast]);
-  const fetchStrukturKurikulumData = useCallback(async (tingkat: string, jurusan: string) => { setIsLoadingStruktur(true); try { const res = await fetch(`/api/kurikulum/struktur?tingkat=${encodeURIComponent(tingkat)}&jurusan=${encodeURIComponent(jurusan)}`); if (!res.ok) throw new Error(`Gagal mengambil struktur kurikulum`); setStrukturKurikulumData(prev => ({ ...prev, [`${tingkat}-${jurusan}`]: await res.json() })); } catch (e: any) { toast({ title: "Error Struktur Kurikulum", description: e.message, variant: "destructive" }); setStrukturKurikulumData(prev => ({ ...prev, [`${tingkat}-${jurusan}`]: [] })); } finally { setIsLoadingStruktur(false); } }, [toast]);
-  const fetchSilabusData = useCallback(async () => { setIsLoadingSilabus(true); try { const res = await fetch('/api/kurikulum/silabus'); if (!res.ok) throw new Error('Gagal mengambil silabus'); setSilabusList(await res.json()); } catch (e: any) { toast({ title: "Error Silabus", description: e.message, variant: "destructive" }); } finally { setIsLoadingSilabus(false); } }, [toast]);
-  const fetchRppData = useCallback(async () => { setIsLoadingRpp(true); try { const res = await fetch('/api/kurikulum/rpp'); if (!res.ok) throw new Error('Gagal mengambil RPP'); setRppList(await res.json()); } catch (e: any) { toast({ title: "Error RPP", description: e.message, variant: "destructive" }); } finally { setIsLoadingRpp(false); } }, [toast]);
+  const fetchSklData = useCallback(async () => {
+    setIsLoadingSkl(true);
+    try {
+      const res = await fetch('/api/kurikulum/skl');
+      if (!res.ok) throw new Error('Gagal mengambil data SKL');
+      setSklList(await res.json());
+    } catch (e: any) {
+      toast({ title: "Error SKL", description: e.message || "Tidak dapat memuat SKL.", variant: "destructive" });
+    } finally {
+      setIsLoadingSkl(false);
+    }
+  }, [toast]);
+  const fetchCpData = useCallback(async () => {
+    setIsLoadingCp(true);
+    try {
+      const res = await fetch('/api/kurikulum/cp');
+      if (!res.ok) throw new Error('Gagal mengambil data CP');
+      setCpList(await res.json());
+    } catch (e: any) {
+      toast({ title: "Error CP", description: e.message || "Tidak dapat memuat CP.", variant: "destructive" });
+    } finally {
+      setIsLoadingCp(false);
+    }
+  }, [toast]);
+  const fetchKategoriMateriData = useCallback(async () => {
+    setIsLoadingKategoriMateri(true);
+    try {
+      const res = await fetch('/api/kurikulum/materi-kategori');
+      if (!res.ok) throw new Error('Gagal mengambil kategori');
+      setKategoriMateriList(await res.json());
+    } catch (e: any) {
+      toast({ title: "Error Kategori", description: e.message, variant: "destructive" });
+    } finally {
+      setIsLoadingKategoriMateri(false);
+    }
+  }, [toast]);
+  const fetchMateriAjarData = useCallback(async () => {
+    setIsLoadingMateriList(true);
+    try {
+      const res = await fetch('/api/kurikulum/materi-ajar');
+      if (!res.ok) throw new Error('Gagal mengambil materi');
+      setMateriList(await res.json());
+    } catch (e: any) {
+      toast({ title: "Error Materi Ajar", description: e.message, variant: "destructive" });
+    } finally {
+      setIsLoadingMateriList(false);
+    }
+  }, [toast]);
+  const fetchMataPelajaranOptions = useCallback(async () => {
+    try {
+      const res = await fetch('/api/mapel');
+      if (!res.ok) throw new Error('Gagal mengambil mapel');
+      setMataPelajaranOptions(await res.json());
+    } catch (e: any) {
+      toast({ title: "Error Mapel", description: e.message, variant: "destructive" });
+    }
+  }, [toast]);
+  const fetchGuruOptions = useCallback(async () => {
+    try {
+      const res = await fetch('/api/users?role=guru');
+      if (!res.ok) throw new Error('Gagal mengambil guru');
+      setGuruOptions(await res.json());
+    } catch (e: any) {
+      toast({ title: "Error Guru", description: e.message, variant: "destructive" });
+    }
+  }, [toast]);
+  const fetchStrukturKurikulumData = useCallback(async (tingkat: string, jurusan: string) => {
+    setIsLoadingStruktur(true);
+    try {
+      const res = await fetch(`/api/kurikulum/struktur?tingkat=${encodeURIComponent(tingkat)}&jurusan=${encodeURIComponent(jurusan)}`);
+      if (!res.ok) throw new Error(`Gagal mengambil struktur kurikulum`);
+      const data = await res.json();
+      setStrukturKurikulumData(prev => ({ ...prev, [`${tingkat}-${jurusan}`]: data }));
+    } catch (e: any) {
+      toast({ title: "Error Struktur Kurikulum", description: e.message, variant: "destructive" });
+      setStrukturKurikulumData(prev => ({ ...prev, [`${tingkat}-${jurusan}`]: [] }));
+    } finally {
+      setIsLoadingStruktur(false);
+    }
+  }, [toast]);
+  const fetchSilabusData = useCallback(async () => {
+    setIsLoadingSilabus(true);
+    try {
+      const res = await fetch('/api/kurikulum/silabus');
+      if (!res.ok) throw new Error('Gagal mengambil silabus');
+      setSilabusList(await res.json());
+    } catch (e: any) {
+      toast({ title: "Error Silabus", description: e.message, variant: "destructive" });
+    } finally {
+      setIsLoadingSilabus(false);
+    }
+  }, [toast]);
+  const fetchRppData = useCallback(async () => {
+     setIsLoadingRpp(true);
+     try {
+       const res = await fetch('/api/kurikulum/rpp');
+       if (!res.ok) throw new Error('Gagal mengambil RPP');
+       setRppList(await res.json());
+     } catch (e: any) {
+       toast({ title: "Error RPP", description: e.message, variant: "destructive" });
+     } finally {
+       setIsLoadingRpp(false);
+     }
+   }, [toast]);
   
-  useEffect(() => { if (user && (user.role === 'admin' || user.role === 'superadmin')) { fetchSklData(); fetchCpData(); fetchKategoriMateriData(); fetchMateriAjarData(); fetchMataPelajaranOptions(); fetchGuruOptions(); fetchSilabusData(); fetchRppData(); } }, [user, fetchSklData, fetchCpData, fetchKategoriMateriData, fetchMateriAjarData, fetchMataPelajaranOptions, fetchGuruOptions, fetchSilabusData, fetchRppData]);
-  useEffect(() => { if (selectedTingkat && selectedJurusan && (user?.role === 'admin' || user?.role === 'superadmin')) { if (!strukturKurikulumData[`${selectedTingkat}-${selectedJurusan}`]) { fetchStrukturKurikulumData(selectedTingkat, selectedJurusan); } } }, [selectedTingkat, selectedJurusan, user, strukturKurikulumData, fetchStrukturKurikulumData]);
-  useEffect(() => { if (editingSKL) sklForm.reset(editingSKL); else sklForm.reset({ kode: "", deskripsi: "", kategori: undefined }); }, [editingSKL, sklForm, isSKLFormOpen]);
-  useEffect(() => { if (editingCP) cpForm.reset(editingCP); else cpForm.reset({ kode: "", deskripsi: "", fase: undefined, elemen: "" }); }, [editingCP, cpForm, isCPFormOpen]);
-  useEffect(() => { if (currentEditingMateri) materiAjarForm.reset({ judul: currentEditingMateri.judul, deskripsi: currentEditingMateri.deskripsi || "", mapelNama: currentEditingMateri.mapelNama, jenisMateri: currentEditingMateri.jenisMateri, externalUrl: currentEditingMateri.jenisMateri === "Link" ? currentEditingMateri.fileUrl || "" : "", fileInput: undefined }); else materiAjarForm.reset({ judul: "", deskripsi: "", mapelNama: undefined, jenisMateri: undefined, fileInput: undefined, externalUrl: "" }); }, [currentEditingMateri, materiAjarForm, isMateriFormOpen]);
-  useEffect(() => { if (currentEditingSilabus) silabusForm.reset({ judul: currentEditingSilabus.judul, mapelId: currentEditingSilabus.mapelId, kelas: currentEditingSilabus.kelas, deskripsiSingkat: currentEditingSilabus.deskripsiSingkat || "", file: undefined }); else silabusForm.reset({ judul: "", mapelId: undefined, kelas: "", deskripsiSingkat: "", file: undefined }); }, [currentEditingSilabus, silabusForm, isSilabusFormOpen]);
-  useEffect(() => { if (currentEditingRPP) rppForm.reset({ judul: currentEditingRPP.judul, mapelId: currentEditingRPP.mapelId, kelas: currentEditingRPP.kelas, pertemuanKe: currentEditingRPP.pertemuanKe, materiPokok: currentEditingRPP.materiPokok || "", kegiatanPembelajaran: currentEditingRPP.kegiatanPembelajaran || "", penilaian: currentEditingRPP.penilaian || "", file: undefined }); else rppForm.reset({ judul: "", mapelId: undefined, kelas: "", pertemuanKe: 1, materiPokok: "", kegiatanPembelajaran: "", penilaian: "", file: undefined }); }, [currentEditingRPP, rppForm, isRPPFormOpen]);
+  useEffect(() => { 
+    if (user && (user.role === 'admin' || user.role === 'superadmin')) { 
+      fetchSklData(); 
+      fetchCpData(); 
+      fetchKategoriMateriData(); 
+      fetchMateriAjarData(); 
+      fetchMataPelajaranOptions(); 
+      fetchGuruOptions(); 
+      fetchSilabusData(); 
+      fetchRppData(); 
+    } 
+  }, [user, fetchSklData, fetchCpData, fetchKategoriMateriData, fetchMateriAjarData, fetchMataPelajaranOptions, fetchGuruOptions, fetchSilabusData, fetchRppData]);
+  useEffect(() => { 
+    if (selectedTingkat && selectedJurusan && (user?.role === 'admin' || user?.role === 'superadmin')) { 
+      if (!strukturKurikulumData[`${selectedTingkat}-${selectedJurusan}`]) { 
+        fetchStrukturKurikulumData(selectedTingkat, selectedJurusan); 
+      } 
+    } 
+  }, [selectedTingkat, selectedJurusan, user, strukturKurikulumData, fetchStrukturKurikulumData]);
+  useEffect(() => { 
+    if (editingSKL) 
+      sklForm.reset(editingSKL); 
+    else 
+      sklForm.reset({ kode: "", deskripsi: "", kategori: undefined }); 
+  }, [editingSKL, sklForm, isSKLFormOpen]);
+  useEffect(() => { 
+    if (editingCP) 
+      cpForm.reset(editingCP); 
+    else 
+      cpForm.reset({ kode: "", deskripsi: "", fase: undefined, elemen: "" }); 
+  }, [editingCP, cpForm, isCPFormOpen]);
+  useEffect(() => { 
+    if (currentEditingMateri) 
+      materiAjarForm.reset({ 
+        judul: currentEditingMateri.judul, 
+        deskripsi: currentEditingMateri.deskripsi || "", 
+        mapelNama: currentEditingMateri.mapelNama, 
+        jenisMateri: currentEditingMateri.jenisMateri, 
+        externalUrl: currentEditingMateri.jenisMateri === "Link" ? currentEditingMateri.fileUrl || "" : "", 
+        fileInput: undefined 
+      }); 
+    else 
+      materiAjarForm.reset({ 
+        judul: "", 
+        deskripsi: "", 
+        mapelNama: undefined, 
+        jenisMateri: undefined, 
+        fileInput: undefined, 
+        externalUrl: "" 
+      }); 
+  }, [currentEditingMateri, materiAjarForm, isMateriFormOpen]);
+  useEffect(() => { 
+    if (currentEditingSilabus) 
+      silabusForm.reset({ 
+        judul: currentEditingSilabus.judul, 
+        mapelId: currentEditingSilabus.mapelId, 
+        kelas: currentEditingSilabus.kelas, 
+        deskripsiSingkat: currentEditingSilabus.deskripsiSingkat || "", 
+        file: undefined 
+      }); 
+    else 
+      silabusForm.reset({ 
+        judul: "", 
+        mapelId: undefined, 
+        kelas: "", 
+        deskripsiSingkat: "", 
+        file: undefined 
+      }); 
+  }, [currentEditingSilabus, silabusForm, isSilabusFormOpen]);
+  useEffect(() => { 
+    if (currentEditingRPP) 
+      rppForm.reset({ 
+        judul: currentEditingRPP.judul, 
+        mapelId: currentEditingRPP.mapelId, 
+        kelas: currentEditingRPP.kelas, 
+        pertemuanKe: currentEditingRPP.pertemuanKe, 
+        materiPokok: currentEditingRPP.materiPokok || "", 
+        kegiatanPembelajaran: currentEditingRPP.kegiatanPembelajaran || "", 
+        penilaian: currentEditingRPP.penilaian || "", 
+        file: undefined 
+      }); 
+    else 
+      rppForm.reset({ 
+        judul: "", 
+        mapelId: undefined, 
+        kelas: "", 
+        pertemuanKe: 1, 
+        materiPokok: "", 
+        kegiatanPembelajaran: "", 
+        penilaian: "", 
+        file: undefined 
+      }); 
+  }, [currentEditingRPP, rppForm, isRPPFormOpen]);
 
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) { return <p>Akses Ditolak.</p>; }
   

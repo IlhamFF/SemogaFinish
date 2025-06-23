@@ -15,6 +15,8 @@ import type { Tugas as TugasType, TugasSubmission } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+
 
 type TugasSiswaStatus = "Belum Dikerjakan" | "Terlambat" | "Sudah Dikumpulkan" | "Dinilai";
 
@@ -353,4 +355,3 @@ export default function SiswaTugasPage() {
     </>
   );
 }
-

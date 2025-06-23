@@ -1,11 +1,11 @@
 import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from "typeorm";
 import type { Role } from "@/types";
-import type { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
-import type { MateriAjarEntity } from "./materi-ajar.entity";
-import type { SilabusEntity } from "./silabus.entity";
-import type { RppEntity } from "./rpp.entity";
-import type { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
+import { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
+import { MateriAjarEntity } from "./materi-ajar.entity";
+import { SilabusEntity } from "./silabus.entity";
+import { RppEntity } from "./rpp.entity";
+import { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
 import type { TugasEntity } from "./tugas.entity";
 import type { TestEntity } from "./test.entity";
 import type { TugasSubmissionEntity } from "./tugas-submission.entity"; 
@@ -89,19 +89,19 @@ export class UserEntity {
   @Column({ type: "varchar", nullable: true, unique: true })
   firebaseUid?: string | null;
 
-  @OneToMany("StrukturKurikulumEntity", (ske: StrukturKurikulumEntity) => ske.guruPengampu)
+  @OneToMany(() => StrukturKurikulumEntity, (ske: StrukturKurikulumEntity) => ske.guruPengampu)
   strukturKurikulumDiajar?: StrukturKurikulumEntity[];
 
-  @OneToMany("MateriAjarEntity", (materi: MateriAjarEntity) => materi.uploader)
+  @OneToMany(() => MateriAjarEntity, (materi: MateriAjarEntity) => materi.uploader)
   materiAjarUploaded?: MateriAjarEntity[];
 
-  @OneToMany("SilabusEntity", (silabus: SilabusEntity) => silabus.uploader)
+  @OneToMany(() => SilabusEntity, (silabus: SilabusEntity) => silabus.uploader)
   silabusUploaded?: SilabusEntity[];
 
-  @OneToMany("RppEntity", (rpp: RppEntity) => rpp.uploader)
+  @OneToMany(() => RppEntity, (rpp: RppEntity) => rpp.uploader)
   rppUploaded?: RppEntity[];
 
-  @OneToMany("JadwalPelajaranEntity", (jadwal: JadwalPelajaranEntity) => jadwal.guru)
+  @OneToMany(() => JadwalPelajaranEntity, (jadwal: JadwalPelajaranEntity) => jadwal.guru)
   jadwalMengajar?: JadwalPelajaranEntity[];
 
   @OneToMany("TugasEntity", (tugas: TugasEntity) => tugas.uploader)
