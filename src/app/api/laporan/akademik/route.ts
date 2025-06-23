@@ -5,6 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { NilaiSemesterSiswaEntity } from "@/entities/nilai-semester-siswa.entity";
 import { UserEntity } from "@/entities/user.entity";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
+import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 
 export async function GET(request: NextRequest) {
   const authenticatedUser = getAuthenticatedUser(request);
@@ -16,28 +17,46 @@ export async function GET(request: NextRequest) {
     const dataSource = await getInitializedDataSource();
     const nilaiRepo = dataSource.getRepository(NilaiSemesterSiswaEntity);
     const userRepo = dataSource.getRepository(UserEntity);
+    const mapelRepo = dataSource.getRepository(MataPelajaranEntity);
 
-    // Rata-rata per kelas
-    const rataRataKelasData = await nilaiRepo.createQueryBuilder("nilai")
-      .select("nilai.kelasId", "name")
-      .addSelect("AVG(nilai.nilaiAkhir)", "rataRata")
-      .where("nilai.nilaiAkhir IS NOT NULL")
-      .groupBy("nilai.kelasId")
-      .orderBy("rataRata", "DESC")
-      .getRawMany();
-
-    // Peringkat siswa
-    const peringkatSiswaData = await userRepo.createQueryBuilder("user")
-      .select("user.fullName", "nama")
-      .addSelect("user.kelasId", "kelas")
-      .addSelect("AVG(nilai.nilaiAkhir)", "rataRata")
-      .leftJoin("user.nilaiSemesterSiswa", "nilai", "nilai.siswaId = user.id")
-      .where("user.role = :role", { role: 'siswa' })
-      .andWhere("nilai.nilaiAkhir IS NOT NULL")
-      .groupBy("user.id") // Menggunakan user.id untuk grouping yang benar
-      .orderBy("rataRata", "DESC")
-      .limit(5)
-      .getRawMany();
+    // Perform all queries in parallel for efficiency
+    const [
+      rataRataKelasData,
+      peringkatSiswaData,
+      totalSiswa,
+      totalGuru,
+      kelasData,
+      totalMataPelajaran,
+    ] = await Promise.all([
+      // Rata-rata per kelas
+      nilaiRepo.createQueryBuilder("nilai")
+        .select("nilai.kelasId", "name")
+        .addSelect("AVG(nilai.nilaiAkhir)", "rataRata")
+        .where("nilai.nilaiAkhir IS NOT NULL")
+        .groupBy("nilai.kelasId")
+        .orderBy('AVG("nilai"."nilaiAkhir")', "DESC")
+        .getRawMany(),
+      // Peringkat siswa
+      userRepo.createQueryBuilder("user")
+        .select("user.fullName", "nama")
+        .addSelect("user.kelasId", "kelas")
+        .addSelect("AVG(nilai.nilaiAkhir)", "rataRata")
+        .leftJoin("user.nilaiSemesterSiswa", "nilai", "nilai.siswaId = user.id")
+        .where("user.role = :role", { role: 'siswa' })
+        .andWhere("nilai.nilaiAkhir IS NOT NULL")
+        .groupBy("user.id")
+        .orderBy('AVG("nilai"."nilaiAkhir")', "DESC")
+        .limit(5)
+        .getRawMany(),
+      // Counts
+      userRepo.count({ where: { role: 'siswa' } }),
+      userRepo.count({ where: { role: 'guru' } }),
+      userRepo.createQueryBuilder("user")
+        .select("DISTINCT user.kelasId", "kelas")
+        .where("user.role = :role AND user.kelasId IS NOT NULL", { role: 'siswa' })
+        .getRawMany(),
+      mapelRepo.count()
+    ]);
 
     // Pastikan tipe data numerik benar
     const rataRataKelas = rataRataKelasData.map(item => ({
@@ -50,7 +69,16 @@ export async function GET(request: NextRequest) {
         rataRata: parseFloat(item.rataRata)
     }));
     
-    return NextResponse.json({ rataRataKelas, peringkatSiswa });
+    const totalKelas = kelasData.length;
+    
+    return NextResponse.json({ 
+      rataRataKelas, 
+      peringkatSiswa,
+      totalSiswa,
+      totalGuru,
+      totalKelas,
+      totalMataPelajaran
+    });
 
   } catch (error: any) {
     console.error("Error fetching laporan akademik:", error);

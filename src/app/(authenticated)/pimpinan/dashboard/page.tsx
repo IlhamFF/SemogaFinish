@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,38 +14,39 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 interface AkademikData {
   rataRataKelas: { name: string; rataRata: number }[];
   peringkatSiswa: { nama: string; kelas: string; rataRata: number }[];
+  totalSiswa: number;
+  totalGuru: number;
+  totalKelas: number;
+  totalMataPelajaran: number;
 }
+
+const initialAkademikData: AkademikData = {
+  rataRataKelas: [],
+  peringkatSiswa: [],
+  totalSiswa: 0,
+  totalGuru: 0,
+  totalKelas: 0,
+  totalMataPelajaran: 0,
+};
 
 export default function PimpinanDashboardPage() {
   const { user: currentUserAuth } = useAuth();
   const { toast } = useToast();
-  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
-  const [akademikData, setAkademikData] = useState<AkademikData>({ rataRataKelas: [], peringkatSiswa: [] });
+  const [akademikData, setAkademikData] = useState<AkademikData>(initialAkademikData);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [allMataPelajaranCount, setAllMataPelajaranCount] = useState(0);
 
   const fetchAllData = useCallback(async () => {
     setIsLoadingData(true);
     try {
-      const [usersRes, mapelRes, akademikRes] = await Promise.all([
-        fetch('/api/users'),
-        fetch('/api/mapel'),
-        fetch('/api/laporan/akademik')
-      ]);
-      
-      if (!usersRes.ok) throw new Error("Gagal mengambil data pengguna.");
-      if (!mapelRes.ok) throw new Error("Gagal mengambil data mata pelajaran.");
-      if (!akademikRes.ok) throw new Error("Gagal mengambil data laporan akademik.");
-
-      const usersData = await usersRes.json();
-      setAllUsers(usersData);
-      const mapelData = await mapelRes.json();
-      setAllMataPelajaranCount(mapelData.length);
-      const akademikData = await akademikRes.json();
-      setAkademikData(akademikData);
-
+      const akademikRes = await fetch('/api/laporan/akademik');
+      if (!akademikRes.ok) {
+        const errorData = await akademikRes.json();
+        throw new Error(errorData.message || "Gagal mengambil data laporan akademik.");
+      }
+      setAkademikData(await akademikRes.json());
     } catch (error: any) {
       toast({ title: "Error Data Dasbor", description: error.message, variant: "destructive" });
+      setAkademikData(initialAkademikData);
     } finally {
       setIsLoadingData(false);
     }
@@ -61,20 +61,17 @@ export default function PimpinanDashboardPage() {
   }, [currentUserAuth, fetchAllData]);
 
   const pimpinanStats = useMemo(() => {
-    const totalSiswa = allUsers.filter(u => u.role === 'siswa').length;
-    const totalGuru = allUsers.filter(u => u.role === 'guru').length;
-    const totalKelas = new Set(allUsers.filter(u => u.role === 'siswa' && u.kelas).map(u => u.kelas)).size;
     const rataRataSekolah = akademikData.rataRataKelas.length > 0
       ? (akademikData.rataRataKelas.reduce((acc, curr) => acc + curr.rataRata, 0) / akademikData.rataRataKelas.length).toFixed(2)
       : 0;
     
     return [
-      { title: "Total Siswa Aktif", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : totalSiswa.toString(), icon: Users, color: "text-primary" },
-      { title: "Total Guru", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : totalGuru.toString(), icon: Users, color: "text-green-500" },
-      { title: "Jumlah Kelas", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : totalKelas.toString(), icon: BookOpenCheck, color: "text-yellow-500" },
+      { title: "Total Siswa Aktif", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalSiswa.toString(), icon: Users, color: "text-primary" },
+      { title: "Total Guru", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalGuru.toString(), icon: Users, color: "text-green-500" },
+      { title: "Jumlah Kelas", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalKelas.toString(), icon: BookOpenCheck, color: "text-yellow-500" },
       { title: "Nilai Rata-rata Sekolah", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : rataRataSekolah.toString(), icon: TrendingUp, color: "text-indigo-500" },
     ];
-  }, [allUsers, isLoadingData, akademikData]);
+  }, [isLoadingData, akademikData]);
   
   
   const chartConfigClassDist = {
