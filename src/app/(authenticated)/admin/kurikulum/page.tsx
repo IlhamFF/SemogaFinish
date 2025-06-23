@@ -13,7 +13,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/hooks/use-auth";
-import { BookOpenCheck, Target, BookCopy, BookUp, Layers, FileText, FolderKanban, PlusCircle, Edit, Loader2, UploadCloud, Link2Icon, Trash2, Book, Library, List, GitMerge } from "lucide-react";
+import { BookOpenCheck, Target, BookCopy, BookUp, Layers, FileText, FolderKanban, PlusCircle, Edit, Loader2, UploadCloud, Link2, Trash2, Book, Library, List, GitMerge, Search } from "lucide-react";
 import Link from "next/link";
 import { ROUTES, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR as JENIS_MATERI_AJAR_CONST } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
@@ -181,20 +181,308 @@ export default function AdminKurikulumPage() {
 
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) { return <p>Akses Ditolak.</p>; }
   
-  const handleMateriSubmit = async (values: MateriAjarClientFormValues) => { setIsMateriSubmitting(true); try { const payload: Partial<MateriAjar> = { judul: values.judul, deskripsi: values.deskripsi, mapelNama: values.mapelNama, jenisMateri: values.jenisMateri, }; if (values.jenisMateri === "File") { if (values.fileInput && values.fileInput.name) payload.namaFileOriginal = values.fileInput.name; } else if (values.jenisMateri === "Link") { payload.fileUrl = values.externalUrl; payload.namaFileOriginal = null; } const url = currentEditingMateri ? `/api/kurikulum/materi-ajar/${currentEditingMateri.id}` : '/api/kurikulum/materi-ajar'; const method = currentEditingMateri ? 'PUT' : 'POST'; const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menyimpan materi ajar'); } toast({ title: "Berhasil!", description: `Materi "${values.judul}" ${currentEditingMateri ? 'diperbarui' : 'ditambahkan'}.` }); setIsMateriFormOpen(false); fetchMateriAjarData(); } catch (e: any) { toast({ title: "Error Materi", description: e.message, variant: "destructive" }); } finally { setIsMateriSubmitting(false); } };
-  const handleDeleteMateriConfirm = async () => { if (!materiToDelete) return; setIsMateriSubmitting(true); try { const res = await fetch(`/api/kurikulum/materi-ajar/${materiToDelete.id}`, { method: 'DELETE' }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menghapus materi ajar'); } toast({ title: "Dihapus!", description: `Materi "${materiToDelete.judul}" dihapus.` }); fetchMateriAjarData(); } catch (e: any) { toast({ title: "Error Materi", description: e.message, variant: "destructive" }); } finally { setIsMateriSubmitting(false); setMateriToDelete(null); } };
-  const handleSKLSubmit = async (values: SKLFormValues) => { setIsSKLSubmitting(true); try { const url = editingSKL ? `/api/kurikulum/skl/${editingSKL.id}` : '/api/kurikulum/skl'; const method = editingSKL ? 'PUT' : 'POST'; const payload = editingSKL ? { deskripsi: values.deskripsi, kategori: values.kategori } : values; const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menyimpan SKL'); } toast({ title: "Berhasil!", description: `SKL ${values.kode || editingSKL?.kode} ${editingSKL ? 'diperbarui' : 'ditambahkan'}.` }); setIsSKLFormOpen(false); fetchSklData(); } catch (e: any) { toast({ title: "Error SKL", description: e.message, variant: "destructive" }); } finally { setIsSKLSubmitting(false); } };
-  const handleDeleteSKLConfirm = async () => { if (!sklToDelete) return; setIsSKLSubmitting(true); try { const res = await fetch(`/api/kurikulum/skl/${sklToDelete.id}`, { method: 'DELETE' }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menghapus SKL'); } toast({ title: "Dihapus!", description: `SKL ${sklToDelete.kode} dihapus.` }); fetchSklData(); } catch (e: any) { toast({ title: "Error SKL", description: e.message, variant: "destructive" }); } finally { setIsSKLSubmitting(false); setSklToDelete(null); } };
-  const handleCPSubmit = async (values: CPFormValues) => { setIsCPSubmitting(true); try { const url = editingCP ? `/api/kurikulum/cp/${editingCP.id}` : '/api/kurikulum/cp'; const method = editingCP ? 'PUT' : 'POST'; const payload = editingCP ? { deskripsi: values.deskripsi, fase: values.fase, elemen: values.elemen } : values; const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menyimpan CP'); } toast({ title: "Berhasil!", description: `CP ${values.kode || editingCP?.kode} ${editingCP ? 'diperbarui' : 'ditambahkan'}.` }); setIsCPFormOpen(false); fetchCpData(); } catch (e: any) { toast({ title: "Error CP", description: e.message, variant: "destructive" }); } finally { setIsCPSubmitting(false); } };
-  const handleDeleteCPConfirm = async () => { if (!cpToDelete) return; setIsCPSubmitting(true); try { const res = await fetch(`/api/kurikulum/cp/${cpToDelete.id}`, { method: 'DELETE' }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menghapus CP'); } toast({ title: "Dihapus!", description: `CP ${cpToDelete.kode} dihapus.` }); fetchCpData(); } catch (e: any) { toast({ title: "Error CP", description: e.message, variant: "destructive" }); } finally { setIsCPSubmitting(false); setCpToDelete(null); } };
-  const handleKategoriMateriSubmit = async (values: KategoriMateriFormValues) => { setIsKategoriMateriSubmitting(true); try { const res = await fetch('/api/kurikulum/materi-kategori', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values), }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menyimpan kategori'); } toast({ title: "Berhasil!", description: `Kategori "${values.nama}" ditambahkan.` }); kategoriMateriForm.reset(); fetchKategoriMateriData(); } catch (e: any) { toast({ title: "Error Kategori", description: e.message, variant: "destructive" }); } finally { setIsKategoriMateriSubmitting(false); } };
-  const handleDeleteKategoriMateriConfirm = async () => { if (!kategoriMateriToDelete) return; setIsKategoriMateriSubmitting(true); try { const res = await fetch(`/api/kurikulum/materi-kategori/${kategoriMateriToDelete.id}`, { method: 'DELETE' }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menghapus kategori'); } toast({ title: "Dihapus!", description: `Kategori "${kategoriMateriToDelete.nama}" dihapus.` }); fetchKategoriMateriData(); } catch (e: any) { toast({ title: "Error Kategori", description: e.message, variant: "destructive" }); } finally { setIsKategoriMateriSubmitting(false); setKategoriMateriToDelete(null); } };
-  const handleStrukturSubmit = async (values: StrukturKurikulumClientFormValues) => { setIsStrukturSubmitting(true); try { const payload = { ...values, tingkat: selectedTingkat, jurusan: selectedJurusan }; const res = await fetch('/api/kurikulum/struktur', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menambahkan mapel.'); } toast({ title: "Berhasil!", description: `Mata pelajaran ditambahkan ke struktur.` }); fetchStrukturKurikulumData(selectedTingkat, selectedJurusan); setIsStrukturKurikulumFormOpen(false); strukturKurikulumForm.reset({mapelId: undefined, alokasiJam: 0, guruPengampuId: undefined}); } catch (e: any) { toast({ title: "Error Struktur", description: e.message, variant: "destructive" }); } finally { setIsStrukturSubmitting(false); } };
-  const handleDeleteStrukturItemConfirm = async () => { if (!strukturItemToDelete) return; setIsStrukturSubmitting(true); try { const res = await fetch(`/api/kurikulum/struktur/${strukturItemToDelete.id}`, { method: 'DELETE' }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menghapus item.'); } toast({ title: "Dihapus!", description: `Item "${strukturItemToDelete.namaMapel}" dihapus.` }); fetchStrukturKurikulumData(selectedTingkat, selectedJurusan); } catch (e: any) { toast({ title: "Error Hapus", description: e.message, variant: "destructive" }); } finally { setIsStrukturSubmitting(false); setStrukturItemToDelete(null); } };
-  const handleSilabusSubmit = async (values: SilabusFormValues) => { setIsSilabusSubmitting(true); try { const payload: Partial<Silabus> = { ...values, namaFileOriginal: values.file ? (values.file as File).name : undefined }; const url = currentEditingSilabus ? `/api/kurikulum/silabus/${currentEditingSilabus.id}` : '/api/kurikulum/silabus'; const method = currentEditingSilabus ? 'PUT' : 'POST'; const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menyimpan silabus'); } toast({title: "Berhasil!", description: `Silabus "${values.judul}" ${currentEditingSilabus ? 'diperbarui' : 'ditambahkan'}.`}); setIsSilabusFormOpen(false); silabusForm.reset(); fetchSilabusData(); } catch (e: any) { toast({ title: "Error Silabus", description: e.message, variant: "destructive" }); } finally { setIsSilabusSubmitting(false); } };
-  const handleDeleteSilabusConfirm = async () => { if (!silabusToDelete) return; setIsSilabusSubmitting(true); try { const res = await fetch(`/api/kurikulum/silabus/${silabusToDelete.id}`, { method: 'DELETE' }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menghapus silabus'); } toast({ title: "Dihapus!", description: `Silabus "${silabusToDelete.judul}" dihapus.` }); fetchSilabusData(); } catch (e: any) { toast({ title: "Error Silabus", description: e.message, variant: "destructive" }); } finally { setIsSilabusSubmitting(false); setSilabusToDelete(null); } };
-  const handleRPPSubmit = async (values: RPPFormValues) => { setIsRPPSubmitting(true); try { const payload: Partial<RPP> = { ...values, namaFileOriginal: values.file ? (values.file as File).name : undefined }; const url = currentEditingRPP ? `/api/kurikulum/rpp/${currentEditingRPP.id}` : '/api/kurikulum/rpp'; const method = currentEditingRPP ? 'PUT' : 'POST'; const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menyimpan RPP'); } toast({title: "Berhasil!", description: `RPP "${values.judul}" ${currentEditingRPP ? 'diperbarui' : 'ditambahkan'}.`}); setIsRPPFormOpen(false); rppForm.reset(); fetchRppData(); } catch (e: any) { toast({ title: "Error RPP", description: e.message, variant: "destructive" }); } finally { setIsRPPSubmitting(false); } };
-  const handleDeleteRPPConfirm = async () => { if (!rppToDelete) return; setIsRPPSubmitting(true); try { const res = await fetch(`/api/kurikulum/rpp/${rppToDelete.id}`, { method: 'DELETE' }); if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Gagal menghapus RPP'); } toast({ title: "Dihapus!", description: `RPP "${rppToDelete.judul}" dihapus.` }); fetchRppData(); } catch (e: any) { toast({ title: "Error RPP", description: e.message, variant: "destructive" }); } finally { setIsRPPSubmitting(false); setRppToDelete(null); } };
+  const handleMateriSubmit = async (values: MateriAjarClientFormValues) => {
+    setIsMateriSubmitting(true);
+    try {
+      const payload: Partial<MateriAjar> = {
+        judul: values.judul,
+        deskripsi: values.deskripsi,
+        mapelNama: values.mapelNama,
+        jenisMateri: values.jenisMateri,
+      };
+      if (values.jenisMateri === "File") {
+        if (values.fileInput && values.fileInput.name) {
+          payload.namaFileOriginal = values.fileInput.name;
+        }
+      } else if (values.jenisMateri === "Link") {
+        payload.fileUrl = values.externalUrl;
+        payload.namaFileOriginal = null;
+      }
+      const url = currentEditingMateri ? `/api/kurikulum/materi-ajar/${currentEditingMateri.id}` : '/api/kurikulum/materi-ajar';
+      const method = currentEditingMateri ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menyimpan materi ajar');
+      }
+      toast({
+        title: "Berhasil!",
+        description: `Materi "${values.judul}" ${currentEditingMateri ? 'diperbarui' : 'ditambahkan'}.`
+      });
+      setIsMateriFormOpen(false);
+      fetchMateriAjarData();
+    } catch (e: any) {
+      toast({
+        title: "Error Materi",
+        description: e.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsMateriSubmitting(false);
+    }
+  };
+
+  const handleDeleteMateriConfirm = async () => {
+    if (!materiToDelete) return;
+    setIsMateriSubmitting(true);
+    try {
+      const res = await fetch(`/api/kurikulum/materi-ajar/${materiToDelete.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menghapus materi ajar');
+      }
+      toast({ title: "Dihapus!", description: `Materi "${materiToDelete.judul}" dihapus.` });
+      fetchMateriAjarData();
+    } catch (e: any) {
+      toast({ title: "Error Materi", description: e.message, variant: "destructive" });
+    } finally {
+      setIsMateriSubmitting(false);
+      setMateriToDelete(null);
+    }
+  };
+
+  const handleSKLSubmit = async (values: SKLFormValues) => {
+    setIsSKLSubmitting(true);
+    try {
+      const url = editingSKL ? `/api/kurikulum/skl/${editingSKL.id}` : '/api/kurikulum/skl';
+      const method = editingSKL ? 'PUT' : 'POST';
+      const payload = editingSKL ? { deskripsi: values.deskripsi, kategori: values.kategori } : values;
+      const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menyimpan SKL');
+      }
+      toast({ title: "Berhasil!", description: `SKL ${values.kode || editingSKL?.kode} ${editingSKL ? 'diperbarui' : 'ditambahkan'}.` });
+      setIsSKLFormOpen(false);
+      fetchSklData();
+    } catch (e: any) {
+      toast({ title: "Error SKL", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSKLSubmitting(false);
+    }
+  };
+
+  const handleDeleteSKLConfirm = async () => {
+    if (!sklToDelete) return;
+    setIsSKLSubmitting(true);
+    try {
+      const res = await fetch(`/api/kurikulum/skl/${sklToDelete.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menghapus SKL');
+      }
+      toast({ title: "Dihapus!", description: `SKL ${sklToDelete.kode} dihapus.` });
+      fetchSklData();
+    } catch (e: any) {
+      toast({ title: "Error SKL", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSKLSubmitting(false);
+      setSklToDelete(null);
+    }
+  };
+
+  const handleCPSubmit = async (values: CPFormValues) => {
+    setIsCPSubmitting(true);
+    try {
+      const url = editingCP ? `/api/kurikulum/cp/${editingCP.id}` : '/api/kurikulum/cp';
+      const method = editingCP ? 'PUT' : 'POST';
+      const payload = editingCP ? { deskripsi: values.deskripsi, fase: values.fase, elemen: values.elemen } : values;
+      const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menyimpan CP');
+      }
+      toast({ title: "Berhasil!", description: `CP ${values.kode || editingCP?.kode} ${editingCP ? 'diperbarui' : 'ditambahkan'}.` });
+      setIsCPFormOpen(false);
+      fetchCpData();
+    } catch (e: any) {
+      toast({ title: "Error CP", description: e.message, variant: "destructive" });
+    } finally {
+      setIsCPSubmitting(false);
+    }
+  };
+
+  const handleDeleteCPConfirm = async () => {
+    if (!cpToDelete) return;
+    setIsCPSubmitting(true);
+    try {
+      const res = await fetch(`/api/kurikulum/cp/${cpToDelete.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menghapus CP');
+      }
+      toast({ title: "Dihapus!", description: `CP ${cpToDelete.kode} dihapus.` });
+      fetchCpData();
+    } catch (e: any) {
+      toast({ title: "Error CP", description: e.message, variant: "destructive" });
+    } finally {
+      setIsCPSubmitting(false);
+      setCpToDelete(null);
+    }
+  };
+
+  const handleKategoriMateriSubmit = async (values: KategoriMateriFormValues) => {
+    setIsKategoriMateriSubmitting(true);
+    try {
+      const res = await fetch('/api/kurikulum/materi-kategori', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values), });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menyimpan kategori');
+      }
+      toast({ title: "Berhasil!", description: `Kategori "${values.nama}" ditambahkan.` });
+      kategoriMateriForm.reset();
+      fetchKategoriMateriData();
+    } catch (e: any) {
+      toast({ title: "Error Kategori", description: e.message, variant: "destructive" });
+    } finally {
+      setIsKategoriMateriSubmitting(false);
+    }
+  };
+
+  const handleDeleteKategoriMateriConfirm = async () => {
+    if (!kategoriMateriToDelete) return;
+    setIsKategoriMateriSubmitting(true);
+    try {
+      const res = await fetch(`/api/kurikulum/materi-kategori/${kategoriMateriToDelete.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menghapus kategori');
+      }
+      toast({ title: "Dihapus!", description: `Kategori "${kategoriMateriToDelete.nama}" dihapus.` });
+      fetchKategoriMateriData();
+    } catch (e: any) {
+      toast({ title: "Error Kategori", description: e.message, variant: "destructive" });
+    } finally {
+      setIsKategoriMateriSubmitting(false);
+      setKategoriMateriToDelete(null);
+    }
+  };
+
+  const handleStrukturSubmit = async (values: StrukturKurikulumClientFormValues) => {
+    setIsStrukturSubmitting(true);
+    try {
+      const payload = { ...values, tingkat: selectedTingkat, jurusan: selectedJurusan };
+      const res = await fetch('/api/kurikulum/struktur', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menambahkan mapel.');
+      }
+      toast({ title: "Berhasil!", description: `Mata pelajaran ditambahkan ke struktur.` });
+      fetchStrukturKurikulumData(selectedTingkat, selectedJurusan);
+      setIsStrukturKurikulumFormOpen(false);
+      strukturKurikulumForm.reset({mapelId: undefined, alokasiJam: 0, guruPengampuId: undefined});
+    } catch (e: any) {
+      toast({ title: "Error Struktur", description: e.message, variant: "destructive" });
+    } finally {
+      setIsStrukturSubmitting(false);
+    }
+  };
+
+  const handleDeleteStrukturItemConfirm = async () => {
+    if (!strukturItemToDelete) return;
+    setIsStrukturSubmitting(true);
+    try {
+      const res = await fetch(`/api/kurikulum/struktur/${strukturItemToDelete.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menghapus item.');
+      }
+      toast({ title: "Dihapus!", description: `Item "${strukturItemToDelete.namaMapel}" dihapus.` });
+      fetchStrukturKurikulumData(selectedTingkat, selectedJurusan);
+    } catch (e: any) {
+      toast({ title: "Error Hapus", description: e.message, variant: "destructive" });
+    } finally {
+      setIsStrukturSubmitting(false);
+      setStrukturItemToDelete(null);
+    }
+  };
+
+  const handleSilabusSubmit = async (values: SilabusFormValues) => {
+    setIsSilabusSubmitting(true);
+    try {
+      const payload: Partial<Silabus> = { ...values, namaFileOriginal: values.file ? (values.file as File).name : undefined };
+      const url = currentEditingSilabus ? `/api/kurikulum/silabus/${currentEditingSilabus.id}` : '/api/kurikulum/silabus';
+      const method = currentEditingSilabus ? 'PUT' : 'POST';
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menyimpan silabus');
+      }
+      toast({title: "Berhasil!", description: `Silabus "${values.judul}" ${currentEditingSilabus ? 'diperbarui' : 'ditambahkan'}.`});
+      setIsSilabusFormOpen(false);
+      silabusForm.reset();
+      fetchSilabusData();
+    } catch (e: any) {
+      toast({ title: "Error Silabus", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSilabusSubmitting(false);
+    }
+  };
+
+  const handleDeleteSilabusConfirm = async () => {
+    if (!silabusToDelete) return;
+    setIsSilabusSubmitting(true);
+    try {
+      const res = await fetch(`/api/kurikulum/silabus/${silabusToDelete.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menghapus silabus');
+      }
+      toast({ title: "Dihapus!", description: `Silabus "${silabusToDelete.judul}" dihapus.` });
+      fetchSilabusData();
+    } catch (e: any) {
+      toast({ title: "Error Silabus", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSilabusSubmitting(false);
+      setSilabusToDelete(null);
+    }
+  };
+
+  const handleRPPSubmit = async (values: RPPFormValues) => {
+    setIsRPPSubmitting(true);
+    try {
+      const payload: Partial<RPP> = { ...values, namaFileOriginal: values.file ? (values.file as File).name : undefined };
+      const url = currentEditingRPP ? `/api/kurikulum/rpp/${currentEditingRPP.id}` : '/api/kurikulum/rpp';
+      const method = currentEditingRPP ? 'PUT' : 'POST';
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menyimpan RPP');
+      }
+      toast({title: "Berhasil!", description: `RPP "${values.judul}" ${currentEditingRPP ? 'diperbarui' : 'ditambahkan'}.`});
+      setIsRPPFormOpen(false);
+      rppForm.reset();
+      fetchRppData();
+    } catch (e: any) {
+      toast({ title: "Error RPP", description: e.message, variant: "destructive" });
+    } finally {
+      setIsRPPSubmitting(false);
+    }
+  };
+
+  const handleDeleteRPPConfirm = async () => {
+    if (!rppToDelete) return;
+    setIsRPPSubmitting(true);
+    try {
+      const res = await fetch(`/api/kurikulum/rpp/${rppToDelete.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.message || 'Gagal menghapus RPP');
+      }
+      toast({ title: "Dihapus!", description: `RPP "${rppToDelete.judul}" dihapus.` });
+      fetchRppData();
+    } catch (e: any) {
+      toast({ title: "Error RPP", description: e.message, variant: "destructive" });
+    } finally {
+      setIsRPPSubmitting(false);
+      setRppToDelete(null);
+    }
+  };
+
   const openPlaceholderToast = () => toast({ title: "Fitur Dalam Pengembangan", description: "Fitur ini akan segera tersedia." });
   const openSKLForm = (skl?: SKL) => { setEditingSKL(skl || null); setIsSKLFormOpen(true); };
   const openDeleteSKLDialog = (skl: SKL) => setSklToDelete(skl);
@@ -263,7 +551,7 @@ export default function AdminKurikulumPage() {
               <FormField control={materiAjarForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Materi</FormLabel><FormControl><Input placeholder="Modul Bab 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={materiAjarForm.control} name="mapelNama" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih mata pelajaran" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.length > 0 ? mataPelajaranOptions.map(subject => (<SelectItem key={subject.id} value={subject.nama}>{subject.nama} ({subject.kode})</SelectItem>)) : <SelectItem value="" disabled>Tidak ada mapel</SelectItem>}</SelectContent></Select><FormMessage /></FormItem>)} />
               <FormField control={materiAjarForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea placeholder="Deskripsi singkat materi..." {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={materiAjarForm.control} name="jenisMateri" render={({ field }) => (<FormItem><FormLabel>Jenis Materi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis materi" /></SelectTrigger></FormControl><SelectContent>{JENIS_MATERI_AJAR_CONST.map(jenis => <SelectItem key={jenis} value={jenis}>{jenis === "File" ? <><UploadCloud className="inline-block mr-2 h-4 w-4" />Unggah File</> : <><Link2Icon className="inline-block mr-2 h-4 w-4" />Tautan Eksternal</>}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={materiAjarForm.control} name="jenisMateri" render={({ field }) => (<FormItem><FormLabel>Jenis Materi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis materi" /></SelectTrigger></FormControl><SelectContent>{JENIS_MATERI_AJAR_CONST.map(jenis => <SelectItem key={jenis} value={jenis}>{jenis === "File" ? <><UploadCloud className="inline-block mr-2 h-4 w-4" />Unggah File</> : <><Link2 className="inline-block mr-2 h-4 w-4" />Tautan Eksternal</>}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
               {materiAjarForm.watch("jenisMateri") === "File" && (<FormField control={materiAjarForm.control} name="fileInput" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>Unggah File {currentEditingMateri?.namaFileOriginal ? `(Kosongkan jika tidak ubah: ${currentEditingMateri.namaFileOriginal})` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>PDF, DOCX, dll.</FormDescription><FormMessage /></FormItem>)} />)}
               {materiAjarForm.watch("jenisMateri") === "Link" && (<FormField control={materiAjarForm.control} name="externalUrl" render={({ field }) => (<FormItem><FormLabel>URL Materi</FormLabel><FormControl><Input placeholder="https://contoh.com/materi" {...field} /></FormControl><FormDescription>URL lengkap sumber materi.</FormDescription><FormMessage /></FormItem>)} />)}
               <DialogFooter><Button type="button" variant="outline" onClick={() => { setIsMateriFormOpen(false); setCurrentEditingMateri(null); }} disabled={isMateriSubmitting}>Batal</Button><Button type="submit" disabled={isMateriSubmitting || mataPelajaranOptions.length === 0}>{isMateriSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{currentEditingMateri ? "Simpan" : "Simpan"}</Button></DialogFooter>
@@ -284,13 +572,11 @@ export default function AdminKurikulumPage() {
       <Dialog open={isStrukturKurikulumFormOpen} onOpenChange={setIsStrukturKurikulumFormOpen}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Tambah Mapel ke Struktur {selectedTingkat} {selectedJurusan}</DialogTitle></DialogHeader><Form {...strukturKurikulumForm}><form onSubmit={strukturKurikulumForm.handleSubmit(handleStrukturSubmit)} className="space-y-4 py-2"><FormField control={strukturKurikulumForm.control} name="mapelId" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Mapel" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.length > 0 ? mataPelajaranOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.nama} ({s.kode})</SelectItem>) : <SelectItem value="" disabled>Tidak ada mapel</SelectItem>}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={strukturKurikulumForm.control} name="alokasiJam" render={({ field }) => (<FormItem><FormLabel>Alokasi Jam per Minggu</FormLabel><FormControl><Input type="number" placeholder="Contoh: 4" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={strukturKurikulumForm.control} name="guruPengampuId" render={({ field }) => (<FormItem><FormLabel>Guru Pengampu (Opsional)</FormLabel><Select onValueChange={field.onChange} value={field.value || ""}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Guru Pengampu" /></SelectTrigger></FormControl><SelectContent>{guruOptions.length > 0 ? guruOptions.map(g => <SelectItem key={g.id} value={g.id}>{g.fullName || g.name} ({g.nip || g.email})</SelectItem>) : <SelectItem value="" disabled>Tidak ada guru</SelectItem>}<SelectItem value="">Tidak Ditentukan</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} /><DialogFooter><Button type="button" variant="outline" onClick={() => setIsStrukturKurikulumFormOpen(false)} disabled={isStrukturSubmitting}>Batal</Button><Button type="submit" disabled={isStrukturSubmitting || mataPelajaranOptions.length === 0}>{isStrukturSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan</Button></DialogFooter></form></Form></DialogContent></Dialog>
       <AlertDialog open={!!strukturItemToDelete} onOpenChange={(open) => !open && setStrukturItemToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Hapus Item Struktur</AlertDialogTitle><AlertDialogDescription>Yakin hapus "{strukturItemToDelete?.namaMapel}" dari struktur?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setStrukturItemToDelete(null)} disabled={isStrukturSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteStrukturItemConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isStrukturSubmitting}>{isStrukturSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       <Dialog open={isSilabusDialogOpen} onOpenChange={setIsSilabusDialogOpen}><DialogContent className="sm:max-w-3xl"><DialogHeader><DialogTitle>Pengembangan Silabus</DialogTitle><DialogDescription>Kelola daftar silabus per mata pelajaran.</DialogDescription></DialogHeader><div className="py-4 space-y-4"><Button onClick={() => openSilabusForm()}><PlusCircle className="mr-2 h-4 w-4" /> Tambah Silabus</Button>{isLoadingSilabus ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : silabusList.length > 0 ? (<ScrollArea className="h-80 border rounded-md"><Table><TableHeader className="bg-muted/50 sticky top-0"><TableRow><TableHead>Judul</TableHead><TableHead>Mapel</TableHead><TableHead>Kelas</TableHead><TableHead>File</TableHead><TableHead className="text-right">Tindakan</TableHead></TableRow></TableHeader><TableBody>{silabusList.map(s => (<TableRow key={s.id}><TableCell className="font-medium max-w-xs truncate">{s.judul}</TableCell><TableCell>{s.mapel?.nama || "-"}</TableCell><TableCell>{s.kelas}</TableCell><TableCell>{s.namaFileOriginal || "-"}</TableCell><TableCell className="text-right"><Button variant="ghost" size="xs" onClick={() => openSilabusForm(s)} className="mr-1"><Edit className="h-3 w-3"/></Button><Button variant="ghost" size="xs" onClick={() => openDeleteSilabusDialog(s)} className="text-destructive"><Trash2 className="h-3 w-3"/></Button></TableCell></TableRow>))}</TableBody></Table></ScrollArea>) : (<p className="text-center text-muted-foreground py-4">Belum ada silabus.</p>)}</div><DialogFooter><Button variant="outline" onClick={() => setIsSilabusDialogOpen(false)}>Tutup</Button></DialogFooter></DialogContent></Dialog>
-      <Dialog open={isSilabusFormOpen} onOpenChange={(open) => { setIsSilabusFormOpen(open); if(!open) setCurrentEditingSilabus(null);}}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>{currentEditingSilabus ? "Edit Silabus" : "Tambah Silabus"}</DialogTitle></DialogHeader><Form {...silabusForm}><form onSubmit={silabusForm.handleSubmit(handleSilabusSubmit)} className="space-y-4 py-2"><FormField control={silabusForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Silabus</FormLabel><FormControl><Input placeholder="Silabus Matematika Semester Ganjil" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="mapelId" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Mapel" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.length > 0 ? mataPelajaranOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.nama} ({s.kode})</SelectItem>) : <SelectItem value="" disabled>Tidak ada mapel</SelectItem>}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas</FormLabel><FormControl><Input placeholder="Contoh: X IPA 1" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="deskripsiSingkat" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea placeholder="Ringkasan isi silabus..." {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="file" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>File Silabus {currentEditingSilabus?.namaFileOriginal ? `(Kosongkan jika tidak ubah: ${currentEditingSilabus.namaFileOriginal})` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>Unggah file PDF/DOCX.</FormMessage><FormMessage /></FormItem>)} /><DialogFooter><Button type="button" variant="outline" onClick={() => {setIsSilabusFormOpen(false);setCurrentEditingSilabus(null);}} disabled={isSilabusSubmitting}>Batal</Button><Button type="submit" disabled={isSilabusSubmitting || mataPelajaranOptions.length === 0}>{isSilabusSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{currentEditingSilabus ? "Simpan" : "Tambah"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
+      <Dialog open={isSilabusFormOpen} onOpenChange={(open) => { setIsSilabusFormOpen(open); if(!open) setCurrentEditingSilabus(null);}}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>{currentEditingSilabus ? "Edit Silabus" : "Tambah Silabus"}</DialogTitle></DialogHeader><Form {...silabusForm}><form onSubmit={silabusForm.handleSubmit(handleSilabusSubmit)} className="space-y-4 py-2"><FormField control={silabusForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Silabus</FormLabel><FormControl><Input placeholder="Silabus Matematika Semester Ganjil" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="mapelId" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Mapel" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.length > 0 ? mataPelajaranOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.nama} ({s.kode})</SelectItem>) : <SelectItem value="" disabled>Tidak ada mapel</SelectItem>}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas</FormLabel><FormControl><Input placeholder="Contoh: X IPA 1" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="deskripsiSingkat" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea placeholder="Ringkasan isi silabus..." {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>)} /><FormField control={silabusForm.control} name="file" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>File Silabus {currentEditingSilabus?.namaFileOriginal ? `(Kosongkan jika tidak ubah: ${currentEditingSilabus.namaFileOriginal})` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>Unggah file PDF/DOCX.</FormDescription><FormMessage /></FormItem>)} /><DialogFooter><Button type="button" variant="outline" onClick={() => {setIsSilabusFormOpen(false);setCurrentEditingSilabus(null);}} disabled={isSilabusSubmitting}>Batal</Button><Button type="submit" disabled={isSilabusSubmitting || mataPelajaranOptions.length === 0}>{isSilabusSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{currentEditingSilabus ? "Simpan" : "Tambah"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
       <AlertDialog open={!!silabusToDelete} onOpenChange={(open) => !open && setSilabusToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Hapus Silabus</AlertDialogTitle><AlertDialogDescription>Yakin hapus silabus "{silabusToDelete?.judul}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setSilabusToDelete(null)} disabled={isSilabusSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSilabusConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isSilabusSubmitting}>{isSilabusSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       <Dialog open={isRPPDialogOpen} onOpenChange={setIsRPPDialogOpen}><DialogContent className="sm:max-w-3xl"><DialogHeader><DialogTitle>Penyusunan RPP</DialogTitle><DialogDescription>Kelola Rencana Pelaksanaan Pembelajaran.</DialogDescription></DialogHeader><div className="py-4 space-y-4"><Button onClick={() => openRPPForm()}><PlusCircle className="mr-2 h-4 w-4" /> Tambah RPP</Button>{isLoadingRpp ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) :rppList.length > 0 ? (<ScrollArea className="h-80 border rounded-md"><Table><TableHeader className="bg-muted/50 sticky top-0"><TableRow><TableHead>Judul</TableHead><TableHead>Mapel</TableHead><TableHead>Kelas</TableHead><TableHead className="text-center">Pertemuan</TableHead><TableHead className="text-right">Tindakan</TableHead></TableRow></TableHeader><TableBody>{rppList.map(r => (<TableRow key={r.id}><TableCell className="font-medium max-w-xs truncate">{r.judul}</TableCell><TableCell>{r.mapel?.nama || "-"}</TableCell><TableCell>{r.kelas}</TableCell><TableCell className="text-center">{r.pertemuanKe}</TableCell><TableCell className="text-right"><Button variant="ghost" size="xs" onClick={() => openRPPForm(r)} className="mr-1"><Edit className="h-3 w-3"/></Button><Button variant="ghost" size="xs" onClick={() => openDeleteRPPDialog(r)} className="text-destructive"><Trash2 className="h-3 w-3"/></Button></TableCell></TableRow>))}</TableBody></Table></ScrollArea>) : (<p className="text-center text-muted-foreground py-4">Belum ada RPP.</p>)}</div><DialogFooter><Button variant="outline" onClick={() => setIsRPPDialogOpen(false)}>Tutup</Button></DialogFooter></DialogContent></Dialog>
-      <Dialog open={isRPPFormOpen} onOpenChange={(open) => { setIsRPPFormOpen(open); if(!open) setCurrentEditingRPP(null);}}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>{currentEditingRPP ? "Edit RPP" : "Tambah RPP"}</DialogTitle></DialogHeader><Form {...rppForm}><form onSubmit={rppForm.handleSubmit(handleRPPSubmit)} className="space-y-4 py-2"><FormField control={rppForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul RPP</FormLabel><FormControl><Input placeholder="RPP Fungsi Kuadrat Pertemuan 1" {...field} /></FormControl><FormMessage /></FormItem>)} /><div className="grid grid-cols-2 gap-4"><FormField control={rppForm.control} name="mapelId" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Mapel" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.length > 0 ? mataPelajaranOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.nama} ({s.kode})</SelectItem>) : <SelectItem value="" disabled>Tidak ada mapel</SelectItem>}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas</FormLabel><FormControl><Input placeholder="X IPA 1" {...field} /></FormControl><FormMessage /></FormItem>)} /></div><FormField control={rppForm.control} name="pertemuanKe" render={({ field }) => (<FormItem><FormLabel>Pertemuan Ke-</FormLabel><FormControl><Input type="number" placeholder="1" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="materiPokok" render={({ field }) => (<FormItem><FormLabel>Materi Pokok (Opsional)</FormLabel><FormControl><Textarea placeholder="Materi utama..." {...field} rows={2} value={field.value || ""}/></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="kegiatanPembelajaran" render={({ field }) => (<FormItem><FormLabel>Kegiatan Pembelajaran (Opsional)</FormLabel><FormControl><Textarea placeholder="Langkah-langkah kegiatan..." {...field} rows={3} value={field.value || ""}/></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="penilaian" render={({ field }) => (<FormItem><FormLabel>Penilaian (Opsional)</FormLabel><FormControl><Textarea placeholder="Teknik penilaian..." {...field} rows={2} value={field.value || ""}/></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="file" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>File RPP {currentEditingRPP?.namaFileOriginal ? `(Kosongkan jika tidak diubah)` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>Unggah file PDF/DOCX.</FormMessage><FormMessage /></FormItem>)} /><DialogFooter><Button type="button" variant="outline" onClick={() => {setIsRPPFormOpen(false);setCurrentEditingRPP(null);}} disabled={isRPPSubmitting}>Batal</Button><Button type="submit" disabled={isRPPSubmitting || mataPelajaranOptions.length === 0}>{isRPPSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{currentEditingRPP ? "Simpan" : "Tambah"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
+      <Dialog open={isRPPFormOpen} onOpenChange={(open) => { setIsRPPFormOpen(open); if(!open) setCurrentEditingRPP(null);}}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>{currentEditingRPP ? "Edit RPP" : "Tambah RPP"}</DialogTitle></DialogHeader><Form {...rppForm}><form onSubmit={rppForm.handleSubmit(handleRPPSubmit)} className="space-y-4 py-2"><FormField control={rppForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul RPP</FormLabel><FormControl><Input placeholder="RPP Fungsi Kuadrat Pertemuan 1" {...field} /></FormControl><FormMessage /></FormItem>)} /><div className="grid grid-cols-2 gap-4"><FormField control={rppForm.control} name="mapelId" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Mapel" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.length > 0 ? mataPelajaranOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.nama} ({s.kode})</SelectItem>) : <SelectItem value="" disabled>Tidak ada mapel</SelectItem>}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas</FormLabel><FormControl><Input placeholder="X IPA 1" {...field} /></FormControl><FormMessage /></FormItem>)} /></div><FormField control={rppForm.control} name="pertemuanKe" render={({ field }) => (<FormItem><FormLabel>Pertemuan Ke-</FormLabel><FormControl><Input type="number" placeholder="1" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="materiPokok" render={({ field }) => (<FormItem><FormLabel>Materi Pokok (Opsional)</FormLabel><FormControl><Textarea placeholder="Materi utama..." {...field} rows={2} value={field.value || ""}/></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="kegiatanPembelajaran" render={({ field }) => (<FormItem><FormLabel>Kegiatan Pembelajaran (Opsional)</FormLabel><FormControl><Textarea placeholder="Langkah-langkah kegiatan..." {...field} rows={3} value={field.value || ""}/></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="penilaian" render={({ field }) => (<FormItem><FormLabel>Penilaian (Opsional)</FormLabel><FormControl><Textarea placeholder="Teknik penilaian..." {...field} rows={2} value={field.value || ""}/></FormControl><FormMessage /></FormItem>)} /><FormField control={rppForm.control} name="file" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>File RPP {currentEditingRPP?.namaFileOriginal ? `(Kosongkan jika tidak diubah)` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>Unggah file PDF/DOCX.</FormDescription><FormMessage /></FormItem>)} /><DialogFooter><Button type="button" variant="outline" onClick={() => {setIsRPPFormOpen(false);setCurrentEditingRPP(null);}} disabled={isRPPSubmitting}>Batal</Button><Button type="submit" disabled={isRPPSubmitting || mataPelajaranOptions.length === 0}>{isRPPSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{currentEditingRPP ? "Simpan" : "Tambah"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
       <AlertDialog open={!!rppToDelete} onOpenChange={(open) => !open && setRppToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Hapus RPP</AlertDialogTitle><AlertDialogDescription>Yakin hapus RPP "{rppToDelete?.judul}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setRppToDelete(null)} disabled={isRPPSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteRPPConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isRPPSubmitting}>{isRPPSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </div>
   );
 }
-
-    
