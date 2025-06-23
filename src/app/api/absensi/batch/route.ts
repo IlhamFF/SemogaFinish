@@ -1,4 +1,3 @@
-
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
@@ -78,26 +77,28 @@ export async function POST(request: NextRequest) {
          return NextResponse.json({ message: "Tidak ada data absensi untuk disimpan." }, { status: 400 });
     }
 
-    // Use save with onConflict to handle upsert-like behavior based on the unique constraint
-    // (siswaId, jadwalPelajaranId, tanggalAbsensi)
     const absensiRepo = dataSource.getRepository(AbsensiSiswaEntity);
     try {
-        await absensiRepo.save(absensiToSave, { chunk: 100 }); // chunk for large batches
-        // Fetch back the saved/updated records to return them with relations if needed
-        const savedRecords = await absensiRepo.find({
-            where: {
-                jadwalPelajaranId,
-                tanggalAbsensi,
-                siswaId: In(absensiToSave.map(a => a.siswaId!))
-            },
-            relations: ["siswa"]
-        });
-        results.push(...savedRecords.map(sr => ({
-            siswaId: sr.siswaId,
-            siswaNama: sr.siswa?.fullName || sr.siswa?.name,
-            statusKehadiran: sr.statusKehadiran,
-            success: true
-        })));
+      await dataSource.transaction(async (transactionalEntityManager) => {
+        for (const record of absensiToSave) {
+          await transactionalEntityManager.upsert(AbsensiSiswaEntity, record, ["siswaId", "jadwalPelajaranId", "tanggalAbsensi"]);
+        }
+      });
+
+      const savedRecords = await absensiRepo.find({
+          where: {
+              jadwalPelajaranId,
+              tanggalAbsensi,
+              siswaId: In(absensiToSave.map(a => a.siswaId!))
+          },
+          relations: ["siswa"]
+      });
+      results.push(...savedRecords.map(sr => ({
+          siswaId: sr.siswaId,
+          siswaNama: sr.siswa?.fullName || sr.siswa?.name,
+          statusKehadiran: sr.statusKehadiran,
+          success: true
+      })));
 
     } catch (dbError: any) {
         console.error("DB Error saving batch absensi:", dbError);

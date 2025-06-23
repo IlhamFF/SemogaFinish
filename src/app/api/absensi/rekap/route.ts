@@ -1,4 +1,3 @@
-
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
@@ -12,7 +11,7 @@ import { startOfMonth, endOfMonth, format } from 'date-fns';
 const rekapQuerySchema = z.object({
   kelasId: z.string().min(1, "ID Kelas wajib diisi."),
   bulan: z.coerce.number().min(1).max(12),
-  tahun: z.coerce.number().min(2000).max(new Date().getFullYear() + 5), // Allow future years
+  tahun: z.coerce.number().min(2000).max(new Date().getFullYear() + 5),
 });
 
 export async function GET(request: NextRequest) {

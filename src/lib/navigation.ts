@@ -1,4 +1,3 @@
-
 import type { Role } from '@/types';
 import { 
     LayoutDashboard, Users, BarChart3, Settings, LogOut, BookOpenText, 
@@ -6,7 +5,7 @@ import {
     UploadCloud, ScrollText, GraduationCap, ClipboardCheck as ClipboardCheckSiswa, 
     BookOpen, FileText as FileTextSiswa, Award, BookCopy 
 } from 'lucide-react';
-import { ROUTES } from './constants'; // Import ROUTES from the separated constants file
+import { ROUTES } from './constants'; 
 
 export interface NavLink {
   href: string;
@@ -51,8 +50,3 @@ export const USER_NAV_ITEMS = [
     { href: ROUTES.SETTINGS, label: 'Pengaturan Profil', icon: Settings },
     { href: ROUTES.LOGIN, label: 'Keluar', icon: LogOut, action: 'logout' },
 ];
-
-// Ensure all icon names are distinct if they refer to different icons from lucide-react
-// For example, if ClipboardCheck from admin section is different from siswa, ensure distinct import or usage.
-// In this case, I used ClipboardCheckSiswa for clarity, assuming they are the same icon but used in different contexts.
-// If they are indeed the same, just one import is fine.

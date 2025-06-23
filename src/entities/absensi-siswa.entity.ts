@@ -1,4 +1,3 @@
-
 import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, Unique } from "typeorm";
 import type { UserEntity } from "./user.entity";
@@ -7,7 +6,7 @@ import type { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
 export type StatusKehadiran = "Hadir" | "Izin" | "Sakit" | "Alpha";
 
 @Entity({ name: "absensi_siswa" })
-@Unique(["siswaId", "jadwalPelajaranId", "tanggalAbsensi"]) // Satu record per siswa per sesi jadwal per tanggal
+@Unique(["siswaId", "jadwalPelajaranId", "tanggalAbsensi"])
 export class AbsensiSiswaEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
@@ -26,7 +25,7 @@ export class AbsensiSiswaEntity {
   @JoinColumn({ name: "jadwalPelajaranId" })
   jadwalPelajaran!: JadwalPelajaranEntity;
 
-  @Column({ type: "date" }) // Tanggal spesifik absensi diambil
+  @Column({ type: "date" })
   tanggalAbsensi!: string; 
 
   @Column({
@@ -37,8 +36,6 @@ export class AbsensiSiswaEntity {
 
   @Column({ type: "text", nullable: true })
   catatan?: string | null;
-
-  // dicatatOlehGuruId bisa didapatkan dari jadwalPelajaran.guruId
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;

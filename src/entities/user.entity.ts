@@ -1,4 +1,3 @@
-
 import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from "typeorm";
 import type { Role } from "@/types";
@@ -119,9 +118,6 @@ export class UserEntity {
 
   @OneToMany("AbsensiSiswaEntity", (absensi) => absensi.siswa)
   kehadiranSiswa?: AbsensiSiswaEntity[];
-
-  @OneToMany("AbsensiSiswaEntity", (absensi) => absensi.jadwalPelajaran.guru)
-  absensiDicatatOlehGuru?: AbsensiSiswaEntity[];
 
   @OneToMany("NilaiSemesterSiswaEntity", (nilai) => nilai.siswa)
   nilaiSemesterSiswa?: NilaiSemesterSiswaEntity[];

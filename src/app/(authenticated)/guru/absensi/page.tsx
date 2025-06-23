@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -360,7 +359,6 @@ export default function GuruAbsensiPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog Rekap Absensi Bulanan */}
       <Dialog open={isRekapDialogOpen} onOpenChange={setIsRekapDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>

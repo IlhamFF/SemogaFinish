@@ -1,4 +1,3 @@
-
 import type { Role } from '@/types';
 
 export const APP_NAME = 'EduCentral SMA Az-Bail';

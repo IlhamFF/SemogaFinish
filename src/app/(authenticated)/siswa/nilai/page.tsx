@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -6,21 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Bar, BarChart as RechartsBarChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Award, FileSignature, TrendingUp, Download, Eye, UserCircle, CalendarDays, CheckCircle, Info, BookUser, Loader2 } from "lucide-react";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { NilaiSemesterSiswa } from '@/types';
-
-const mockKehadiran = {
-  hadir: 100,
-  izin: 2,
-  sakit: 1,
-  alpha: 0,
-  totalHariEfektif: 103
-};
 
 const chartConfig = {
   nilaiAkhir: { label: "Nilai Akhir", color: "hsl(var(--primary))" },
@@ -73,12 +64,6 @@ export default function SiswaNilaiPage() {
     const chart = validGrades.map(item => ({ name: `${item.mapel?.nama} (${item.semester.substring(0,1)}${item.tahunAjaran.substring(2,4)})`, nilaiAkhir: item.nilaiAkhir }));
     return { averageGrade: avg, totalGradedItems: validGrades.length, chartData: chart };
   }, [semesterGrades]);
-  
-  const rataRataKehadiran = useMemo(() => {
-    return mockKehadiran.totalHariEfektif > 0 
-      ? ((mockKehadiran.hadir / mockKehadiran.totalHariEfektif) * 100).toFixed(1) + "%"
-      : "N/A";
-  }, []);
   
   const getPredikatBadgeVariant = (predikat: string | null | undefined): "default" | "secondary" | "destructive" | "outline" => {
     switch (predikat) {
@@ -138,15 +123,11 @@ export default function SiswaNilaiPage() {
                 <p className="text-muted-foreground">Total Mapel Dinilai:</p>
                 <p className="font-semibold text-lg">{isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : `${totalGradedItems} Mapel`}</p>
             </div>
-            <div className="space-y-1">
-                <p className="text-muted-foreground">Rekap Kehadiran (Mock):</p>
+             <div className="space-y-1">
+                <p className="text-muted-foreground">Rekap Kehadiran:</p>
                 <div className="flex flex-wrap gap-x-3 gap-y-1">
-                    <Badge variant="default" className="bg-green-500 hover:bg-green-600">Hadir: {mockKehadiran.hadir}</Badge>
-                    <Badge variant="secondary">Izin: {mockKehadiran.izin}</Badge>
-                    <Badge variant="outline">Sakit: {mockKehadiran.sakit}</Badge>
-                    <Badge variant="destructive">Alpha: {mockKehadiran.alpha}</Badge>
+                    <p className="text-sm text-muted-foreground">Fitur rekap kehadiran akan segera tersedia.</p>
                 </div>
-                <p className="text-xs text-muted-foreground">Total Hari Efektif: {mockKehadiran.totalHariEfektif} ({rataRataKehadiran} hadir)</p>
             </div>
           </CardContent>
         </Card>
@@ -162,15 +143,13 @@ export default function SiswaNilaiPage() {
              <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
           ) : chartData.length > 0 ? (
               <ChartContainer config={chartConfig} className="w-full h-full">
-                <ResponsiveContainer>
-                    <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: -20 }}>
+                <RechartsBarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: -20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="hsl(var(--foreground))" fontSize={10} interval={0} angle={-30} textAnchor="end" height={70} />
                     <YAxis tickLine={false} axisLine={false} stroke="hsl(var(--foreground))" fontSize={12} domain={[0, 100]} />
                     <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }}/>
                     <Bar dataKey="nilaiAkhir" fill="var(--color-nilaiAkhir)" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
+                </RechartsBarChart>
               </ChartContainer>
           ) : (
              <p className="text-center text-muted-foreground pt-10">Belum ada data nilai semester untuk ditampilkan di grafik.</p>
@@ -227,4 +206,3 @@ export default function SiswaNilaiPage() {
     </div>
   );
 }
-

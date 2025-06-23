@@ -1,4 +1,3 @@
-
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
@@ -19,8 +18,6 @@ export async function GET(request: NextRequest) {
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
-  // Hanya guru yang mengajar sesi tersebut atau admin/superadmin yang bisa GET
-  // Validasi lebih lanjut akan dilakukan setelah mengambil data jadwalPelajaran
 
   const { searchParams } = new URL(request.url);
   const queryValidation = getAbsensiQuerySchema.safeParse({
@@ -48,14 +45,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: "Akses ditolak. Anda tidak mengajar sesi ini." }, { status: 403 });
     }
 
-    // Ambil semua siswa di kelas tersebut
     const siswaDiKelas = await userRepo.find({
       where: { kelasId: jadwalPelajaran.kelas, role: "siswa" },
       select: ["id", "fullName", "name", "nis"],
       order: { fullName: "ASC" }
     });
 
-    // Ambil data absensi yang sudah ada untuk sesi dan tanggal ini
     const existingAbsensi = await absensiRepo.find({
       where: { jadwalPelajaranId, tanggalAbsensi: tanggal },
       relations: ["siswa"],
@@ -70,9 +65,9 @@ export async function GET(request: NextRequest) {
         siswaId: siswa.id,
         fullName: siswa.fullName || siswa.name,
         nis: siswa.nis,
-        statusKehadiran: absenSiswa?.statusKehadiran || null, // Default null if not recorded
+        statusKehadiran: absenSiswa?.statusKehadiran || null,
         catatan: absenSiswa?.catatan || null,
-        absensiId: absenSiswa?.id || null, // ID absensi jika sudah ada
+        absensiId: absenSiswa?.id || null,
       };
     });
 
