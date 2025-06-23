@@ -51,9 +51,6 @@ export async function GET(
     if (!materi) {
       return NextResponse.json({ message: "Materi ajar tidak ditemukan." }, { status: 404 });
     }
-    // Siswa hanya bisa lihat materi jika relevan dengan mapelnya (logika ini bisa di client atau diperketat di sini)
-    // Guru bisa lihat semua, atau hanya materi yang diuploadnya (tergantung kebutuhan)
-    // Admin/Superadmin bisa lihat semua
     return NextResponse.json({
         ...materi,
         uploader: materi.uploader ? { id: materi.uploader.id, name: materi.uploader.name, fullName: materi.uploader.fullName, email: materi.uploader.email } : undefined

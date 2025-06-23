@@ -1,12 +1,12 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { MateriAjarEntity } from "@/entities/materi-ajar.entity";
 import * as z from "zod";
 import { JENIS_MATERI_AJAR, type JenisMateriAjarType } from "@/types";
 import { format } from 'date-fns';
-import { getAuthenticatedUser } from "@/lib/auth-utils-node"; // Import new auth util
+import { getAuthenticatedUser } from "@/lib/auth-utils-node"; 
 
 const materiAjarCreateSchema = z.object({
   judul: z.string().min(3, { message: "Judul minimal 3 karakter." }).max(255),
@@ -15,7 +15,6 @@ const materiAjarCreateSchema = z.object({
   jenisMateri: z.enum(JENIS_MATERI_AJAR, { required_error: "Jenis materi wajib dipilih." }),
   namaFileOriginal: z.string().optional().nullable(),
   fileUrl: z.string().url({ message: "URL tidak valid atau format path salah." }).optional().nullable(),
-  // uploaderId is removed from here, will be taken from token
 }).refine(data => {
     if (data.jenisMateri === "File" && !data.namaFileOriginal) {
         return true; 
@@ -29,13 +28,11 @@ const materiAjarCreateSchema = z.object({
     path: ["fileUrl"],
 });
 
-// GET /api/kurikulum/materi-ajar - Mendapatkan semua materi ajar
 export async function GET(request: NextRequest) {
   const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Akses ditolak. Tidak terautentikasi." }, { status: 401 });
   }
-  // Further role-based access for GET can be added here if needed
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -54,13 +51,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/kurikulum/materi-ajar - Membuat materi ajar baru
 export async function POST(request: NextRequest) {
   const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Akses ditolak. Tidak terautentikasi." }, { status: 401 });
   }
-  // Check if user role is allowed to create material (e.g., guru, admin, superadmin)
   if (!['guru', 'admin', 'superadmin'].includes(authenticatedUser.role)) {
     return NextResponse.json({ message: "Akses ditolak. Peran tidak diizinkan." }, { status: 403 });
   }
@@ -92,7 +87,7 @@ export async function POST(request: NextRequest) {
       namaFileOriginal: jenisMateri === "File" ? namaFileOriginal : null,
       fileUrl: finalFileUrl,
       tanggalUpload: format(new Date(), "yyyy-MM-dd"),
-      uploaderId, // Use uploaderId from authenticated token
+      uploaderId, 
     });
 
     await materiRepo.save(newMateri);

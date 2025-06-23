@@ -88,7 +88,7 @@ export async function PUT(
 
     if (validatedData.judul !== undefined) updateData.judul = validatedData.judul;
     if (validatedData.mapelId !== undefined) {
-        const dataSource = await getInitializedDataSource(); // Re-fetch if needed
+        const dataSource = await getInitializedDataSource(); 
         const mapelRepo = dataSource.getRepository(MataPelajaranEntity);
         const mapelExists = await mapelRepo.findOneBy({ id: validatedData.mapelId });
         if (!mapelExists) {

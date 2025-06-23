@@ -1,8 +1,8 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import { JENIS_MATERI_AJAR, type JenisMateriAjarType } from "@/types";
-import type { UserEntity } from "./user.entity"; // Menggunakan import type
+import type { UserEntity } from "./user.entity"; 
 
 @Entity({ name: "materi_ajar" })
 export class MateriAjarEntity {
@@ -15,7 +15,7 @@ export class MateriAjarEntity {
   @Column({ type: "text", nullable: true })
   deskripsi?: string | null;
 
-  @Column({ type: "varchar", length: 255 }) // Menyimpan nama mata pelajaran
+  @Column({ type: "varchar", length: 255 }) 
   mapelNama!: string;
 
   @Column({
@@ -25,18 +25,18 @@ export class MateriAjarEntity {
   jenisMateri!: JenisMateriAjarType;
 
   @Column({ type: "varchar", length: 255, nullable: true })
-  namaFileOriginal?: string | null; // Nama file asli saat diunggah
+  namaFileOriginal?: string | null; 
 
-  @Column({ type: "varchar", length: 500, nullable: true }) // Bisa URL atau path internal (simulasi)
+  @Column({ type: "varchar", length: 500, nullable: true }) 
   fileUrl?: string | null;
 
-  @Column({ type: "date" }) // Hanya tanggal, tanpa waktu
+  @Column({ type: "date" }) 
   tanggalUpload!: string;
 
   @Column({ type: "uuid" })
   uploaderId!: string;
 
-  @ManyToOne("UserEntity", { onDelete: "SET NULL", nullable: true }) // Jika uploader dihapus, set uploaderId jadi NULL
+  @ManyToOne("UserEntity", { onDelete: "SET NULL", nullable: true }) 
   @JoinColumn({ name: "uploaderId" })
   uploader?: UserEntity;
 

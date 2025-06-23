@@ -1,5 +1,5 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from "typeorm";
 import { KATEGORI_SKL, type KategoriSklType } from "@/types";
 

@@ -1,5 +1,5 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from "typeorm";
 
 @Entity({ name: "materi_kategori" })
@@ -11,10 +11,6 @@ export class MateriKategoriEntity {
   @Column({ type: "varchar", length: 255 })
   nama!: string;
   
-  // Tambahkan deskripsi jika diperlukan
-  // @Column({ type: "text", nullable: true })
-  // deskripsi?: string | null;
-
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;
 

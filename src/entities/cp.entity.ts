@@ -1,5 +1,5 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from "typeorm";
 import { FASE_CP, type FaseCpType } from "@/types";
 
@@ -9,7 +9,7 @@ export class CpEntity {
   id!: string;
 
   @Index({ unique: true })
-  @Column({ type: "varchar", length: 100 }) // Kode CP bisa panjang
+  @Column({ type: "varchar", length: 100 })
   kode!: string;
 
   @Column({ type: "text" })
@@ -22,7 +22,7 @@ export class CpEntity {
   fase!: FaseCpType;
 
   @Column({ type: "varchar", length: 255 })
-  elemen!: string; // Misal: Bilangan, Membaca dan Memirsa, dll.
+  elemen!: string; 
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;

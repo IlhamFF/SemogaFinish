@@ -1,10 +1,10 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import type { MataPelajaranEntity } from "./mata-pelajaran.entity";
 import type { UserEntity } from "./user.entity";
 
-@Entity({ name: "rpp" }) // Rencana Pelaksanaan Pembelajaran
+@Entity({ name: "rpp" }) 
 export class RppEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
@@ -37,7 +37,7 @@ export class RppEntity {
   @Column({ type: "varchar", length: 255, nullable: true })
   namaFileOriginal?: string | null;
 
-  @Column({ type: "varchar", length: 500, nullable: true }) // Path simulasi ke file
+  @Column({ type: "varchar", length: 500, nullable: true }) 
   fileUrl?: string | null;
 
   @Column({ type: "uuid" })

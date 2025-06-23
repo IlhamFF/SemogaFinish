@@ -141,7 +141,7 @@ const MOCK_SUBJECTS = [
     "Geografi",
     "Sosiologi",
     "Ekonomi",
-    "Sejarah Peminatan" // IPS
+    "Sejarah Peminatan"
 ];
 const KATEGORI_MAPEL = [
     "Wajib Umum",

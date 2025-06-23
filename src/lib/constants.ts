@@ -1,6 +1,5 @@
 
 import type { Role } from '@/types';
-// Lucide-react icons are removed from this file
 
 export const APP_NAME = 'EduCentral SMA Az-Bail';
 
@@ -58,8 +57,8 @@ export const SCHOOL_CLASSES_PER_MAJOR_GRADE = 5;
 
 export const MOCK_SUBJECTS = [
   "Matematika Wajib", "Bahasa Indonesia", "Bahasa Inggris", "Pendidikan Agama", "PPKn", "Sejarah Indonesia",
-  "Fisika", "Kimia", "Biologi", "Matematika Peminatan", // IPA
-  "Geografi", "Sosiologi", "Ekonomi", "Sejarah Peminatan" // IPS
+  "Fisika", "Kimia", "Biologi", "Matematika Peminatan", 
+  "Geografi", "Sosiologi", "Ekonomi", "Sejarah Peminatan" 
 ];
 
 export const KATEGORI_MAPEL = [
@@ -70,7 +69,6 @@ export const KATEGORI_MAPEL = [
   "Muatan Lokal",
 ] as const;
 
-// Constants moved from types/index.ts as they don't depend on other types and are used broadly
 export const KATEGORI_SKL_CONST = ["Sikap", "Pengetahuan", "Keterampilan"] as const;
 export const FASE_CP_CONST = ["A", "B", "C", "D", "E", "F", "Lainnya"] as const;
 export const JENIS_MATERI_AJAR = ["File", "Link"] as const;

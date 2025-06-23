@@ -42,9 +42,9 @@ export async function GET(request: NextRequest) {
     if (mapelIdFilter) queryOptions.where.mapelId = mapelIdFilter;
     if (kelasFilter) queryOptions.where.kelas = kelasFilter;
     
-    if (authenticatedUser.role === 'guru' && !uploaderIdFilter) { // Guru defaultnya lihat RPP dia sendiri
+    if (authenticatedUser.role === 'guru' && !uploaderIdFilter) { 
       queryOptions.where.uploaderId = authenticatedUser.id;
-    } else if (uploaderIdFilter && ['admin', 'superadmin'].includes(authenticatedUser.role)) { // Admin bisa filter by uploader
+    } else if (uploaderIdFilter && ['admin', 'superadmin'].includes(authenticatedUser.role)) { 
       queryOptions.where.uploaderId = uploaderIdFilter;
     } else if (uploaderIdFilter && authenticatedUser.role === 'guru' && uploaderIdFilter !== authenticatedUser.id) {
         return NextResponse.json({ message: "Guru hanya dapat melihat RPP sendiri jika tidak ada filter uploader spesifik." }, { status: 403 });

@@ -589,6 +589,10 @@ body {
   margin-right: .25rem;
 }
 
+.mr-1\.5 {
+  margin-right: .375rem;
+}
+
 .mr-2 {
   margin-right: .5rem;
 }
@@ -623,10 +627,6 @@ body {
 
 .mt-auto {
   margin-top: auto;
-}
-
-.mr-1\.5 {
-  margin-right: .375rem;
 }
 
 .block {

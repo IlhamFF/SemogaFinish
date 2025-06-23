@@ -27,10 +27,7 @@ export const dataSourceOptions: DataSourceOptions = {
   username: process.env.POSTGRES_USER || "postgres",
   password: process.env.POSTGRES_PASSWORD || "password",
   database: process.env.POSTGRES_DB || "educentral",
-  // In development, `synchronize: true` automatically creates the database schema on every connection.
-  // This should be `false` in production to prevent accidental data loss. Use migrations instead.
   synchronize: process.env.NODE_ENV === "development", 
-  // Logs all SQL queries in development, but only errors in production.
   logging: process.env.NODE_ENV === "development" ? ["query", "error"] : ["error"],
   entities: [
     UserEntity,
@@ -56,16 +53,9 @@ export const dataSourceOptions: DataSourceOptions = {
   subscribers: [],
 };
 
-// Singleton instance of the DataSource.
 let AppDataSource: DataSource | undefined = undefined;
 
-/**
- * Initializes and returns a singleton instance of the TypeORM DataSource.
- * If already initialized, it returns the existing instance.
- * @returns A promise that resolves to the initialized DataSource.
- */
 export async function getInitializedDataSource(): Promise<DataSource> {
-  // If already initialized and connected, return it.
   if (AppDataSource && AppDataSource.isInitialized) {
     return AppDataSource;
   }

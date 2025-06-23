@@ -1,5 +1,5 @@
 
-import "reflect-metadata"; // Ensure this is the very first import
+import "reflect-metadata"; 
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import type { MataPelajaranEntity } from "./mata-pelajaran.entity";
 import type { UserEntity } from "./user.entity";
@@ -19,7 +19,7 @@ export class SilabusEntity {
   @JoinColumn({ name: "mapelId" })
   mapel!: MataPelajaranEntity;
 
-  @Column({ type: "varchar", length: 100 }) // e.g., "X IPA 1", "Semua Kelas XI"
+  @Column({ type: "varchar", length: 100 }) 
   kelas!: string;
 
   @Column({ type: "text", nullable: true })
@@ -28,7 +28,7 @@ export class SilabusEntity {
   @Column({ type: "varchar", length: 255, nullable: true })
   namaFileOriginal?: string | null;
 
-  @Column({ type: "varchar", length: 500, nullable: true }) // Path simulasi ke file
+  @Column({ type: "varchar", length: 500, nullable: true }) 
   fileUrl?: string | null;
 
   @Column({ type: "uuid" })
