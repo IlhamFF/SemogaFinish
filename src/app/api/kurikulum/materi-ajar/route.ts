@@ -14,18 +14,7 @@ const materiAjarCreateSchema = z.object({
   mapelNama: z.string({ required_error: "Mata pelajaran wajib dipilih." }),
   jenisMateri: z.enum(JENIS_MATERI_AJAR, { required_error: "Jenis materi wajib dipilih." }),
   namaFileOriginal: z.string().optional().nullable(),
-  fileUrl: z.string().url({ message: "URL tidak valid atau format path salah." }).optional().nullable(),
-}).refine(data => {
-    if (data.jenisMateri === "File" && !data.namaFileOriginal) {
-        return true; 
-    }
-    if (data.jenisMateri === "Link" && !data.fileUrl) {
-        return false;
-    }
-    return true;
-}, {
-    message: "Jika jenis materi adalah 'Link', URL wajib diisi. Jika 'File', nama file sebaiknya ada.",
-    path: ["fileUrl"],
+  fileUrl: z.string().url({ message: "URL tidak valid." }).optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -74,18 +63,13 @@ export async function POST(request: NextRequest) {
     const dataSource = await getInitializedDataSource();
     const materiRepo = dataSource.getRepository(MateriAjarEntity);
 
-    let finalFileUrl = fileUrl;
-    if (jenisMateri === "File" && namaFileOriginal) {
-      finalFileUrl = `/uploads/materi/${Date.now()}-${namaFileOriginal.replace(/\s+/g, '_')}`;
-    }
-
     const newMateri = materiRepo.create({
       judul,
       deskripsi,
       mapelNama,
       jenisMateri: jenisMateri as JenisMateriAjarType,
-      namaFileOriginal: jenisMateri === "File" ? namaFileOriginal : null,
-      fileUrl: finalFileUrl,
+      namaFileOriginal: namaFileOriginal,
+      fileUrl: fileUrl,
       tanggalUpload: format(new Date(), "yyyy-MM-dd"),
       uploaderId, 
     });

@@ -13,17 +13,9 @@ const materiAjarUpdateSchema = z.object({
   mapelNama: z.string().optional(),
   jenisMateri: z.enum(JENIS_MATERI_AJAR).optional(),
   namaFileOriginal: z.string().optional().nullable(),
-  fileUrl: z.string().url({ message: "URL tidak valid atau format path salah." }).optional().nullable(),
+  fileUrl: z.string().url({ message: "URL tidak valid." }).optional().nullable(),
 }).refine(data => Object.keys(data).length > 0, {
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
-}).refine(data => {
-    if (data.jenisMateri === "Link" && (data.fileUrl === undefined || data.fileUrl === null || data.fileUrl === "")) {
-        return false;
-    }
-    return true;
-}, {
-    message: "Jika jenis materi adalah 'Link', URL wajib diisi.",
-    path: ["fileUrl"],
 });
 
 export async function GET(
@@ -83,41 +75,8 @@ export async function PUT(
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
     
-    const updateData: Partial<MateriAjarEntity> = {};
-    const validatedData = validation.data;
-
-    if (validatedData.judul !== undefined) updateData.judul = validatedData.judul;
-    if (validatedData.deskripsi !== undefined) updateData.deskripsi = validatedData.deskripsi;
-    if (validatedData.mapelNama !== undefined) updateData.mapelNama = validatedData.mapelNama;
-    if (validatedData.jenisMateri !== undefined) updateData.jenisMateri = validatedData.jenisMateri as JenisMateriAjarType;
+    const updateData: Partial<MateriAjarEntity> = validation.data;
     
-    if (validatedData.jenisMateri === "File") {
-        if (validatedData.namaFileOriginal !== undefined) {
-            updateData.namaFileOriginal = validatedData.namaFileOriginal;
-            if (validatedData.namaFileOriginal) {
-              updateData.fileUrl = `/uploads/materi/${Date.now()}-${validatedData.namaFileOriginal.replace(/\s+/g, '_')}`;
-            } else {
-              updateData.fileUrl = null;
-            }
-        }
-    } else if (validatedData.jenisMateri === "Link") {
-        if (validatedData.fileUrl !== undefined) updateData.fileUrl = validatedData.fileUrl;
-        updateData.namaFileOriginal = null;
-    } else { 
-        if (validatedData.namaFileOriginal !== undefined && body.jenisMateri === "File") {
-            updateData.namaFileOriginal = validatedData.namaFileOriginal;
-             if (validatedData.namaFileOriginal) {
-              updateData.fileUrl = `/uploads/materi/${Date.now()}-${validatedData.namaFileOriginal.replace(/\s+/g, '_')}`;
-            } else {
-              updateData.fileUrl = null;
-            }
-        }
-        if (validatedData.fileUrl !== undefined && body.jenisMateri === "Link") {
-            updateData.fileUrl = validatedData.fileUrl;
-            if (body.jenisMateri === "Link") updateData.namaFileOriginal = null;
-        }
-    }
-
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ message: "Tidak ada data untuk diperbarui." }, { status: 400 });
     }

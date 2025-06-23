@@ -20,6 +20,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { id as localeID } from 'date-fns/locale';
 import Image from "next/image";
 import { ROLES } from "@/lib/constants";
+import { useToast } from "@/hooks/use-toast";
 
 const profileFormSchema = z.object({
   fullName: z.string().min(2, { message: "Nama lengkap minimal 2 karakter." }).optional(),
@@ -27,7 +28,7 @@ const profileFormSchema = z.object({
   address: z.string().optional(),
   birthDate: z.date().optional(),
   bio: z.string().max(300, { message: "Bio maksimal 300 karakter." }).optional(),
-  avatarUrl: z.string().url({ message: "URL Avatar tidak valid." }).optional().or(z.literal('')),
+  avatarFile: z.any().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -45,6 +46,7 @@ type ChangePasswordFormValues = z.infer<typeof changePasswordFormSchema>;
 
 export default function SettingsPage() {
   const { user, updateUserProfile, changePassword, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [isProfileSubmitting, setIsProfileSubmitting] = React.useState(false);
   const [isPasswordSubmitting, setIsPasswordSubmitting] = React.useState(false);
 
@@ -77,7 +79,7 @@ export default function SettingsPage() {
         address: user.address || "",
         birthDate: parsedBirthDate,
         bio: user.bio || "",
-        avatarUrl: user.avatarUrl || "",
+        avatarFile: undefined,
       });
     }
   }, [user, profileForm]);
@@ -85,33 +87,50 @@ export default function SettingsPage() {
   async function onProfileSubmit(data: ProfileFormValues) {
     if (!user) return;
     setIsProfileSubmitting(true);
-
-    const profileDataToUpdate: Partial<User> = { // Use Partial<User> from types
-      fullName: data.fullName,
-      phone: data.phone,
-      address: data.address,
-      bio: data.bio,
-      avatarUrl: data.avatarUrl,
-      birthDate: data.birthDate ? format(data.birthDate, 'yyyy-MM-dd') : undefined,
-    };
+    let finalAvatarUrl = user.avatarUrl;
     
-    // Filter out undefined fields to only send what's changed or explicitly set
-    const definedProfileData = Object.fromEntries(
-      Object.entries(profileDataToUpdate).filter(([_, v]) => v !== undefined)
-    ) as Partial<User>;
+    try {
+      if (data.avatarFile && data.avatarFile.name) {
+        const formData = new FormData();
+        formData.append('file', data.avatarFile);
+        formData.append('category', 'avatars');
 
+        const uploadResponse = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+        });
 
-    await updateUserProfile(user.id, definedProfileData); // Pass user.id explicitly
-    setIsProfileSubmitting(false);
+        const uploadResult = await uploadResponse.json();
+        if (!uploadResponse.ok) {
+            throw new Error(uploadResult.message || 'Gagal mengunggah avatar.');
+        }
+        finalAvatarUrl = uploadResult.url;
+      }
+      
+      const profileDataToUpdate = {
+        fullName: data.fullName,
+        phone: data.phone,
+        address: data.address,
+        bio: data.bio,
+        birthDate: data.birthDate ? format(data.birthDate, 'yyyy-MM-dd') : undefined,
+        avatarUrl: finalAvatarUrl,
+      };
+
+      await updateUserProfile(user.id, profileDataToUpdate);
+    } catch(error: any) {
+      toast({ title: "Gagal Memperbarui Profil", description: error.message, variant: "destructive" });
+    } finally {
+      setIsProfileSubmitting(false);
+    }
   }
 
   async function onPasswordSubmit(data: ChangePasswordFormValues) {
     if (!user) return;
     setIsPasswordSubmitting(true);
     
-    const success = await changePassword(user.id, data.currentPassword, data.newPassword); // Pass user.id explicitly
+    const success = await changePassword(user.id, data.currentPassword, data.newPassword);
     if (success) {
-      passwordForm.reset(); // Reset form on success
+      passwordForm.reset();
     }
     setIsPasswordSubmitting(false);
   }
@@ -286,16 +305,16 @@ export default function SettingsPage() {
                 )}
               />
               
-              <FormField
+               <FormField
                 control={profileForm.control}
-                name="avatarUrl"
-                render={({ field }) => (
+                name="avatarFile"
+                render={({ field: { onChange, value, ...restField }}) => (
                   <FormItem>
-                    <FormLabel>URL Avatar</FormLabel>
+                    <FormLabel>Ganti Avatar</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://contoh.com/avatar.png" {...field} />
+                      <Input type="file" accept="image/*" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} />
                     </FormControl>
-                     <FormDescription>Tempelkan URL ke gambar profil Anda. Biarkan kosong untuk menggunakan placeholder.</FormDescription>
+                    <FormDescription>Kosongkan jika tidak ingin mengubah avatar.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

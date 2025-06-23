@@ -38,7 +38,7 @@ const materiAjarClientSchema = z.object({
   deskripsi: z.string().optional(),
   mapelNama: z.string({ required_error: "Mata pelajaran wajib dipilih." }),
   jenisMateri: z.enum(JENIS_MATERI_AJAR_CONST, { required_error: "Jenis materi wajib dipilih." }),
-  fileInput: z.any().optional(), 
+  file: z.any().optional(), 
   externalUrl: z.string().url({ message: "URL tidak valid." }).optional().or(z.literal('')),
 }).refine(data => {
   if (data.jenisMateri === "Link" && !data.externalUrl) return false;
@@ -110,7 +110,7 @@ export default function AdminKurikulumPage() {
   const [isLoadingMateriList, setIsLoadingMateriList] = useState(true);
   const [isMateriSubmitting, setIsMateriSubmitting] = useState(false);
   const [materiToDelete, setMateriToDelete] = useState<MateriAjar | null>(null);
-  const materiAjarForm = useForm<MateriAjarClientFormValues>({ resolver: zodResolver(materiAjarClientSchema), defaultValues: { judul: "", deskripsi: "", mapelNama: undefined, jenisMateri: undefined, fileInput: undefined, externalUrl: "" } });
+  const materiAjarForm = useForm<MateriAjarClientFormValues>({ resolver: zodResolver(materiAjarClientSchema), defaultValues: { judul: "", deskripsi: "", mapelNama: undefined, jenisMateri: undefined, file: undefined, externalUrl: "" } });
   const [isSKLDialogOpen, setIsSKLDialogOpen] = useState(false);
   const [isSKLFormOpen, setIsSKLFormOpen] = useState(false);
   const [editingSKL, setEditingSKL] = useState<SKL | null>(null);
@@ -298,87 +298,86 @@ export default function AdminKurikulumPage() {
       cpForm.reset({ kode: "", deskripsi: "", fase: undefined, elemen: "" }); 
   }, [editingCP, cpForm, isCPFormOpen]);
   useEffect(() => { 
-    if (currentEditingMateri) 
-      materiAjarForm.reset({ 
-        judul: currentEditingMateri.judul, 
-        deskripsi: currentEditingMateri.deskripsi || "", 
-        mapelNama: currentEditingMateri.mapelNama, 
-        jenisMateri: currentEditingMateri.jenisMateri, 
-        externalUrl: currentEditingMateri.jenisMateri === "Link" ? currentEditingMateri.fileUrl || "" : "", 
-        fileInput: undefined 
-      }); 
-    else 
-      materiAjarForm.reset({ 
-        judul: "", 
-        deskripsi: "", 
-        mapelNama: undefined, 
-        jenisMateri: undefined, 
-        fileInput: undefined, 
-        externalUrl: "" 
-      }); 
+    if (isMateriFormOpen) {
+      if (currentEditingMateri) {
+        materiAjarForm.reset({ 
+          judul: currentEditingMateri.judul, 
+          deskripsi: currentEditingMateri.deskripsi || "", 
+          mapelNama: currentEditingMateri.mapelNama, 
+          jenisMateri: currentEditingMateri.jenisMateri, 
+          externalUrl: currentEditingMateri.jenisMateri === "Link" ? currentEditingMateri.fileUrl || "" : "", 
+          file: undefined 
+        });
+      } else {
+        materiAjarForm.reset({ judul: "", deskripsi: "", mapelNama: undefined, jenisMateri: undefined, file: undefined, externalUrl: "" });
+      }
+    }
   }, [currentEditingMateri, materiAjarForm, isMateriFormOpen]);
   useEffect(() => { 
-    if (currentEditingSilabus) 
-      silabusForm.reset({ 
-        judul: currentEditingSilabus.judul, 
-        mapelId: currentEditingSilabus.mapelId, 
-        kelas: currentEditingSilabus.kelas, 
-        deskripsiSingkat: currentEditingSilabus.deskripsiSingkat || "", 
-        file: undefined 
-      }); 
-    else 
-      silabusForm.reset({ 
-        judul: "", 
-        mapelId: undefined, 
-        kelas: "", 
-        deskripsiSingkat: "", 
-        file: undefined 
-      }); 
+    if (isSilabusFormOpen) {
+      if (currentEditingSilabus) {
+        silabusForm.reset({ 
+          judul: currentEditingSilabus.judul, 
+          mapelId: currentEditingSilabus.mapelId, 
+          kelas: currentEditingSilabus.kelas, 
+          deskripsiSingkat: currentEditingSilabus.deskripsiSingkat || "", 
+          file: undefined 
+        });
+      } else { 
+        silabusForm.reset({ judul: "", mapelId: undefined, kelas: "", deskripsiSingkat: "", file: undefined });
+      }
+    }
   }, [currentEditingSilabus, silabusForm, isSilabusFormOpen]);
   useEffect(() => { 
-    if (currentEditingRPP) 
-      rppForm.reset({ 
-        judul: currentEditingRPP.judul, 
-        mapelId: currentEditingRPP.mapelId, 
-        kelas: currentEditingRPP.kelas, 
-        pertemuanKe: currentEditingRPP.pertemuanKe, 
-        materiPokok: currentEditingRPP.materiPokok || "", 
-        kegiatanPembelajaran: currentEditingRPP.kegiatanPembelajaran || "", 
-        penilaian: currentEditingRPP.penilaian || "", 
-        file: undefined 
-      }); 
-    else 
-      rppForm.reset({ 
-        judul: "", 
-        mapelId: undefined, 
-        kelas: "", 
-        pertemuanKe: 1, 
-        materiPokok: "", 
-        kegiatanPembelajaran: "", 
-        penilaian: "", 
-        file: undefined 
-      }); 
+    if (isRPPFormOpen) {
+      if (currentEditingRPP) {
+        rppForm.reset({ 
+          judul: currentEditingRPP.judul, 
+          mapelId: currentEditingRPP.mapelId, 
+          kelas: currentEditingRPP.kelas, 
+          pertemuanKe: currentEditingRPP.pertemuanKe, 
+          materiPokok: currentEditingRPP.materiPokok || "", 
+          kegiatanPembelajaran: currentEditingRPP.kegiatanPembelajaran || "", 
+          penilaian: currentEditingRPP.penilaian || "", 
+          file: undefined 
+        });
+      } else {
+        rppForm.reset({ judul: "", mapelId: undefined, kelas: "", pertemuanKe: 1, materiPokok: "", kegiatanPembelajaran: "", penilaian: "", file: undefined });
+      }
+    }
   }, [currentEditingRPP, rppForm, isRPPFormOpen]);
 
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) { return <p>Akses Ditolak.</p>; }
   
   const handleMateriSubmit = async (values: MateriAjarClientFormValues) => {
     setIsMateriSubmitting(true);
+    let uploadedFileData: { url: string | null; originalName: string | null } = { url: currentEditingMateri?.fileUrl ?? null, originalName: currentEditingMateri?.namaFileOriginal ?? null };
+
     try {
-      const payload: Partial<MateriAjar> = {
+      // 1. Handle file upload if present
+      if (values.jenisMateri === 'File' && values.file && values.file.name) {
+        const formData = new FormData();
+        formData.append('file', values.file);
+        formData.append('category', 'materi');
+
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+        const uploadResult = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadResult.message || 'Gagal mengunggah file.');
+        
+        uploadedFileData = { url: uploadResult.url, originalName: uploadResult.originalName };
+      }
+
+      // 2. Prepare payload for the main API
+      const payload: Partial<MateriAjar> & { fileUrl?: string | null } = {
         judul: values.judul,
         deskripsi: values.deskripsi,
         mapelNama: values.mapelNama,
         jenisMateri: values.jenisMateri,
+        fileUrl: values.jenisMateri === 'Link' ? values.externalUrl : uploadedFileData.url,
+        namaFileOriginal: values.jenisMateri === 'File' ? uploadedFileData.originalName : null,
       };
-      if (values.jenisMateri === "File") {
-        if (values.fileInput && values.fileInput.name) {
-          payload.namaFileOriginal = values.fileInput.name;
-        }
-      } else if (values.jenisMateri === "Link") {
-        payload.fileUrl = values.externalUrl;
-        payload.namaFileOriginal = null;
-      }
+
+      // 3. Call the main API
       const url = currentEditingMateri ? `/api/kurikulum/materi-ajar/${currentEditingMateri.id}` : '/api/kurikulum/materi-ajar';
       const method = currentEditingMateri ? 'PUT' : 'POST';
       const res = await fetch(url, {
@@ -397,11 +396,7 @@ export default function AdminKurikulumPage() {
       setIsMateriFormOpen(false);
       fetchMateriAjarData();
     } catch (e: any) {
-      toast({
-        title: "Error Materi",
-        description: e.message,
-        variant: "destructive"
-      });
+      toast({ title: "Error Materi", description: e.message, variant: "destructive" });
     } finally {
       setIsMateriSubmitting(false);
     }
@@ -584,8 +579,22 @@ export default function AdminKurikulumPage() {
 
   const handleSilabusSubmit = async (values: SilabusFormValues) => {
     setIsSilabusSubmitting(true);
+    let uploadedFileData: { url: string | null; originalName: string | null } = { url: currentEditingSilabus?.fileUrl ?? null, originalName: currentEditingSilabus?.namaFileOriginal ?? null };
+
     try {
-      const payload: Partial<Silabus> = { ...values, namaFileOriginal: values.file ? (values.file as File).name : undefined };
+      if (values.file && values.file.name) {
+        const formData = new FormData();
+        formData.append('file', values.file);
+        formData.append('category', 'silabus');
+
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+        const uploadResult = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadResult.message || 'Gagal mengunggah file silabus.');
+        
+        uploadedFileData = { url: uploadResult.url, originalName: uploadResult.originalName };
+      }
+      
+      const payload = { ...values, fileUrl: uploadedFileData.url, namaFileOriginal: uploadedFileData.originalName };
       const url = currentEditingSilabus ? `/api/kurikulum/silabus/${currentEditingSilabus.id}` : '/api/kurikulum/silabus';
       const method = currentEditingSilabus ? 'PUT' : 'POST';
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -595,7 +604,6 @@ export default function AdminKurikulumPage() {
       }
       toast({title: "Berhasil!", description: `Silabus "${values.judul}" ${currentEditingSilabus ? 'diperbarui' : 'ditambahkan'}.`});
       setIsSilabusFormOpen(false);
-      silabusForm.reset();
       fetchSilabusData();
     } catch (e: any) {
       toast({ title: "Error Silabus", description: e.message, variant: "destructive" });
@@ -625,8 +633,22 @@ export default function AdminKurikulumPage() {
 
   const handleRPPSubmit = async (values: RPPFormValues) => {
     setIsRPPSubmitting(true);
+     let uploadedFileData: { url: string | null; originalName: string | null } = { url: currentEditingRPP?.fileUrl ?? null, originalName: currentEditingRPP?.namaFileOriginal ?? null };
+
     try {
-      const payload: Partial<RPP> = { ...values, namaFileOriginal: values.file ? (values.file as File).name : undefined };
+      if (values.file && values.file.name) {
+        const formData = new FormData();
+        formData.append('file', values.file);
+        formData.append('category', 'rpp');
+
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+        const uploadResult = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadResult.message || 'Gagal mengunggah file RPP.');
+        
+        uploadedFileData = { url: uploadResult.url, originalName: uploadResult.originalName };
+      }
+
+      const payload = { ...values, fileUrl: uploadedFileData.url, namaFileOriginal: uploadedFileData.originalName };
       const url = currentEditingRPP ? `/api/kurikulum/rpp/${currentEditingRPP.id}` : '/api/kurikulum/rpp';
       const method = currentEditingRPP ? 'PUT' : 'POST';
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -636,7 +658,6 @@ export default function AdminKurikulumPage() {
       }
       toast({title: "Berhasil!", description: `RPP "${values.judul}" ${currentEditingRPP ? 'diperbarui' : 'ditambahkan'}.`});
       setIsRPPFormOpen(false);
-      rppForm.reset();
       fetchRppData();
     } catch (e: any) {
       toast({ title: "Error RPP", description: e.message, variant: "destructive" });
@@ -733,7 +754,7 @@ export default function AdminKurikulumPage() {
               <FormField control={materiAjarForm.control} name="mapelNama" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih mata pelajaran" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.length > 0 ? mataPelajaranOptions.map(subject => (<SelectItem key={subject.id} value={subject.nama}>{subject.nama} ({subject.kode})</SelectItem>)) : <SelectItem value="" disabled>Tidak ada mapel</SelectItem>}</SelectContent></Select><FormMessage /></FormItem>)} />
               <FormField control={materiAjarForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea placeholder="Deskripsi singkat materi..." {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={materiAjarForm.control} name="jenisMateri" render={({ field }) => (<FormItem><FormLabel>Jenis Materi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis materi" /></SelectTrigger></FormControl><SelectContent>{JENIS_MATERI_AJAR_CONST.map(jenis => <SelectItem key={jenis} value={jenis}>{jenis === "File" ? <><UploadCloud className="inline-block mr-2 h-4 w-4" />Unggah File</> : <><Link2 className="inline-block mr-2 h-4 w-4" />Tautan Eksternal</>}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
-              {materiAjarForm.watch("jenisMateri") === "File" && (<FormField control={materiAjarForm.control} name="fileInput" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>Unggah File {currentEditingMateri?.namaFileOriginal ? `(Kosongkan jika tidak ubah: ${currentEditingMateri.namaFileOriginal})` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>PDF, DOCX, dll.</FormDescription><FormMessage /></FormItem>)} />)}
+              {materiAjarForm.watch("jenisMateri") === "File" && (<FormField control={materiAjarForm.control} name="file" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>Unggah File {currentEditingMateri?.namaFileOriginal ? `(Kosongkan jika tidak ubah: ${currentEditingMateri.namaFileOriginal})` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>PDF, DOCX, dll.</FormDescription><FormMessage /></FormItem>)} />)}
               {materiAjarForm.watch("jenisMateri") === "Link" && (<FormField control={materiAjarForm.control} name="externalUrl" render={({ field }) => (<FormItem><FormLabel>URL Materi</FormLabel><FormControl><Input placeholder="https://contoh.com/materi" {...field} /></FormControl><FormDescription>URL lengkap sumber materi.</FormDescription><FormMessage /></FormItem>)} />)}
               <DialogFooter><Button type="button" variant="outline" onClick={() => { setIsMateriFormOpen(false); setCurrentEditingMateri(null); }} disabled={isMateriSubmitting}>Batal</Button><Button type="submit" disabled={isMateriSubmitting || mataPelajaranOptions.length === 0}>{isMateriSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{currentEditingMateri ? "Simpan" : "Simpan"}</Button></DialogFooter>
             </form>
