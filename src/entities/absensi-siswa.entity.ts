@@ -15,14 +15,14 @@ export class AbsensiSiswaEntity {
   @Column({ type: "uuid" })
   siswaId!: string;
 
-  @ManyToOne(() => UserEntity, (user) => user.kehadiranSiswa, { onDelete: "CASCADE" })
+  @ManyToOne("UserEntity", (user) => user.kehadiranSiswa, { onDelete: "CASCADE" })
   @JoinColumn({ name: "siswaId" })
   siswa!: UserEntity;
 
   @Column({ type: "uuid" })
   jadwalPelajaranId!: string;
 
-  @ManyToOne(() => JadwalPelajaranEntity, (jadwal) => jadwal.absensiSiswaEntries, { onDelete: "CASCADE" })
+  @ManyToOne("JadwalPelajaranEntity", (jadwal) => jadwal.absensiSiswaEntries, { onDelete: "CASCADE" })
   @JoinColumn({ name: "jadwalPelajaranId" })
   jadwalPelajaran!: JadwalPelajaranEntity;
 

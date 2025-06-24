@@ -15,7 +15,7 @@ export class SilabusEntity {
   @Column({ type: "uuid" })
   mapelId!: string;
 
-  @ManyToOne(() => MataPelajaranEntity, (mapel) => mapel.silabusList, { onDelete: "CASCADE" })
+  @ManyToOne("MataPelajaranEntity", (mapel) => mapel.silabusList, { onDelete: "CASCADE" })
   @JoinColumn({ name: "mapelId" })
   mapel!: MataPelajaranEntity;
 
@@ -34,7 +34,7 @@ export class SilabusEntity {
   @Column({ type: "uuid" })
   uploaderId!: string;
 
-  @ManyToOne(() => UserEntity, (user) => user.silabusUploaded, { onDelete: "SET NULL", nullable: true })
+  @ManyToOne("UserEntity", (user) => user.silabusUploaded, { onDelete: "SET NULL", nullable: true })
   @JoinColumn({ name: "uploaderId" })
   uploader?: UserEntity | null;
 

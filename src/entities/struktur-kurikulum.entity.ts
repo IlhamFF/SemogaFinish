@@ -19,7 +19,7 @@ export class StrukturKurikulumEntity {
   @Column({ type: "uuid" })
   mapelId!: string;
 
-  @ManyToOne(() => MataPelajaranEntity, (mapel) => mapel.strukturKurikulumEntries, { onDelete: "CASCADE" })
+  @ManyToOne("MataPelajaranEntity", (mapel) => mapel.strukturKurikulumEntries, { onDelete: "CASCADE" })
   @JoinColumn({ name: "mapelId" })
   mapel!: MataPelajaranEntity;
 
@@ -29,7 +29,7 @@ export class StrukturKurikulumEntity {
   @Column({ type: "uuid", nullable: true })
   guruPengampuId?: string | null;
 
-  @ManyToOne(() => UserEntity, (user) => user.strukturKurikulumDiajar, { onDelete: "SET NULL", nullable: true })
+  @ManyToOne("UserEntity", (user) => user.strukturKurikulumDiajar, { onDelete: "SET NULL", nullable: true })
   @JoinColumn({ name: "guruPengampuId" })
   guruPengampu?: UserEntity | null;
 

@@ -2,7 +2,7 @@
 import "reflect-metadata"; // Ensure this is the very first import
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from "typeorm";
 import type { UserEntity } from "./user.entity";
-import type { TugasSubmissionEntity } from "./tugas-submission.entity"; // Ditambahkan
+import type { TugasSubmissionEntity } from "./tugas-submission.entity";
 
 @Entity({ name: "tugas" })
 export class TugasEntity {
@@ -33,11 +33,11 @@ export class TugasEntity {
   @Column({ type: "uuid" })
   uploaderId!: string;
 
-  @ManyToOne(() => UserEntity, (user) => user.tugasUploaded, { onDelete: "CASCADE", nullable: false }) // Jika uploader dihapus, tugas juga terhapus
+  @ManyToOne("UserEntity", (user) => user.tugasUploaded, { onDelete: "CASCADE", nullable: false }) // Jika uploader dihapus, tugas juga terhapus
   @JoinColumn({ name: "uploaderId" })
   uploader!: UserEntity; // Relasi ke UserEntity
 
-  @OneToMany(() => TugasSubmissionEntity, (submission) => submission.tugas) // Ditambahkan
+  @OneToMany("TugasSubmissionEntity", (submission) => submission.tugas)
   submissions?: TugasSubmissionEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
