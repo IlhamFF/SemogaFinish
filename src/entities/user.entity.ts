@@ -1,17 +1,17 @@
 import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from "typeorm";
 import type { Role } from "@/types";
-import type { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
-import type { MateriAjarEntity } from "./materi-ajar.entity";
-import type { SilabusEntity } from "./silabus.entity";
-import type { RppEntity } from "./rpp.entity";
-import type { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
-import type { TugasEntity } from "./tugas.entity";
-import type { TestEntity } from "./test.entity";
-import type { TugasSubmissionEntity } from "./tugas-submission.entity"; 
-import type { TestSubmissionEntity } from "./test-submission.entity"; 
-import type { AbsensiSiswaEntity } from "./absensi-siswa.entity";
-import type { NilaiSemesterSiswaEntity } from "./nilai-semester-siswa.entity";
+import { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
+import { MateriAjarEntity } from "./materi-ajar.entity";
+import { SilabusEntity } from "./silabus.entity";
+import { RppEntity } from "./rpp.entity";
+import { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
+import { TugasEntity } from "./tugas.entity";
+import { TestEntity } from "./test.entity";
+import { TugasSubmissionEntity } from "./tugas-submission.entity"; 
+import { TestSubmissionEntity } from "./test-submission.entity"; 
+import { AbsensiSiswaEntity } from "./absensi-siswa.entity";
+import { NilaiSemesterSiswaEntity } from "./nilai-semester-siswa.entity";
 
 @Entity({ name: "users" })
 export class UserEntity {
@@ -89,40 +89,40 @@ export class UserEntity {
   @Column({ type: "varchar", nullable: true, unique: true })
   firebaseUid?: string | null;
 
-  @OneToMany("StrukturKurikulumEntity", (ske: StrukturKurikulumEntity) => ske.guruPengampu)
+  @OneToMany(() => StrukturKurikulumEntity, (ske) => ske.guruPengampu)
   strukturKurikulumDiajar?: StrukturKurikulumEntity[];
 
-  @OneToMany("MateriAjarEntity", (materi: MateriAjarEntity) => materi.uploader)
+  @OneToMany(() => MateriAjarEntity, (materi) => materi.uploader)
   materiAjarUploaded?: MateriAjarEntity[];
 
-  @OneToMany("SilabusEntity", (silabus: SilabusEntity) => silabus.uploader)
+  @OneToMany(() => SilabusEntity, (silabus) => silabus.uploader)
   silabusUploaded?: SilabusEntity[];
 
-  @OneToMany("RppEntity", (rpp: RppEntity) => rpp.uploader)
+  @OneToMany(() => RppEntity, (rpp) => rpp.uploader)
   rppUploaded?: RppEntity[];
 
-  @OneToMany("JadwalPelajaranEntity", (jadwal: JadwalPelajaranEntity) => jadwal.guru)
+  @OneToMany(() => JadwalPelajaranEntity, (jadwal) => jadwal.guru)
   jadwalMengajar?: JadwalPelajaranEntity[];
 
-  @OneToMany("TugasEntity", (tugas: TugasEntity) => tugas.uploader)
+  @OneToMany(() => TugasEntity, (tugas) => tugas.uploader)
   tugasUploaded?: TugasEntity[];
 
-  @OneToMany("TestEntity", (test: TestEntity) => test.uploader)
+  @OneToMany(() => TestEntity, (test) => test.uploader)
   testUploaded?: TestEntity[];
   
-  @OneToMany("TugasSubmissionEntity", (submission) => submission.siswa)
+  @OneToMany(() => TugasSubmissionEntity, (submission) => submission.siswa)
   tugasSubmissions?: TugasSubmissionEntity[];
 
-  @OneToMany("TestSubmissionEntity", (submission) => submission.siswa)
+  @OneToMany(() => TestSubmissionEntity, (submission) => submission.siswa)
   testSubmissions?: TestSubmissionEntity[];
 
-  @OneToMany("AbsensiSiswaEntity", (absensi) => absensi.siswa)
+  @OneToMany(() => AbsensiSiswaEntity, (absensi) => absensi.siswa)
   kehadiranSiswa?: AbsensiSiswaEntity[];
 
-  @OneToMany("NilaiSemesterSiswaEntity", (nilai) => nilai.siswa)
+  @OneToMany(() => NilaiSemesterSiswaEntity, (nilai) => nilai.siswa)
   nilaiSemesterSiswa?: NilaiSemesterSiswaEntity[];
 
-  @OneToMany("NilaiSemesterSiswaEntity", (nilai) => nilai.dicatatOlehGuru)
+  @OneToMany(() => NilaiSemesterSiswaEntity, (nilai) => nilai.dicatatOlehGuru)
   nilaiDicatatOlehGuru?: NilaiSemesterSiswaEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })

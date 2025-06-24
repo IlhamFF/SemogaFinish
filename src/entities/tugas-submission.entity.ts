@@ -1,9 +1,8 @@
-
 import "reflect-metadata"; // Ensure this is the very first import
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from "typeorm";
-import type { UserEntity } from "./user.entity";
-import type { TugasEntity } from "./tugas.entity";
-import type { SubmissionStatus } from "@/types"; // Import SubmissionStatus
+import { UserEntity } from "./user.entity";
+import { TugasEntity } from "./tugas.entity";
+import type { SubmissionStatus } from "@/types";
 
 @Entity({ name: "tugas_submissions" })
 @Index(["siswaId", "tugasId"], { unique: true }) // Siswa hanya bisa submit satu kali per tugas
@@ -14,14 +13,14 @@ export class TugasSubmissionEntity {
   @Column({ type: "uuid" })
   siswaId!: string;
 
-  @ManyToOne("UserEntity", (user) => user.tugasSubmissions, { onDelete: "CASCADE" })
+  @ManyToOne(() => UserEntity, (user) => user.tugasSubmissions, { onDelete: "CASCADE" })
   @JoinColumn({ name: "siswaId" })
   siswa!: UserEntity;
 
   @Column({ type: "uuid" })
   tugasId!: string;
 
-  @ManyToOne("TugasEntity", (tugas) => tugas.submissions, { onDelete: "CASCADE" })
+  @ManyToOne(() => TugasEntity, (tugas) => tugas.submissions, { onDelete: "CASCADE" })
   @JoinColumn({ name: "tugasId" })
   tugas!: TugasEntity;
 

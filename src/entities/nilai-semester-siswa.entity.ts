@@ -1,8 +1,7 @@
-
 import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, Unique } from "typeorm";
-import type { UserEntity } from "./user.entity";
-import type { MataPelajaranEntity } from "./mata-pelajaran.entity";
+import { UserEntity } from "./user.entity";
+import { MataPelajaranEntity } from "./mata-pelajaran.entity";
 
 export type SemesterTypeEntity = "Ganjil" | "Genap";
 
@@ -15,14 +14,14 @@ export class NilaiSemesterSiswaEntity {
   @Column({ type: "uuid" })
   siswaId!: string;
 
-  @ManyToOne("UserEntity", (user) => user.nilaiSemesterSiswa, { onDelete: "CASCADE" })
+  @ManyToOne(() => UserEntity, (user) => user.nilaiSemesterSiswa, { onDelete: "CASCADE" })
   @JoinColumn({ name: "siswaId" })
   siswa!: UserEntity;
 
   @Column({ type: "uuid" })
   mapelId!: string;
 
-  @ManyToOne("MataPelajaranEntity", (mapel) => mapel.nilaiSemesterSiswaEntries, { onDelete: "CASCADE" })
+  @ManyToOne(() => MataPelajaranEntity, (mapel) => mapel.nilaiSemesterSiswaEntries, { onDelete: "CASCADE" })
   @JoinColumn({ name: "mapelId" })
   mapel!: MataPelajaranEntity;
 
@@ -59,7 +58,7 @@ export class NilaiSemesterSiswaEntity {
   @Column({ type: "uuid" })
   dicatatOlehGuruId!: string; // Guru yang menginput/bertanggung jawab atas nilai ini
 
-  @ManyToOne("UserEntity", (guru) => guru.nilaiDicatatOlehGuru, { onDelete: "SET NULL", nullable: true })
+  @ManyToOne(() => UserEntity, (guru) => guru.nilaiDicatatOlehGuru, { onDelete: "SET NULL", nullable: true })
   @JoinColumn({ name: "dicatatOlehGuruId" })
   dicatatOlehGuru?: UserEntity;
 

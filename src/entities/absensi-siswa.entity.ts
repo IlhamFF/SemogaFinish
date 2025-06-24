@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, Unique } from "typeorm";
-import type { UserEntity } from "./user.entity";
-import type { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
+import { UserEntity } from "./user.entity";
+import { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
 
 export type StatusKehadiran = "Hadir" | "Izin" | "Sakit" | "Alpha";
 
@@ -14,14 +14,14 @@ export class AbsensiSiswaEntity {
   @Column({ type: "uuid" })
   siswaId!: string;
 
-  @ManyToOne("UserEntity", { onDelete: "CASCADE" })
+  @ManyToOne(() => UserEntity, { onDelete: "CASCADE" })
   @JoinColumn({ name: "siswaId" })
   siswa!: UserEntity;
 
   @Column({ type: "uuid" })
   jadwalPelajaranId!: string;
 
-  @ManyToOne("JadwalPelajaranEntity", { onDelete: "CASCADE" })
+  @ManyToOne(() => JadwalPelajaranEntity, { onDelete: "CASCADE" })
   @JoinColumn({ name: "jadwalPelajaranId" })
   jadwalPelajaran!: JadwalPelajaranEntity;
 

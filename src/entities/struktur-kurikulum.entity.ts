@@ -1,8 +1,7 @@
-
 import "reflect-metadata"; 
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from "typeorm";
-import type { MataPelajaranEntity } from "./mata-pelajaran.entity";
-import type { UserEntity } from "./user.entity";
+import { MataPelajaranEntity } from "./mata-pelajaran.entity";
+import { UserEntity } from "./user.entity";
 
 @Entity({ name: "struktur_kurikulum" })
 @Index(["tingkat", "jurusan", "mapelId"], { unique: true }) 
@@ -19,7 +18,7 @@ export class StrukturKurikulumEntity {
   @Column({ type: "uuid" })
   mapelId!: string;
 
-  @ManyToOne("MataPelajaranEntity", (mapel) => mapel.strukturKurikulumEntries, { onDelete: "CASCADE" })
+  @ManyToOne(() => MataPelajaranEntity, (mapel) => mapel.strukturKurikulumEntries, { onDelete: "CASCADE" })
   @JoinColumn({ name: "mapelId" })
   mapel!: MataPelajaranEntity;
 
@@ -29,7 +28,7 @@ export class StrukturKurikulumEntity {
   @Column({ type: "uuid", nullable: true })
   guruPengampuId?: string | null;
 
-  @ManyToOne("UserEntity", (user) => user.strukturKurikulumDiajar, { onDelete: "SET NULL", nullable: true })
+  @ManyToOne(() => UserEntity, (user) => user.strukturKurikulumDiajar, { onDelete: "SET NULL", nullable: true })
   @JoinColumn({ name: "guruPengampuId" })
   guruPengampu?: UserEntity | null;
 

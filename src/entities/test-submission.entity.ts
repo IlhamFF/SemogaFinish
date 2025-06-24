@@ -1,8 +1,7 @@
-
 import "reflect-metadata"; // Ensure this is the very first import
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from "typeorm";
-import type { UserEntity } from "./user.entity";
-import type { TestEntity } from "./test.entity";
+import { UserEntity } from "./user.entity";
+import { TestEntity } from "./test.entity";
 
 export type TestSubmissionStatus = "Berlangsung" | "Selesai" | "Dinilai";
 
@@ -15,14 +14,14 @@ export class TestSubmissionEntity {
   @Column({ type: "uuid" })
   siswaId!: string;
 
-  @ManyToOne("UserEntity", (user) => user.testSubmissions, { onDelete: "CASCADE" })
+  @ManyToOne(() => UserEntity, (user) => user.testSubmissions, { onDelete: "CASCADE" })
   @JoinColumn({ name: "siswaId" })
   siswa!: UserEntity;
 
   @Column({ type: "uuid" })
   testId!: string;
 
-  @ManyToOne("TestEntity", (test) => test.submissions, { onDelete: "CASCADE" })
+  @ManyToOne(() => TestEntity, (test) => test.submissions, { onDelete: "CASCADE" })
   @JoinColumn({ name: "testId" })
   test!: TestEntity;
 

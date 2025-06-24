@@ -1,8 +1,7 @@
-
 import "reflect-metadata"; 
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
-import type { MataPelajaranEntity } from "./mata-pelajaran.entity";
-import type { UserEntity } from "./user.entity";
+import { MataPelajaranEntity } from "./mata-pelajaran.entity";
+import { UserEntity } from "./user.entity";
 
 @Entity({ name: "rpp" }) 
 export class RppEntity {
@@ -15,7 +14,7 @@ export class RppEntity {
   @Column({ type: "uuid" })
   mapelId!: string;
 
-  @ManyToOne("MataPelajaranEntity", (mapel) => mapel.rppList, { onDelete: "CASCADE" })
+  @ManyToOne(() => MataPelajaranEntity, (mapel) => mapel.rppList, { onDelete: "CASCADE" })
   @JoinColumn({ name: "mapelId" })
   mapel!: MataPelajaranEntity;
 
@@ -43,7 +42,7 @@ export class RppEntity {
   @Column({ type: "uuid" })
   uploaderId!: string;
 
-  @ManyToOne("UserEntity", (user) => user.rppUploaded, { onDelete: "SET NULL", nullable: true })
+  @ManyToOne(() => UserEntity, (user) => user.rppUploaded, { onDelete: "SET NULL", nullable: true })
   @JoinColumn({ name: "uploaderId" })
   uploader?: UserEntity | null;
 

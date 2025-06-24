@@ -1,8 +1,7 @@
-
 import "reflect-metadata"; 
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import { JENIS_MATERI_AJAR, type JenisMateriAjarType } from "@/types";
-import type { UserEntity } from "./user.entity"; 
+import { UserEntity } from "./user.entity"; 
 
 @Entity({ name: "materi_ajar" })
 export class MateriAjarEntity {
@@ -36,7 +35,7 @@ export class MateriAjarEntity {
   @Column({ type: "uuid" })
   uploaderId!: string;
 
-  @ManyToOne("UserEntity", (user) => user.materiAjarUploaded, { onDelete: "SET NULL", nullable: true }) 
+  @ManyToOne(() => UserEntity, (user) => user.materiAjarUploaded, { onDelete: "SET NULL", nullable: true }) 
   @JoinColumn({ name: "uploaderId" })
   uploader?: UserEntity;
 
