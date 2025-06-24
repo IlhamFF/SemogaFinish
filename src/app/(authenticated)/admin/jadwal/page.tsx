@@ -13,7 +13,7 @@ import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/hooks/use-auth";
-import { CalendarCheck, PlusCircle, Edit, Search, Loader2, Trash2, Save, Eraser, Building, Settings2, CalendarDays, Clock, Upload } from "lucide-react";
+import { CalendarCheck, PlusCircle, Edit, Search, Loader2, Trash2, Save, Eraser, Building, Settings2, CalendarDays, Clock, Upload, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Ruangan, SlotWaktu, MataPelajaran, User as AppUser, JadwalPelajaran } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -203,7 +203,7 @@ export default function AdminJadwalPage() {
           <CardDescription>Tetapkan guru pengampu untuk setiap mata pelajaran dan alokasikan ruangan kelas atau laboratorium.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" onClick={() => showPlaceholderToast("Ketersediaan Guru")} className="justify-start text-left h-auto py-3"><UsersIcon className="mr-3 h-5 w-5" /><div><p className="font-semibold">Ketersediaan Guru</p><p className="text-xs text-muted-foreground">Lihat dan atur jadwal guru.</p></div></Button>
+            <Button variant="outline" onClick={() => showPlaceholderToast("Ketersediaan Guru")} className="justify-start text-left h-auto py-3"><Users className="mr-3 h-5 w-5" /><div><p className="font-semibold">Ketersediaan Guru</p><p className="text-xs text-muted-foreground">Lihat dan atur jadwal guru.</p></div></Button>
             <Button variant="outline" onClick={() => setIsRuanganDialogOpen(true)} className="justify-start text-left h-auto py-3"><Building className="mr-3 h-5 w-5" /><div><p className="font-semibold">Manajemen Ruangan</p><p className="text-xs text-muted-foreground">Kelola daftar dan kapasitas.</p></div></Button>
             <Button variant="outline" onClick={() => showPlaceholderToast("Deteksi Konflik")} className="justify-start text-left h-auto py-3"><Search className="mr-3 h-5 w-5" /><div><p className="font-semibold">Deteksi Konflik</p><p className="text-xs text-muted-foreground">Periksa bentrok jadwal.</p></div></Button>
         </CardContent>
