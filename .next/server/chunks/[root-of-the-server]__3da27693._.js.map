@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 6, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"","debugId":null}},
-    {"offset": {"line": 51, "column": 0}, "map": {"version":3,"sources":["file:///home/user/studio/src/app/api/auth/register/route.ts"],"sourcesContent":["// This file is no longer needed. \n// User registration is now handled by Firebase Auth on the client-side (via useAuth hook).\n// If you need to create a corresponding user record in your local PostgreSQL database\n// after successful Firebase registration, you should create a new, separate API endpoint\n// (e.g., /api/users/sync-firebase-user) that the useAuth hook's register function can call.\n// Keeping this file empty signifies its removal.\n"],"names":[],"mappings":"AAAA,kCAAkC;AAClC,2FAA2F;AAC3F,sFAAsF;AACtF,yFAAyF;AACzF,4FAA4F;AAC5F,iDAAiD","debugId":null}}]
-}

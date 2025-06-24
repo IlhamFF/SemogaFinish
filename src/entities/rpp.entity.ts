@@ -1,3 +1,4 @@
+
 import "reflect-metadata"; 
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import type { MataPelajaranEntity } from "./mata-pelajaran.entity";

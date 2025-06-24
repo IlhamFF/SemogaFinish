@@ -1,3 +1,4 @@
+
 import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, OneToMany } from "typeorm";
 import type { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";

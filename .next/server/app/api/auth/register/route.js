@@ -1,19 +1,33 @@
-const CHUNK_PUBLIC_PATH = "server/app/api/auth/register/route.js";
-const runtime = require("../../../../chunks/[turbopack]_runtime.js");
-runtime.loadChunk("server/chunks/[root-of-the-server]__a25ff74d._.js");
-runtime.loadChunk("server/chunks/node_modules_next_acd3fb9b._.js");
-runtime.loadChunk("server/chunks/node_modules_typeorm_query-builder_a0366d72._.js");
-runtime.loadChunk("server/chunks/node_modules_typeorm_driver_sqlserver_959cbaa5._.js");
-runtime.loadChunk("server/chunks/node_modules_typeorm_driver_cockroachdb_7297a1a6._.js");
-runtime.loadChunk("server/chunks/node_modules_typeorm_driver_mysql_ba3606c6._.js");
-runtime.loadChunk("server/chunks/node_modules_typeorm_driver_postgres_1af1b5c1._.js");
-runtime.loadChunk("server/chunks/node_modules_typeorm_driver_sap_d18f348c._.js");
-runtime.loadChunk("server/chunks/node_modules_typeorm_driver_61d54b0f._.js");
-runtime.loadChunk("server/chunks/node_modules_typeorm_persistence_86ce9dc1._.js");
-runtime.loadChunk("server/chunks/node_modules_typeorm_fcac18dd._.js");
-runtime.loadChunk("server/chunks/node_modules_zod_lib_index_mjs_a0234164._.js");
-runtime.loadChunk("server/chunks/node_modules_nodemailer_a9f338b9._.js");
-runtime.loadChunk("server/chunks/node_modules_7c2fbc21._.js");
-runtime.getOrInstantiateRuntimeModule("[project]/.next-internal/server/app/api/auth/register/route/actions.js [app-rsc] (server actions loader, ecmascript)", CHUNK_PUBLIC_PATH);
-runtime.getOrInstantiateRuntimeModule("[project]/node_modules/next/dist/esm/build/templates/app-route.js { INNER_APP_ROUTE => \"[project]/src/app/api/auth/register/route.ts [app-route] (ecmascript)\" } [app-route] (ecmascript)", CHUNK_PUBLIC_PATH);
-module.exports = runtime.getOrInstantiateRuntimeModule("[project]/node_modules/next/dist/esm/build/templates/app-route.js { INNER_APP_ROUTE => \"[project]/src/app/api/auth/register/route.ts [app-route] (ecmascript)\" } [app-route] (ecmascript)", CHUNK_PUBLIC_PATH).exports;
+"use strict";(()=>{var e={};e.id=1612,e.ids=[1612],e.modules={3295:e=>{e.exports=require("next/dist/server/app-render/after-task-async-storage.external.js")},8086:e=>{e.exports=require("module")},10317:(e,r,a)=>{a.d(r,{J:()=>p,k:()=>l});var t=a(49526),i=a(86890);let s=t.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT||587),secure:"465"===process.env.SMTP_PORT,auth:{user:process.env.SMTP_USER,pass:process.env.SMTP_PASS}}),n=process.env.EMAIL_FROM||`noreply@${"http://localhost:9008".replace(/^https?:\/\//,"")}`;async function o({to:e,subject:r,html:a,text:t}){try{let o=await s.sendMail({from:`"${i.C3}" <${n}>`,to:e,subject:r,html:a,text:t||a.replace(/<[^>]*>?/gm,"")});console.log("Email terkirim: %s",o.messageId)}catch(r){throw console.error("Error mengirim email:",r),Error(`Gagal mengirim email ke ${e}: ${r.message}`)}}async function l(e,r,a){let t=`Verifikasi Email Anda untuk ${i.C3}`,s=`
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">Selamat Datang di ${i.C3}, ${r||"Pengguna Baru"}!</h2>
+      <p>Terima kasih telah mendaftar. Silakan klik tautan di bawah ini untuk memverifikasi alamat email Anda:</p>
+      <p style="margin: 20px 0;">
+        <a href="${a}" 
+           style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+          Verifikasi Email Saya
+        </a>
+      </p>
+      <p>Jika Anda tidak bisa mengklik tombol di atas, salin dan tempel URL berikut ke browser Anda:</p>
+      <p><a href="${a}">${a}</a></p>
+      <p>Jika Anda tidak mendaftar untuk akun ini, Anda bisa mengabaikan email ini.</p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+      <p style="font-size: 0.9em; color: #777;">Email ini dikirim secara otomatis. Mohon jangan membalas email ini.</p>
+    </div>
+  `;await o({to:e,subject:t,html:s})}async function p(e,r){let a=`Reset Kata Sandi Akun ${i.C3} Anda`,t=`
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="color: #333;">Permintaan Reset Kata Sandi</h2>
+      <p>Kami menerima permintaan untuk mereset kata sandi akun Anda di ${i.C3}.</p>
+      <p>Silakan klik tautan di bawah ini untuk membuat kata sandi baru:</p>
+      <p style="margin: 20px 0;">
+        <a href="${r}" 
+           style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+          Reset Kata Sandi
+        </a>
+      </p>
+      <p>Tautan ini akan kedaluwarsa dalam 1 jam.</p>
+      <p>Jika Anda tidak meminta reset kata sandi, abaikan email ini.</p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+      <p style="font-size: 0.9em; color: #777;">Email ini dikirim secara otomatis. Mohon jangan membalas email ini.</p>
+    </div>
+  `;await o({to:e,subject:a,html:t})}},10846:e=>{e.exports=require("next/dist/compiled/next-server/app-page.runtime.prod.js")},21820:e=>{e.exports=require("os")},27910:e=>{e.exports=require("stream")},28354:e=>{e.exports=require("util")},29021:e=>{e.exports=require("fs")},29294:e=>{e.exports=require("next/dist/server/app-render/work-async-storage.external.js")},33873:e=>{e.exports=require("path")},34631:e=>{e.exports=require("tls")},37366:e=>{e.exports=require("dns")},42449:e=>{e.exports=require("pg")},44870:e=>{e.exports=require("next/dist/compiled/next-server/app-route.runtime.prod.js")},46193:e=>{e.exports=require("node:string_decoder")},51455:e=>{e.exports=require("node:fs/promises")},55511:e=>{e.exports=require("crypto")},55591:e=>{e.exports=require("https")},56078:(e,r,a)=>{a.d(r,{HU:()=>d,ON:()=>c,jn:()=>h,l4:()=>k,nr:()=>m,sN:()=>f,vD:()=>x});var t=a(43205),i=a.n(t),s=a(25538),n=a(55511),o=a.n(n);let l=process.env.JWT_SECRET||"your-super-secret-jwt-key-please-change-this",p=process.env.JWT_EXPIRY||"1d",u="auth_token";function d(e){let r={id:e.id,email:e.email,role:e.role,isVerified:e.isVerified,kelasId:e.kelasId};return i().sign(r,l,{expiresIn:p})}function m(e){try{return i().verify(e,l)}catch(e){return console.error("Invalid token:",e),null}}function c(e,r){e.headers.append("Set-Cookie",s.serialize(u,r,{httpOnly:!0,secure:!0,maxAge:86400,path:"/",sameSite:"lax"}))}function k(e){let r={httpOnly:!0,secure:!0,expires:new Date(0),path:"/",sameSite:"lax"};e.headers.append("Set-Cookie",s.serialize(u,"",r))}function h(e){let r=e.cookies.get(u);return r?.value||null}function x(e){let r=h(e);return r?m(r):null}function f(e=32){return o().randomBytes(e).toString("hex")}},57075:e=>{e.exports=require("node:stream")},63033:e=>{e.exports=require("next/dist/server/app-render/work-unit-async-storage.external.js")},73024:e=>{e.exports=require("node:fs")},73136:e=>{e.exports=require("node:url")},74075:e=>{e.exports=require("zlib")},76760:e=>{e.exports=require("node:path")},78474:e=>{e.exports=require("node:events")},79428:e=>{e.exports=require("buffer")},79551:e=>{e.exports=require("url")},79646:e=>{e.exports=require("child_process")},79748:e=>{e.exports=require("fs/promises")},81630:e=>{e.exports=require("http")},83115:(e,r,a)=>{a.r(r),a.d(r,{patchFetch:()=>b,routeModule:()=>f,serverHooks:()=>y,workAsyncStorage:()=>g,workUnitAsyncStorage:()=>v});var t={};a.r(t),a.d(t,{POST:()=>x});var i=a(96559),s=a(48088),n=a(37719);a(99180);var o=a(32190),l=a(98765),p=a(93019),u=a(85665),d=a.n(u),m=a(70762),c=a(56078),k=a(10317);let h=m.Ik({fullName:m.Yj().min(2,{message:"Nama lengkap minimal 2 karakter."}),email:m.Yj().email({message:"Alamat email tidak valid."}),password:m.Yj().min(6,{message:"Kata sandi minimal 6 karakter."}),nis:m.Yj().min(4,{message:"NIS minimal 4 karakter."}).optional().nullable(),kelas:m.Yj().min(1,{message:"Kelas wajib diisi."}).optional().nullable()});async function x(e){try{let r=await e.json(),a=h.safeParse(r);if(!a.success)return console.error("Register API validation failed:",a.error.flatten().fieldErrors),o.NextResponse.json({message:"Input tidak valid.",errors:a.error.flatten().fieldErrors},{status:400});let{email:t,password:i,fullName:s,nis:n,kelas:u}=a.data,m=(await (0,l.A)()).getRepository(p.v);if(await m.findOne({where:{email:t}}))return o.NextResponse.json({message:"Email sudah terdaftar."},{status:409});let x=await d().hash(i,10),f=(0,c.sN)(),g=new Date(Date.now()+864e5),v=m.create({email:t,passwordHash:x,role:"siswa",isVerified:!1,name:s.split(" ")[0],fullName:s,nis:n,kelasId:u,joinDate:new Date().toISOString().split("T")[0],emailVerificationToken:f,emailVerificationTokenExpires:g});await m.save(v);let y="http://localhost:9008";y||console.error("Register API: Environment variable NEXT_PUBLIC_APP_URL is not set! Verification link may be incomplete.");let b=`${y||"http://localhost:3000"}/api/auth/verify-email?token=${f}`;try{await (0,k.k)(v.email,v.fullName,b)}catch(e){console.error(`Register API: Non-fatal error. Failed to send verification email to ${v.email}. Error: ${e.message}`)}return o.NextResponse.json({message:"Pendaftaran berhasil. Silakan cek email Anda untuk verifikasi.",userId:v.id},{status:201})}catch(e){return console.error("Unhandled error in POST /api/auth/register:",e),o.NextResponse.json({message:"Terjadi kesalahan internal server."},{status:500})}}let f=new i.AppRouteRouteModule({definition:{kind:s.RouteKind.APP_ROUTE,page:"/api/auth/register/route",pathname:"/api/auth/register",filename:"route",bundlePath:"app/api/auth/register/route"},resolvedPagePath:"/home/user/studio/src/app/api/auth/register/route.ts",nextConfigOutput:"",userland:t}),{workAsyncStorage:g,workUnitAsyncStorage:v,serverHooks:y}=f;function b(){return(0,n.patchFetch)({workAsyncStorage:g,workUnitAsyncStorage:v})}},83997:e=>{e.exports=require("tty")},91645:e=>{e.exports=require("net")},94735:e=>{e.exports=require("events")}};var r=require("../../../../webpack-runtime.js");r.C(e);var a=e=>r(r.s=e),t=r.X(0,[4447,580,9013,8117,4958,762,5665,9526,1580],()=>a(83115));module.exports=t})();

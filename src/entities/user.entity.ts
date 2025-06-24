@@ -1,3 +1,4 @@
+
 import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from "typeorm";
 import type { Role } from "@/types";

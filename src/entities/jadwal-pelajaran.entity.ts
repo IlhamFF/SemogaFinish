@@ -1,3 +1,4 @@
+
 import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, OneToMany } from "typeorm";
 import type { SlotWaktuEntity } from "./slot-waktu.entity";

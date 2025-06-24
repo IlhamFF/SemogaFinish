@@ -1,7 +1,8 @@
+
 import "reflect-metadata"; 
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import { JENIS_MATERI_AJAR, type JenisMateriAjarType } from "@/types";
-import { UserEntity } from "./user.entity"; 
+import type { UserEntity } from "./user.entity"; 
 
 @Entity({ name: "materi_ajar" })
 export class MateriAjarEntity {
