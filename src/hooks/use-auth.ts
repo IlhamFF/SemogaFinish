@@ -20,7 +20,7 @@ export interface AuthContextType {
   register: (registerData: RegisterData) => Promise<boolean>;
   logout: () => Promise<void>;
   fetchUser: () => Promise<void>;
-  updateUserProfile: (userId: string, profileData: Partial<User>) => Promise<boolean>;
+  updateUserProfile: (profileData: Partial<User>) => Promise<boolean>;
   changePassword: (userId: string, currentPassword: string, newPassword: string) => Promise<boolean>;
 }
 

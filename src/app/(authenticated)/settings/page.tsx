@@ -116,7 +116,7 @@ export default function SettingsPage() {
         avatarUrl: finalAvatarUrl,
       };
 
-      await updateUserProfile(user.id, profileDataToUpdate);
+      await updateUserProfile(profileDataToUpdate);
     } catch(error: any) {
       toast({ title: "Gagal Memperbarui Profil", description: error.message, variant: "destructive" });
     } finally {

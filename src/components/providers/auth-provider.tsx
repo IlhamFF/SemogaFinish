@@ -108,12 +108,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [router, toast]);
 
-  const updateUserProfile = useCallback(async (userId: string, profileData: Partial<User>): Promise<boolean> => {
-    const endpoint = userId === user?.id ? '/api/users/me/profile' : `/api/users/${userId}`;
-    if (endpoint === `/api/users/${userId}`) {
-        console.warn("useAuth.updateUserProfile is for self-updates only. Admin updates should use a different flow.");
+  const updateUserProfile = useCallback(async (profileData: Partial<User>): Promise<boolean> => {
+    if (!user) {
+        toast({ title: "Update Profil Gagal", description: "Anda tidak sedang login.", variant: "destructive" });
         return false;
     }
+    const endpoint = '/api/users/me/profile';
 
     try {
         const response = await fetch(endpoint, {
@@ -133,7 +133,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         toast({ title: "Update Profil Gagal", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
         return false;
     }
-  }, [toast, user?.id]);
+  }, [user, toast]);
 
   const changePassword = useCallback(async (userId: string, currentPassword: string, newPassword: string): Promise<boolean> => {
       try {
