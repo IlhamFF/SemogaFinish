@@ -12,7 +12,7 @@ const profileUpdateSchema = z.object({
   address: z.string().max(500, { message: "Alamat maksimal 500 karakter."}).optional().nullable(),
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Format tanggal lahir YYYY-MM-DD" }).optional().nullable(),
   bio: z.string().max(300, { message: "Bio maksimal 300 karakter." }).optional().nullable(),
-  avatarUrl: z.string().url({ message: "URL Avatar tidak valid." }).optional().nullable().or(z.literal('')),
+  avatarUrl: z.string().optional().nullable(),
 });
 
 export async function PUT(request: NextRequest) {
@@ -57,7 +57,7 @@ export async function PUT(request: NextRequest) {
         select: [
             "id", "name", "email", "emailVerified", "image", "role", "isVerified", 
             "fullName", "phone", "address", "birthDate", "bio", "nis", "nip", 
-            "joinDate", "kelasId", "mataPelajaran", "createdAt", "updatedAt"
+            "joinDate", "kelasId", "mataPelajaran", "firebaseUid", "createdAt", "updatedAt"
         ]
     });
 
