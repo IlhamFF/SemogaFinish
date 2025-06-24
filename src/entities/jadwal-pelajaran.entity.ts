@@ -24,35 +24,35 @@ export class JadwalPelajaranEntity {
   @Column({ type: "uuid" })
   slotWaktuId!: string;
 
-  @ManyToOne("SlotWaktuEntity", (slot) => slot.jadwalPelajaranEntries, { onDelete: "CASCADE", eager: true })
+  @ManyToOne("SlotWaktuEntity", (slot: SlotWaktuEntity) => slot.jadwalPelajaranEntries, { onDelete: "CASCADE", eager: true })
   @JoinColumn({ name: "slotWaktuId" })
   slotWaktu!: SlotWaktuEntity;
 
   @Column({ type: "uuid" })
   mapelId!: string;
 
-  @ManyToOne("MataPelajaranEntity", (mapel) => mapel.jadwalPelajaranEntries, { onDelete: "CASCADE", eager: true })
+  @ManyToOne("MataPelajaranEntity", (mapel: MataPelajaranEntity) => mapel.jadwalPelajaranEntries, { onDelete: "CASCADE", eager: true })
   @JoinColumn({ name: "mapelId" })
   mapel!: MataPelajaranEntity;
 
   @Column({ type: "uuid" })
   guruId!: string;
 
-  @ManyToOne("UserEntity", (user) => user.jadwalMengajar, { onDelete: "CASCADE", eager: true })
+  @ManyToOne("UserEntity", (user: UserEntity) => user.jadwalMengajar, { onDelete: "CASCADE", eager: true })
   @JoinColumn({ name: "guruId" })
   guru!: UserEntity;
 
   @Column({ type: "uuid" })
   ruanganId!: string;
 
-  @ManyToOne("RuanganEntity", (ruangan) => ruangan.jadwalPelajaranEntries, { onDelete: "CASCADE", eager: true })
+  @ManyToOne("RuanganEntity", (ruangan: RuanganEntity) => ruangan.jadwalPelajaranEntries, { onDelete: "CASCADE", eager: true })
   @JoinColumn({ name: "ruanganId" })
   ruangan!: RuanganEntity;
   
   @Column({ type: "text", nullable: true })
   catatan?: string | null;
 
-  @OneToMany("AbsensiSiswaEntity", (absensi) => absensi.jadwalPelajaran)
+  @OneToMany("AbsensiSiswaEntity", (absensi: AbsensiSiswaEntity) => absensi.jadwalPelajaran)
   absensiSiswaEntries?: AbsensiSiswaEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })

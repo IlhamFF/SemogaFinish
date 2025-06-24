@@ -90,40 +90,40 @@ export class UserEntity {
   @Column({ type: "varchar", nullable: true, unique: true })
   firebaseUid?: string | null;
 
-  @OneToMany("StrukturKurikulumEntity", (ske) => ske.guruPengampu)
+  @OneToMany("StrukturKurikulumEntity", (ske: StrukturKurikulumEntity) => ske.guruPengampu)
   strukturKurikulumDiajar?: StrukturKurikulumEntity[];
 
-  @OneToMany("MateriAjarEntity", (materi) => materi.uploader)
+  @OneToMany("MateriAjarEntity", (materi: MateriAjarEntity) => materi.uploader)
   materiAjarUploaded?: MateriAjarEntity[];
 
-  @OneToMany("SilabusEntity", (silabus) => silabus.uploader)
+  @OneToMany("SilabusEntity", (silabus: SilabusEntity) => silabus.uploader)
   silabusUploaded?: SilabusEntity[];
 
-  @OneToMany("RppEntity", (rpp) => rpp.uploader)
+  @OneToMany("RppEntity", (rpp: RppEntity) => rpp.uploader)
   rppUploaded?: RppEntity[];
 
-  @OneToMany("JadwalPelajaranEntity", (jadwal) => jadwal.guru)
+  @OneToMany("JadwalPelajaranEntity", (jadwal: JadwalPelajaranEntity) => jadwal.guru)
   jadwalMengajar?: JadwalPelajaranEntity[];
 
-  @OneToMany("TugasEntity", (tugas) => tugas.uploader)
+  @OneToMany("TugasEntity", (tugas: TugasEntity) => tugas.uploader)
   tugasUploaded?: TugasEntity[];
 
-  @OneToMany("TestEntity", (test) => test.uploader)
+  @OneToMany("TestEntity", (test: TestEntity) => test.uploader)
   testUploaded?: TestEntity[];
   
-  @OneToMany("TugasSubmissionEntity", (submission) => submission.siswa)
+  @OneToMany("TugasSubmissionEntity", (submission: TugasSubmissionEntity) => submission.siswa)
   tugasSubmissions?: TugasSubmissionEntity[];
 
-  @OneToMany("TestSubmissionEntity", (submission) => submission.siswa)
+  @OneToMany("TestSubmissionEntity", (submission: TestSubmissionEntity) => submission.siswa)
   testSubmissions?: TestSubmissionEntity[];
 
-  @OneToMany("AbsensiSiswaEntity", (absensi) => absensi.siswa)
+  @OneToMany("AbsensiSiswaEntity", (absensi: AbsensiSiswaEntity) => absensi.siswa)
   kehadiranSiswa?: AbsensiSiswaEntity[];
 
-  @OneToMany("NilaiSemesterSiswaEntity", (nilai) => nilai.siswa)
+  @OneToMany("NilaiSemesterSiswaEntity", (nilai: NilaiSemesterSiswaEntity) => nilai.siswa)
   nilaiSemesterSiswa?: NilaiSemesterSiswaEntity[];
 
-  @OneToMany("NilaiSemesterSiswaEntity", (nilai) => nilai.dicatatOlehGuru)
+  @OneToMany("NilaiSemesterSiswaEntity", (nilai: NilaiSemesterSiswaEntity) => nilai.dicatatOlehGuru)
   nilaiDicatatOlehGuru?: NilaiSemesterSiswaEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })

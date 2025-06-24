@@ -36,7 +36,7 @@ export class MateriAjarEntity {
   @Column({ type: "uuid" })
   uploaderId!: string;
 
-  @ManyToOne("UserEntity", (user) => user.materiAjarUploaded, { onDelete: "SET NULL", nullable: true }) 
+  @ManyToOne("UserEntity", (user: UserEntity) => user.materiAjarUploaded, { onDelete: "SET NULL", nullable: true }) 
   @JoinColumn({ name: "uploaderId" })
   uploader?: UserEntity;
 

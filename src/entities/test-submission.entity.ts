@@ -15,14 +15,14 @@ export class TestSubmissionEntity {
   @Column({ type: "uuid" })
   siswaId!: string;
 
-  @ManyToOne("UserEntity", (user) => user.testSubmissions, { onDelete: "CASCADE" })
+  @ManyToOne("UserEntity", (user: UserEntity) => user.testSubmissions, { onDelete: "CASCADE" })
   @JoinColumn({ name: "siswaId" })
   siswa!: UserEntity;
 
   @Column({ type: "uuid" })
   testId!: string;
 
-  @ManyToOne("TestEntity", (test) => test.submissions, { onDelete: "CASCADE" })
+  @ManyToOne("TestEntity", (test: TestEntity) => test.submissions, { onDelete: "CASCADE" })
   @JoinColumn({ name: "testId" })
   test!: TestEntity;
 

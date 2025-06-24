@@ -49,11 +49,11 @@ export class TestEntity {
   @Column({ type: "uuid" })
   uploaderId!: string;
 
-  @ManyToOne("UserEntity", (user) => user.testUploaded, { onDelete: "CASCADE", nullable: false })
+  @ManyToOne("UserEntity", (user: UserEntity) => user.testUploaded, { onDelete: "CASCADE", nullable: false })
   @JoinColumn({ name: "uploaderId" })
   uploader!: UserEntity;
   
-  @OneToMany("TestSubmissionEntity", (submission) => submission.test)
+  @OneToMany("TestSubmissionEntity", (submission: TestSubmissionEntity) => submission.test)
   submissions?: TestSubmissionEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })

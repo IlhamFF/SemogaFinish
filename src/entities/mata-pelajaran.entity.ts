@@ -30,19 +30,19 @@ export class MataPelajaranEntity {
   })
   kategori!: KategoriMapelType;
 
-  @OneToMany("StrukturKurikulumEntity", (ske) => ske.mapel)
+  @OneToMany("StrukturKurikulumEntity", (ske: StrukturKurikulumEntity) => ske.mapel)
   strukturKurikulumEntries?: StrukturKurikulumEntity[];
 
-  @OneToMany("SilabusEntity", (silabus) => silabus.mapel)
+  @OneToMany("SilabusEntity", (silabus: SilabusEntity) => silabus.mapel)
   silabusList?: SilabusEntity[];
 
-  @OneToMany("RppEntity", (rpp) => rpp.mapel)
+  @OneToMany("RppEntity", (rpp: RppEntity) => rpp.mapel)
   rppList?: RppEntity[];
 
-  @OneToMany("JadwalPelajaranEntity", (jadwal) => jadwal.mapel)
+  @OneToMany("JadwalPelajaranEntity", (jadwal: JadwalPelajaranEntity) => jadwal.mapel)
   jadwalPelajaranEntries?: JadwalPelajaranEntity[];
 
-  @OneToMany("NilaiSemesterSiswaEntity", (nilai) => nilai.mapel) 
+  @OneToMany("NilaiSemesterSiswaEntity", (nilai: NilaiSemesterSiswaEntity) => nilai.mapel) 
   nilaiSemesterSiswaEntries?: NilaiSemesterSiswaEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })

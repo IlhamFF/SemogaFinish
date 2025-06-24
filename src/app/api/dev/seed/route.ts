@@ -12,6 +12,7 @@ import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import { JadwalPelajaranEntity } from "@/entities/jadwal-pelajaran.entity";
 import { TugasEntity } from "@/entities/tugas.entity";
 import { TugasSubmissionEntity } from "@/entities/tugas-submission.entity";
+import { NilaiSemesterSiswaEntity, type SemesterTypeEntity } from "@/entities/nilai-semester-siswa.entity";
 import type { Role } from "@/types";
 import { KATEGORI_MAPEL } from "@/lib/constants";
 
@@ -64,6 +65,35 @@ const SLOT_WAKTU_DATA = [
 
 const KELAS_LIST = ["X IPA 1", "X IPS 1", "XI IPA 1", "XI IPS 1"];
 
+function calculateNilaiAkhir(data: { nilaiTugas?: number | null, nilaiUTS?: number | null, nilaiUAS?: number | null, nilaiHarian?: number | null }): number | null {
+  const { nilaiTugas, nilaiUTS, nilaiUAS, nilaiHarian } = data;
+  const bobotTugas = 0.20;
+  const bobotUTS = 0.30;
+  const bobotUAS = 0.40;
+  const bobotHarian = 0.10;
+
+  let totalNilai = 0;
+  let totalBobot = 0;
+
+  if (typeof nilaiTugas === 'number') { totalNilai += nilaiTugas * bobotTugas; totalBobot += bobotTugas; }
+  if (typeof nilaiUTS === 'number') { totalNilai += nilaiUTS * bobotUTS; totalBobot += bobotUTS; }
+  if (typeof nilaiUAS === 'number') { totalNilai += nilaiUAS * bobotUAS; totalBobot += bobotUAS; }
+  if (typeof nilaiHarian === 'number') { totalNilai += nilaiHarian * bobotHarian; totalBobot += bobotHarian; }
+
+  if (totalBobot === 0) return null;
+  return parseFloat((totalNilai / totalBobot).toFixed(2));
+}
+
+function determinePredikat(nilaiAkhir: number | null): string | null {
+  if (nilaiAkhir === null) return null;
+  if (nilaiAkhir >= 90) return "A";
+  if (nilaiAkhir >= 80) return "B";
+  if (nilaiAkhir >= 70) return "C";
+  if (nilaiAkhir >= 60) return "D";
+  return "E";
+}
+
+
 export async function GET(request: NextRequest) {
     if (process.env.NODE_ENV !== 'development') {
         return NextResponse.json({ message: "Akses ditolak. Seeding hanya tersedia di lingkungan pengembangan." }, { status: 403 });
@@ -81,7 +111,7 @@ export async function GET(request: NextRequest) {
         console.log("Menghapus data lama...");
         const superAdmin = await queryRunner.manager.findOne(UserEntity, { where: { role: 'superadmin' } });
         const tablesToClear = [
-            "tugas_submissions", "tugas", "jadwal_pelajaran", "slot_waktu", "ruangan", "mata_pelajaran"
+            "nilai_semester_siswa", "tugas_submissions", "tugas", "jadwal_pelajaran", "slot_waktu", "ruangan", "mata_pelajaran"
         ];
         for (const table of tablesToClear) {
             await queryRunner.query(`DELETE FROM ${table};`);
@@ -214,6 +244,55 @@ export async function GET(request: NextRequest) {
         }
         console.log(`${createdTugasCount} tugas dan ${createdSubmissionCount} submission berhasil dibuat.`);
         
+        // --- Seed Nilai Semester ---
+        const nilaiRepo = queryRunner.manager.getRepository(NilaiSemesterSiswaEntity);
+        const createdNilai = [];
+        const semester: SemesterTypeEntity = "Ganjil";
+        const tahunAjaran = "2023/2024";
+
+        const uniquePelajaranSiswa = new Map<string, { siswaId: string, mapelId: string, kelasId: string, guruId: string }>();
+        for (const jadwal of createdJadwal) {
+            const siswaDiKelas = createdSiswa.filter(s => s.kelasId === jadwal.kelas);
+            for (const siswa of siswaDiKelas) {
+                const key = `${siswa.id}-${jadwal.mapelId}`;
+                if (!uniquePelajaranSiswa.has(key)) {
+                    uniquePelajaranSiswa.set(key, {
+                        siswaId: siswa.id,
+                        mapelId: jadwal.mapelId,
+                        kelasId: jadwal.kelas,
+                        guruId: jadwal.guruId
+                    });
+                }
+            }
+        }
+
+        for (const { siswaId, mapelId, kelasId, guruId } of uniquePelajaranSiswa.values()) {
+            const nilaiKomponen = {
+                nilaiTugas: Math.floor(Math.random() * 35) + 65, // 65-99
+                nilaiUTS: Math.floor(Math.random() * 40) + 60, // 60-99
+                nilaiUAS: Math.floor(Math.random() * 45) + 55, // 55-99
+                nilaiHarian: Math.floor(Math.random() * 30) + 70, // 70-99
+            };
+            
+            const nilaiAkhir = calculateNilaiAkhir(nilaiKomponen);
+            const predikat = determinePredikat(nilaiAkhir);
+
+            const newNilai = nilaiRepo.create({
+                siswaId,
+                mapelId,
+                kelasId,
+                semester,
+                tahunAjaran,
+                ...nilaiKomponen,
+                nilaiAkhir,
+                predikat,
+                catatanGuru: "Perlu lebih giat belajar untuk meningkatkan pemahaman konsep.",
+                dicatatOlehGuruId: guruId
+            });
+            createdNilai.push(await nilaiRepo.save(newNilai));
+        }
+        console.log(`${createdNilai.length} nilai semester berhasil dibuat.`);
+
         // Commit transaction
         await queryRunner.commitTransaction();
         console.log("--- Seeding Selesai ---");

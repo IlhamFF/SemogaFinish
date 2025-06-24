@@ -33,11 +33,11 @@ export class TugasEntity {
   @Column({ type: "uuid" })
   uploaderId!: string;
 
-  @ManyToOne("UserEntity", (user) => user.tugasUploaded, { onDelete: "CASCADE", nullable: false }) // Jika uploader dihapus, tugas juga terhapus
+  @ManyToOne("UserEntity", (user: UserEntity) => user.tugasUploaded, { onDelete: "CASCADE", nullable: false }) // Jika uploader dihapus, tugas juga terhapus
   @JoinColumn({ name: "uploaderId" })
   uploader!: UserEntity; // Relasi ke UserEntity
 
-  @OneToMany("TugasSubmissionEntity", (submission) => submission.tugas)
+  @OneToMany("TugasSubmissionEntity", (submission: TugasSubmissionEntity) => submission.tugas)
   submissions?: TugasSubmissionEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })

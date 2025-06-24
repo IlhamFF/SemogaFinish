@@ -37,7 +37,7 @@ export default function AdminDashboardPage() {
   const isDev = process.env.NODE_ENV === 'development';
 
   const handleSeedDatabase = async () => {
-    if (!confirm("Apakah Anda yakin ingin mengisi database? Ini akan menghapus data yang ada (kecuali superadmin) dan menggantinya dengan data dummy.")) {
+    if (!confirm("Apakah Anda yakin ingin mengisi database? Ini akan menghapus semua data (kecuali superadmin) dan menggantinya dengan data dummy yang komprehensif.")) {
       return;
     }
     setIsSeeding(true);
@@ -243,7 +243,7 @@ export default function AdminDashboardPage() {
               Seed Database dengan Data Dummy
             </Button>
             <p className="text-xs text-muted-foreground mt-2">
-              Aksi ini akan menghapus data yang ada (kecuali superadmin) dan mengisi ulang dengan data dummy yang baru.
+              Aksi ini akan menghapus semua data (kecuali superadmin) dan mengisi ulang dengan data dummy baru (termasuk jadwal, tugas, dan nilai).
             </p>
           </CardContent>
         </Card>
@@ -251,4 +251,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-
