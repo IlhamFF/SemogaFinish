@@ -1,7 +1,7 @@
 import "reflect-metadata"; 
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from "typeorm";
-import { MataPelajaranEntity } from "./mata-pelajaran.entity";
-import { UserEntity } from "./user.entity";
+import type { MataPelajaranEntity } from "./mata-pelajaran.entity";
+import type { UserEntity } from "./user.entity";
 
 @Entity({ name: "struktur_kurikulum" })
 @Index(["tingkat", "jurusan", "mapelId"], { unique: true }) 

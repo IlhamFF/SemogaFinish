@@ -1,10 +1,10 @@
 import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, OneToMany } from "typeorm";
-import { SlotWaktuEntity } from "./slot-waktu.entity";
-import { MataPelajaranEntity } from "./mata-pelajaran.entity";
-import { UserEntity } from "./user.entity";
-import { RuanganEntity } from "./ruangan.entity";
-import { AbsensiSiswaEntity } from "./absensi-siswa.entity";
+import type { SlotWaktuEntity } from "./slot-waktu.entity";
+import type { MataPelajaranEntity } from "./mata-pelajaran.entity";
+import type { UserEntity } from "./user.entity";
+import type { RuanganEntity } from "./ruangan.entity";
+import type { AbsensiSiswaEntity } from "./absensi-siswa.entity";
 
 @Entity({ name: "jadwal_pelajaran" })
 @Index(["hari", "kelas", "slotWaktuId"], { unique: true })

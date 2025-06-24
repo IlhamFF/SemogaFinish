@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, Unique } from "typeorm";
-import { UserEntity } from "./user.entity";
-import { MataPelajaranEntity } from "./mata-pelajaran.entity";
+import type { UserEntity } from "./user.entity";
+import type { MataPelajaranEntity } from "./mata-pelajaran.entity";
 
 export type SemesterTypeEntity = "Ganjil" | "Genap";
 

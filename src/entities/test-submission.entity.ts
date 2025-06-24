@@ -1,7 +1,7 @@
 import "reflect-metadata"; // Ensure this is the very first import
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from "typeorm";
-import { UserEntity } from "./user.entity";
-import { TestEntity } from "./test.entity";
+import type { UserEntity } from "./user.entity";
+import type { TestEntity } from "./test.entity";
 
 export type TestSubmissionStatus = "Berlangsung" | "Selesai" | "Dinilai";
 

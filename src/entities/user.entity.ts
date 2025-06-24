@@ -1,17 +1,17 @@
 import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from "typeorm";
 import type { Role } from "@/types";
-import { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
-import { MateriAjarEntity } from "./materi-ajar.entity";
-import { SilabusEntity } from "./silabus.entity";
-import { RppEntity } from "./rpp.entity";
-import { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
-import { TugasEntity } from "./tugas.entity";
-import { TestEntity } from "./test.entity";
-import { TugasSubmissionEntity } from "./tugas-submission.entity"; 
-import { TestSubmissionEntity } from "./test-submission.entity"; 
-import { AbsensiSiswaEntity } from "./absensi-siswa.entity";
-import { NilaiSemesterSiswaEntity } from "./nilai-semester-siswa.entity";
+import type { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
+import type { MateriAjarEntity } from "./materi-ajar.entity";
+import type { SilabusEntity } from "./silabus.entity";
+import type { RppEntity } from "./rpp.entity";
+import type { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
+import type { TugasEntity } from "./tugas.entity";
+import type { TestEntity } from "./test.entity";
+import type { TugasSubmissionEntity } from "./tugas-submission.entity"; 
+import type { TestSubmissionEntity } from "./test-submission.entity"; 
+import type { AbsensiSiswaEntity } from "./absensi-siswa.entity";
+import type { NilaiSemesterSiswaEntity } from "./nilai-semester-siswa.entity";
 
 @Entity({ name: "users" })
 export class UserEntity {

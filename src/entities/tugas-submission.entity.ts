@@ -1,7 +1,7 @@
 import "reflect-metadata"; // Ensure this is the very first import
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from "typeorm";
-import { UserEntity } from "./user.entity";
-import { TugasEntity } from "./tugas.entity";
+import type { UserEntity } from "./user.entity";
+import type { TugasEntity } from "./tugas.entity";
 import type { SubmissionStatus } from "@/types";
 
 @Entity({ name: "tugas_submissions" })
