@@ -5,7 +5,7 @@ import type { MataPelajaranEntity } from "./mata-pelajaran.entity";
 import type { UserEntity } from "./user.entity";
 
 @Entity({ name: "struktur_kurikulum" })
-@Index(["tingkat", "jurusan", "mapel"], { unique: true }) 
+@Index(["tingkat", "jurusan", "mapelId"], { unique: true }) 
 export class StrukturKurikulumEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;

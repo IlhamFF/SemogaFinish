@@ -14,7 +14,7 @@ export class TugasSubmissionEntity {
   @Column({ type: "uuid" })
   siswaId!: string;
 
-  @ManyToOne("UserEntity", { onDelete: "CASCADE" })
+  @ManyToOne("UserEntity", (user) => user.tugasSubmissions, { onDelete: "CASCADE" })
   @JoinColumn({ name: "siswaId" })
   siswa!: UserEntity;
 

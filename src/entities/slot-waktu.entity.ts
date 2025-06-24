@@ -20,7 +20,7 @@ export class SlotWaktuEntity {
   @Column({ type: "int", nullable: true })
   urutan?: number | null;
 
-  @OneToMany(() => "JadwalPelajaranEntity", (jadwal: JadwalPelajaranEntity) => jadwal.slotWaktu)
+  @OneToMany("JadwalPelajaranEntity", (jadwal: JadwalPelajaranEntity) => jadwal.slotWaktu)
   jadwalPelajaranEntries?: JadwalPelajaranEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })

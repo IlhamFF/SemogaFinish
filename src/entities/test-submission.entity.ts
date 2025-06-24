@@ -22,7 +22,7 @@ export class TestSubmissionEntity {
   @Column({ type: "uuid" })
   testId!: string;
 
-  @ManyToOne("TestEntity", { onDelete: "CASCADE" })
+  @ManyToOne("TestEntity", (test) => test.submissions, { onDelete: "CASCADE" })
   @JoinColumn({ name: "testId" })
   test!: TestEntity;
 

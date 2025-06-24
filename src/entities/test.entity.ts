@@ -1,6 +1,7 @@
 import "reflect-metadata"; // Ensure this is the very first import
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from "typeorm";
 import type { UserEntity } from "./user.entity"; // Menggunakan import type
+import type { TestSubmissionEntity } from "./test-submission.entity";
 
 export type TestTipe = "Kuis" | "Ulangan Harian" | "UTS" | "UAS" | "Lainnya";
 export type TestStatus = "Draf" | "Terjadwal" | "Berlangsung" | "Selesai" | "Menunggu Hasil" | "Dinilai";
@@ -50,6 +51,9 @@ export class TestEntity {
   @ManyToOne("UserEntity", (user) => user.testUploaded, { onDelete: "CASCADE", nullable: false })
   @JoinColumn({ name: "uploaderId" })
   uploader!: UserEntity;
+  
+  @OneToMany("TestSubmissionEntity", (submission) => submission.test)
+  submissions?: TestSubmissionEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;

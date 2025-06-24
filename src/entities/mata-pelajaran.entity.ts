@@ -2,10 +2,10 @@ import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, OneToMany } from "typeorm";
 import { KATEGORI_MAPEL } from "@/lib/constants";
 import type { KategoriMapelType } from "@/types"; 
-import { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
-import { SilabusEntity } from "./silabus.entity";
-import { RppEntity } from "./rpp.entity";
-import { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
+import type { StrukturKurikulumEntity } from "./struktur-kurikulum.entity";
+import type { SilabusEntity } from "./silabus.entity";
+import type { RppEntity } from "./rpp.entity";
+import type { JadwalPelajaranEntity } from "./jadwal-pelajaran.entity";
 import type { NilaiSemesterSiswaEntity } from "./nilai-semester-siswa.entity"; 
 
 @Entity({ name: "mata_pelajaran" })
@@ -29,16 +29,16 @@ export class MataPelajaranEntity {
   })
   kategori!: KategoriMapelType;
 
-  @OneToMany(() => StrukturKurikulumEntity, (ske: StrukturKurikulumEntity) => ske.mapel)
+  @OneToMany("StrukturKurikulumEntity", (ske: StrukturKurikulumEntity) => ske.mapel)
   strukturKurikulumEntries?: StrukturKurikulumEntity[];
 
-  @OneToMany(() => SilabusEntity, (silabus: SilabusEntity) => silabus.mapel)
+  @OneToMany("SilabusEntity", (silabus: SilabusEntity) => silabus.mapel)
   silabusList?: SilabusEntity[];
 
-  @OneToMany(() => RppEntity, (rpp: RppEntity) => rpp.mapel)
+  @OneToMany("RppEntity", (rpp: RppEntity) => rpp.mapel)
   rppList?: RppEntity[];
 
-  @OneToMany(() => JadwalPelajaranEntity, (jadwal: JadwalPelajaranEntity) => jadwal.mapel)
+  @OneToMany("JadwalPelajaranEntity", (jadwal: JadwalPelajaranEntity) => jadwal.mapel)
   jadwalPelajaranEntries?: JadwalPelajaranEntity[];
 
   @OneToMany("NilaiSemesterSiswaEntity", (nilai) => nilai.mapel) 
