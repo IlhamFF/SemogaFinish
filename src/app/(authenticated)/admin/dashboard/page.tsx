@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Link from "next/link";
-import { BarChart3, Users, BookOpenText, PieChart as PieChartIcon } from "lucide-react";
+import { BarChart3, Users, BookOpenText, PieChart as PieChartIcon, Database } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { ROUTES, ROLES } from "@/lib/constants";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
@@ -14,6 +14,7 @@ import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, Legend } from "rechar
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, parseISO } from "date-fns";
+import { Button } from "@/components/ui/button";
 
 
 const ROLE_COLORS: Record<Role, string> = {
@@ -31,6 +32,29 @@ export default function AdminDashboardPage() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [allMataPelajaran, setAllMataPelajaran] = useState<MataPelajaran[]>([]);
   const [isLoadingMapel, setIsLoadingMapel] = useState(true);
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const isDev = process.env.NODE_ENV === 'development';
+
+  const handleSeedDatabase = async () => {
+    if (!confirm("Apakah Anda yakin ingin mengisi database? Ini akan menghapus data yang ada (kecuali superadmin) dan menggantinya dengan data dummy.")) {
+      return;
+    }
+    setIsSeeding(true);
+    toast({ title: "Memulai Proses Seeding...", description: "Mohon tunggu, ini mungkin memakan waktu beberapa saat." });
+    try {
+      const response = await fetch('/api/dev/seed');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Gagal melakukan seeding.');
+      toast({ title: "Seeding Berhasil!", description: data.message, duration: 7000 });
+      window.location.reload();
+    } catch (error: any) {
+      toast({ title: "Seeding Gagal", description: error.message, variant: "destructive", duration: 7000 });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
 
   const fetchUsersForStats = useCallback(async () => {
     if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin')) {
@@ -206,6 +230,25 @@ export default function AdminDashboardPage() {
             </CardContent>
         </Card>
       </div>
+
+      {isDev && (
+        <Card className="shadow-lg border-dashed border-primary/50">
+          <CardHeader>
+            <CardTitle className="flex items-center text-primary"><Database className="mr-2 h-5 w-5" /> Tindakan Developer</CardTitle>
+            <CardDescription>Aksi ini hanya tersedia dalam mode pengembangan.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={handleSeedDatabase} disabled={isSeeding}>
+              {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Database className="mr-2 h-4 w-4" />}
+              Seed Database dengan Data Dummy
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              Aksi ini akan menghapus data yang ada (kecuali superadmin) dan mengisi ulang dengan data dummy yang baru.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
+
