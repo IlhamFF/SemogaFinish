@@ -16,6 +16,7 @@ const rppUpdateSchema = z.object({
   kegiatanPembelajaran: z.string().optional().nullable(),
   penilaian: z.string().optional().nullable(),
   namaFileOriginal: z.string().optional().nullable(),
+  fileUrl: z.string().url().optional().nullable(),
 }).refine(data => Object.keys(data).length > 0, {
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });
@@ -83,34 +84,8 @@ export async function PUT(
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
     
-    const updateData: Partial<RppEntity> = {};
-    const validatedData = validation.data;
-
-    if (validatedData.judul !== undefined) updateData.judul = validatedData.judul;
-    if (validatedData.mapelId !== undefined) {
-        const dataSource = await getInitializedDataSource(); 
-        const mapelRepo = dataSource.getRepository(MataPelajaranEntity);
-        const mapelExists = await mapelRepo.findOneBy({ id: validatedData.mapelId });
-        if (!mapelExists) {
-            return NextResponse.json({ message: "Mata pelajaran tidak ditemukan." }, { status: 404 });
-        }
-        updateData.mapelId = validatedData.mapelId;
-    }
-    if (validatedData.kelas !== undefined) updateData.kelas = validatedData.kelas;
-    if (validatedData.pertemuanKe !== undefined) updateData.pertemuanKe = validatedData.pertemuanKe;
-    if (validatedData.materiPokok !== undefined) updateData.materiPokok = validatedData.materiPokok;
-    if (validatedData.kegiatanPembelajaran !== undefined) updateData.kegiatanPembelajaran = validatedData.kegiatanPembelajaran;
-    if (validatedData.penilaian !== undefined) updateData.penilaian = validatedData.penilaian;
+    const updateData: Partial<RppEntity> = validation.data;
     
-    if (validatedData.namaFileOriginal !== undefined) {
-        updateData.namaFileOriginal = validatedData.namaFileOriginal;
-        if (validatedData.namaFileOriginal) {
-             updateData.fileUrl = `/uploads/kurikulum/rpp/${Date.now()}-${validatedData.namaFileOriginal.replace(/\s+/g, '_')}`;
-        } else {
-            updateData.fileUrl = null;
-        }
-    }
-
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ message: "Tidak ada data untuk diperbarui." }, { status: 400 });
     }
@@ -125,6 +100,14 @@ export async function PUT(
     
     if (!['admin', 'superadmin'].includes(authenticatedUser.role) && existingRpp.uploaderId !== authenticatedUser.id) {
         return NextResponse.json({ message: "Akses ditolak. Anda bukan pemilik RPP ini." }, { status: 403 });
+    }
+
+    if (updateData.mapelId) {
+        const mapelRepo = dataSource.getRepository(MataPelajaranEntity);
+        const mapelExists = await mapelRepo.findOneBy({ id: updateData.mapelId });
+        if (!mapelExists) {
+            return NextResponse.json({ message: "Mata pelajaran tidak ditemukan." }, { status: 404 });
+        }
     }
 
     const updateResult = await rppRepo.update(id, updateData);

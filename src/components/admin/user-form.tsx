@@ -141,9 +141,9 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-2xl max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
-          <DialogTitle>{editingUser ? "Edit Pengguna" : "Buat Pengguna Lokal Baru"}</DialogTitle>
+          <DialogTitle>{editingUser ? "Edit Pengguna" : "Buat Pengguna Baru"}</DialogTitle>
           <DialogDescription>
-            {editingUser ? "Perbarui detail pengguna." : "Isi detail untuk membuat profil pengguna lokal baru."}
+            {editingUser ? "Perbarui detail pengguna." : "Isi detail untuk membuat profil pengguna baru."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -435,9 +435,9 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                     <div className="space-y-0.5">
-                      <FormLabel>Status Verifikasi Lokal</FormLabel>
+                      <FormLabel>Status Verifikasi</FormLabel>
                       <FormDescription>
-                        Aktifkan jika profil lokal ini sudah terverifikasi.
+                        Aktifkan jika profil ini sudah terverifikasi.
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -455,7 +455,7 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
               <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>Batal</Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingUser ? "Simpan Perubahan" : "Buat Profil Lokal"}
+                {editingUser ? "Simpan Perubahan" : "Buat Pengguna"}
               </Button>
             </DialogFooter>
           </form>

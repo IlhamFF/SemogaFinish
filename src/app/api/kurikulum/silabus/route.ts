@@ -13,6 +13,7 @@ const silabusCreateSchema = z.object({
   kelas: z.string().min(1, { message: "Kelas wajib diisi." }).max(100),
   deskripsiSingkat: z.string().optional().nullable(),
   namaFileOriginal: z.string().optional().nullable(),
+  fileUrl: z.string().url().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const { judul, mapelId, kelas, deskripsiSingkat, namaFileOriginal } = validation.data;
+    const { judul, mapelId, kelas, deskripsiSingkat, namaFileOriginal, fileUrl } = validation.data;
 
     const dataSource = await getInitializedDataSource();
     const silabusRepo = dataSource.getRepository(SilabusEntity);
@@ -86,19 +87,14 @@ export async function POST(request: NextRequest) {
     if (!mapelExists) {
       return NextResponse.json({ message: "Mata pelajaran tidak ditemukan." }, { status: 404 });
     }
-
-    let fileUrlSimulasi: string | undefined = undefined;
-    if (namaFileOriginal) {
-      fileUrlSimulasi = `/uploads/kurikulum/silabus/${Date.now()}-${namaFileOriginal.replace(/\s+/g, '_')}`;
-    }
-
+    
     const newSilabus = silabusRepo.create({
       judul,
       mapelId,
       kelas,
       deskripsiSingkat,
       namaFileOriginal,
-      fileUrl: fileUrlSimulasi,
+      fileUrl,
       uploaderId,
     });
 

@@ -148,43 +148,54 @@ export default function GuruTugasPage() {
   const handleFormSubmit = async (values: TugasFormValues) => {
     setIsSubmitting(true);
     
-    const payload: Partial<TugasType> & {tenggat: string, namaFileLampiran?: string | null} = {
-      judul: values.judul,
-      mapel: values.mapel,
-      kelas: values.kelas,
-      tenggat: formatISO(values.tenggat), 
-      deskripsi: values.deskripsi,
-      namaFileLampiran: values.fileLampiranInput ? (values.fileLampiranInput as File).name : (editingTugas ? editingTugas.namaFileLampiran : null),
+    let uploadedFileData: { url: string | null; originalName: string | null } = { 
+        url: editingTugas?.fileUrlLampiran ?? null, 
+        originalName: editingTugas?.namaFileLampiran ?? null 
     };
-    
-    if (!editingTugas || (editingTugas && values.fileLampiranInput)) {
-        payload.namaFileLampiran = values.fileLampiranInput ? (values.fileLampiranInput as File).name : null;
-    } else if (editingTugas && !values.fileLampiranInput) {
-        payload.namaFileLampiran = editingTugas.namaFileLampiran;
-    }
-
-
-    const url = editingTugas ? `/api/tugas/${editingTugas.id}` : '/api/tugas';
-    const method = editingTugas ? 'PUT' : 'POST';
 
     try {
-      const response = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Gagal ${editingTugas ? 'memperbarui' : 'membuat'} tugas.`);
-      }
-      toast({ title: "Berhasil!", description: `Tugas "${values.judul}" telah ${editingTugas ? 'diperbarui' : 'ditambahkan'}.` });
-      setIsFormOpen(false);
-      setEditingTugas(null);
-      fetchTugas();
+        if (values.fileLampiranInput && values.fileLampiranInput.name) {
+            const formData = new FormData();
+            formData.append('file', values.fileLampiranInput);
+            formData.append('category', 'tugas');
+            
+            const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+            const uploadResult = await uploadRes.json();
+            if (!uploadRes.ok) throw new Error(uploadResult.message || 'Gagal mengunggah file lampiran.');
+            
+            uploadedFileData = { url: uploadResult.url, originalName: uploadResult.originalName };
+        }
+        
+        const payload = {
+          judul: values.judul,
+          mapel: values.mapel,
+          kelas: values.kelas,
+          tenggat: formatISO(values.tenggat), 
+          deskripsi: values.deskripsi,
+          namaFileLampiran: uploadedFileData.originalName,
+          fileUrlLampiran: uploadedFileData.url
+        };
+        
+        const url = editingTugas ? `/api/tugas/${editingTugas.id}` : '/api/tugas';
+        const method = editingTugas ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Gagal ${editingTugas ? 'memperbarui' : 'membuat'} tugas.`);
+        }
+        toast({ title: "Berhasil!", description: `Tugas "${values.judul}" telah ${editingTugas ? 'diperbarui' : 'ditambahkan'}.` });
+        setIsFormOpen(false);
+        setEditingTugas(null);
+        fetchTugas();
     } catch (error: any) {
-      toast({ title: "Error Tugas", description: error.message, variant: "destructive" });
+        toast({ title: "Error Tugas", description: error.message, variant: "destructive" });
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
   };
   
@@ -237,7 +248,7 @@ export default function GuruTugasPage() {
     setSelectedTugasForGrading(tugas);
     setIsLoadingSubmissions(true);
     setIsGradingDialogOpen(true);
-    setGradingValues({}); // Reset grading values
+    setGradingValues({}); 
     try {
       const response = await fetch(`/api/tugas/${tugas.id}/submissions`);
       if (!response.ok) {
@@ -246,7 +257,7 @@ export default function GuruTugasPage() {
       }
       const submissions: TugasSubmission[] = await response.json();
       setSubmissionsForGrading(submissions);
-      // Initialize gradingValues with existing data
+      
       const initialGradingValues: Record<string, { nilai: string; feedbackGuru: string }> = {};
       submissions.forEach(sub => {
         initialGradingValues[sub.id] = {

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
-import { ClipboardCheck, FilePenLine, UploadCloud, Eye, Clock, CheckCircle2, Loader2, Send } from "lucide-react";
+import { ClipboardCheck, FilePenLine, UploadCloud, Eye, Clock, CheckCircle2, Loader2, Send, Download } from "lucide-react";
 import { format, formatDistanceToNow, parseISO, isPast } from 'date-fns';
 import { id as localeID } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
@@ -126,10 +126,26 @@ export default function SiswaTugasPage() {
     }
     
     setIsSubmitting(true);
+    
+    let uploadedFileData: { url: string | null, originalName: string | null } = { url: null, originalName: null };
+
     try {
+        if (submissionFile) {
+            const formData = new FormData();
+            formData.append('file', submissionFile);
+            formData.append('category', 'jawaban');
+
+            const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+            const uploadResult = await uploadRes.json();
+            if (!uploadRes.ok) throw new Error(uploadResult.message || 'Gagal mengunggah file jawaban.');
+            
+            uploadedFileData = { url: uploadResult.url, originalName: uploadResult.originalName };
+        }
+
         const payload = {
             tugasId: selectedTugas.id,
-            namaFileJawaban: submissionFile?.name,
+            namaFileJawaban: uploadedFileData.originalName,
+            fileUrlJawaban: uploadedFileData.url,
             catatanSiswa: submissionNotes,
         };
 
@@ -146,7 +162,7 @@ export default function SiswaTugasPage() {
         
         toast({ title: "Berhasil!", description: `Tugas "${selectedTugas.judul}" telah dikumpulkan.` });
         setIsSubmissionDialogOpen(false);
-        fetchTugasDanSubmissions(); // Refresh the list
+        fetchTugasDanSubmissions();
     } catch (error: any) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -197,7 +213,13 @@ export default function SiswaTugasPage() {
                     Tenggat: {format(parseISO(tugas.tenggat), "dd MMMM yyyy, HH:mm", { locale: localeID })}
                     ({formatDistanceToNow(parseISO(tugas.tenggat), { addSuffix: true, locale: localeID })})
                   </p>
-                  {tugas.namaFileLampiran && <p>Lampiran Guru: {tugas.namaFileLampiran}</p>}
+                  {tugas.namaFileLampiran && (
+                    <Button variant="link" size="sm" asChild className="p-0 h-auto text-xs">
+                        <a href={tugas.fileUrlLampiran || "#"} target="_blank" rel="noopener noreferrer">
+                            <Download className="mr-1 h-3 w-3" /> Unduh Lampiran
+                        </a>
+                    </Button>
+                  )}
                 </div>
                 {(tugas.statusFrontend === "Belum Dikerjakan" || tugas.statusFrontend === "Terlambat") && (
                   <Button 
@@ -277,7 +299,6 @@ export default function SiswaTugasPage() {
       </Tabs>
     </div>
 
-    {/* Submission Dialog */}
     <Dialog open={isSubmissionDialogOpen} onOpenChange={setIsSubmissionDialogOpen}>
         <DialogContent>
             <DialogHeader>
@@ -302,7 +323,7 @@ export default function SiswaTugasPage() {
                         {selectedTugas.submission.namaFileJawaban && (
                              <div>
                                 <p className="font-semibold">File Terlampir:</p>
-                                <p className="text-primary hover:underline cursor-pointer">{selectedTugas.submission.namaFileJawaban}</p>
+                                <a href={selectedTugas.submission.fileUrlJawaban || '#'} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{selectedTugas.submission.namaFileJawaban}</a>
                             </div>
                         )}
                          {selectedTugas.submission.catatanSiswa && (

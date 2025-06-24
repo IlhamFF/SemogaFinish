@@ -6,7 +6,7 @@ import { TugasEntity } from "@/entities/tugas.entity";
 import * as z from "zod";
 import { formatISO } from 'date-fns';
 import type { FindManyOptions } from "typeorm";
-import { getAuthenticatedUser } from "@/lib/auth-utils-node"; // Import new auth util
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const tugasCreateSchema = z.object({
   judul: z.string().min(5, { message: "Judul tugas minimal 5 karakter." }),
@@ -15,7 +15,7 @@ const tugasCreateSchema = z.object({
   tenggat: z.date({ required_error: "Tanggal tenggat wajib diisi." }),
   deskripsi: z.string().optional().nullable(),
   namaFileLampiran: z.string().optional().nullable(),
-  // uploaderId is removed, will be taken from token
+  fileUrlLampiran: z.string().url().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -39,15 +39,11 @@ export async function GET(request: NextRequest) {
 
     if (authenticatedUser.role === 'guru') {
         queryOptions.where.uploaderId = authenticatedUser.id;
-        // Optionally, if a guru also wants to filter by class they teach for their own tasks
         if (filterKelas) {
              queryOptions.where.kelas = filterKelas;
         }
     } else if (authenticatedUser.role === 'siswa') {
-        // For siswa, they should only see tasks for their class
-        // This logic should ideally be derived from the user's profile (e.g., user.kelasId)
-        // For now, we assume the client might send a 'kelas' filter or we'd need to enhance `authenticatedUser` payload
-        const siswaKelas = searchParams.get("kelas_siswa") || (authenticatedUser as any).kelasId; // Or get from user object
+        const siswaKelas = (authenticatedUser as any).kelasId; 
         if (!siswaKelas) {
              return NextResponse.json({ message: "Informasi kelas siswa tidak ditemukan untuk filter tugas." }, { status: 400 });
         }
@@ -55,8 +51,7 @@ export async function GET(request: NextRequest) {
     } else if (['admin', 'superadmin'].includes(authenticatedUser.role) && filterKelas) {
         queryOptions.where.kelas = filterKelas;
     }
-    // If no specific role logic for filtering, it might fetch all, or based on other query params.
-
+    
     const tugasList = await tugasRepo.find(queryOptions);
 
     return NextResponse.json(tugasList.map(t => ({
@@ -91,15 +86,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const { judul, mapel, kelas, tenggat, deskripsi, namaFileLampiran } = validation.data;
+    const { judul, mapel, kelas, tenggat, deskripsi, namaFileLampiran, fileUrlLampiran } = validation.data;
 
     const dataSource = await getInitializedDataSource();
     const tugasRepo = dataSource.getRepository(TugasEntity);
-
-    let fileUrlLampiranSimulasi: string | undefined = undefined;
-    if (namaFileLampiran) {
-      fileUrlLampiranSimulasi = `/uploads/tugas/${Date.now()}-${namaFileLampiran.replace(/\s+/g, '_')}`;
-    }
 
     const newTugas = tugasRepo.create({
       judul,
@@ -108,7 +98,7 @@ export async function POST(request: NextRequest) {
       tenggat,
       deskripsi,
       namaFileLampiran,
-      fileUrlLampiran: fileUrlLampiranSimulasi,
+      fileUrlLampiran,
       uploaderId,
     });
 

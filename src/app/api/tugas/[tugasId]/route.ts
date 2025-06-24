@@ -14,6 +14,7 @@ const tugasUpdateSchema = z.object({
   tenggat: z.date().optional(),
   deskripsi: z.string().optional().nullable(),
   namaFileLampiran: z.string().optional().nullable(),
+  fileUrlLampiran: z.string().url().optional().nullable(),
 }).refine(data => Object.keys(data).length > 0, {
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });
@@ -94,14 +95,6 @@ export async function PUT(request: NextRequest, { params }: { params: { tugasId:
     
     const updateData: Partial<TugasEntity> = { ...updatePayload };
     if (updatePayload.tenggat) updateData.tenggat = updatePayload.tenggat;
-
-    if (updatePayload.namaFileLampiran !== undefined) {
-        if (updatePayload.namaFileLampiran) {
-            updateData.fileUrlLampiran = `/uploads/tugas/${Date.now()}-${updatePayload.namaFileLampiran.replace(/\s+/g, '_')}`;
-        } else {
-            updateData.fileUrlLampiran = null;
-        }
-    }
 
     const updateResult = await tugasRepo.update(tugasId, updateData);
 

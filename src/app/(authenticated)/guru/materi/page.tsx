@@ -123,7 +123,7 @@ export default function GuruMateriPage() {
         uploadedFileData = { url: uploadResult.url, originalName: uploadResult.originalName };
       }
 
-      const payload: Partial<MateriAjar> & { fileUrl?: string | null } = {
+      const payload = {
         judul: values.judul,
         deskripsi: values.deskripsi,
         mapelNama: values.mapelNama,
@@ -134,7 +134,7 @@ export default function GuruMateriPage() {
 
       const url = currentEditingMateri ? `/api/kurikulum/materi-ajar/${currentEditingMateri.id}` : '/api/kurikulum/materi-ajar';
       const method = currentEditingMateri ? 'PUT' : 'POST';
-      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || `Gagal ${currentEditingMateri ? 'memperbarui' : 'menambahkan'} materi.`);

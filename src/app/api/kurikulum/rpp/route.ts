@@ -16,6 +16,7 @@ const rppCreateSchema = z.object({
   kegiatanPembelajaran: z.string().optional().nullable(),
   penilaian: z.string().optional().nullable(),
   namaFileOriginal: z.string().optional().nullable(),
+  fileUrl: z.string().url().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const { judul, mapelId, kelas, pertemuanKe, materiPokok, kegiatanPembelajaran, penilaian, namaFileOriginal } = validation.data;
+    const { judul, mapelId, kelas, pertemuanKe, materiPokok, kegiatanPembelajaran, penilaian, namaFileOriginal, fileUrl } = validation.data;
 
     const dataSource = await getInitializedDataSource();
     const rppRepo = dataSource.getRepository(RppEntity);
@@ -92,12 +93,7 @@ export async function POST(request: NextRequest) {
     if (!mapelExists) {
       return NextResponse.json({ message: "Mata pelajaran tidak ditemukan." }, { status: 404 });
     }
-
-    let fileUrlSimulasi: string | undefined = undefined;
-    if (namaFileOriginal) {
-      fileUrlSimulasi = `/uploads/kurikulum/rpp/${Date.now()}-${namaFileOriginal.replace(/\s+/g, '_')}`;
-    }
-
+    
     const newRpp = rppRepo.create({
       judul,
       mapelId,
@@ -107,7 +103,7 @@ export async function POST(request: NextRequest) {
       kegiatanPembelajaran,
       penilaian,
       namaFileOriginal,
-      fileUrl: fileUrlSimulasi,
+      fileUrl,
       uploaderId,
     });
 
