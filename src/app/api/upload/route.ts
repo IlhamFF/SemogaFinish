@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
-import formidable, { File } from 'formidable';
-
-// Disable the default body parser for this route
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
 
 const uploadsDir = path.join(process.cwd(), "/public/uploads");
 
@@ -16,6 +8,7 @@ async function ensureDirExists(dirPath: string) {
   try {
     await fs.access(dirPath);
   } catch (error) {
+    // If directory doesn't exist, create it
     await fs.mkdir(dirPath, { recursive: true });
   }
 }
@@ -24,11 +17,9 @@ export async function POST(request: NextRequest) {
   await ensureDirExists(uploadsDir);
   
   try {
-    const form = formidable({});
-    const [fields, files] = await form.parse(request as any);
-
-    const file = (files.file as File[])?.[0];
-    const category = (fields.category as string[])?.[0] || 'general';
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
+    const category = (formData.get("category") as string) || 'general';
 
     if (!file) {
       return NextResponse.json({ message: "Tidak ada file yang diunggah." }, { status: 400 });
@@ -37,18 +28,19 @@ export async function POST(request: NextRequest) {
     const categoryDir = path.join(uploadsDir, category);
     await ensureDirExists(categoryDir);
 
-    const uniqueFilename = `${Date.now()}-${file.originalFilename?.replace(/\s+/g, '_')}`;
+    const uniqueFilename = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
     const newPath = path.join(categoryDir, uniqueFilename);
     
-    // formidable v3 uses persistent file paths, so we need to move/rename it
-    await fs.rename(file.filepath, newPath);
+    // Convert file to buffer and write to disk
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await fs.writeFile(newPath, buffer);
 
     const publicUrl = `/uploads/${category}/${uniqueFilename}`;
     
     return NextResponse.json({
       message: "File berhasil diunggah.",
       url: publicUrl,
-      originalName: file.originalFilename,
+      originalName: file.name,
     }, { status: 201 });
 
   } catch (error: any) {

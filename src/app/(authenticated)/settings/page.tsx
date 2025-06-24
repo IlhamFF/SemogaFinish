@@ -210,7 +210,7 @@ export default function SettingsPage() {
                     <FormItem>
                       <FormLabel>Nama Lengkap</FormLabel>
                       <FormControl>
-                        <Input placeholder="Masukkan nama lengkap Anda" {...field} />
+                        <Input placeholder="Masukkan nama lengkap Anda" {...field} value={field.value ?? ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -223,7 +223,7 @@ export default function SettingsPage() {
                     <FormItem>
                       <FormLabel>Nomor Telepon</FormLabel>
                       <FormControl>
-                        <Input placeholder="Contoh: 081234567890" {...field} />
+                        <Input placeholder="Contoh: 081234567890" {...field} value={field.value ?? ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -238,7 +238,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel>Alamat</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Masukkan alamat lengkap Anda" {...field} />
+                      <Textarea placeholder="Masukkan alamat lengkap Anda" {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -297,7 +297,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel>Bio Singkat</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Ceritakan sedikit tentang diri Anda..." {...field} />
+                      <Textarea placeholder="Ceritakan sedikit tentang diri Anda..." {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormDescription>Maksimal 300 karakter.</FormDescription>
                     <FormMessage />
