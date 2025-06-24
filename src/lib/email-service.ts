@@ -12,12 +12,12 @@ interface MailOptions {
 // Konfigurasi transporter Nodemailer
 // Anda HARUS mengisi variabel lingkungan ini di file .env.local atau konfigurasi server Anda
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 587), // Port umum untuk SMTP (587 untuk TLS, 465 untuk SSL)
-  secure: (process.env.SMTP_PORT === '465'), // true untuk port 465, false untuk port lain
+  host: process.env.EMAIL_SERVER_HOST,
+  port: Number(process.env.EMAIL_SERVER_PORT || 587), // Port umum untuk SMTP (587 untuk TLS, 465 untuk SSL)
+  secure: (process.env.EMAIL_SERVER_PORT === '465'), // true untuk port 465, false untuk port lain
   auth: {
-    user: process.env.SMTP_USER, // User SMTP Anda
-    pass: process.env.SMTP_PASS, // Password SMTP Anda
+    user: process.env.EMAIL_SERVER_USER, // User SMTP Anda
+    pass: process.env.EMAIL_SERVER_PASSWORD, // Password SMTP Anda
   },
   // Aktifkan ini jika server SMTP Anda menggunakan sertifikat self-signed
   // tls: {
