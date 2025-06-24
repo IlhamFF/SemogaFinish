@@ -19,7 +19,7 @@ const userUpdateSchema = z.object({
   nis: z.string().optional().nullable(),
   nip: z.string().optional().nullable(),
   joinDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Format tanggal bergabung YYYY-MM-DD" }).optional().nullable(),
-  avatarUrl: z.string().url({ message: "URL Avatar tidak valid." }).optional().nullable().or(z.literal('')),
+  avatarUrl: z.string().optional().nullable().or(z.literal('')),
   kelas: z.string().optional().nullable(), // Maps to kelasId
   mataPelajaran: z.string().optional().nullable(),
 });
@@ -54,7 +54,8 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ message: "Pengguna tidak ditemukan." }, { status: 404 });
     }
-    return NextResponse.json(user);
+    const { image, ...rest } = user;
+    return NextResponse.json({ ...rest, avatarUrl: image });
   } catch (error) {
     console.error("Error fetching user:", error);
     return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
@@ -70,7 +71,6 @@ export async function PUT(
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
   
-  // PUT /api/users/[id] is strictly for admin/superadmin actions
   if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
     return NextResponse.json({ message: "Akses ditolak. Operasi ini hanya untuk admin." }, { status: 403 });
   }
@@ -96,7 +96,6 @@ export async function PUT(
     const updateData: Partial<UserEntity> = {};
     const validatedData = validation.data;
 
-    // Role change logic
     if (validatedData.role) {
       if (targetUser.role === 'superadmin' && validatedData.role !== 'superadmin') {
         return NextResponse.json({ message: "Peran Superadmin tidak dapat diubah." }, { status: 403 });
@@ -110,14 +109,12 @@ export async function PUT(
       updateData.role = validatedData.role as Role;
     }
 
-    // Verification status change logic
     if (validatedData.isVerified !== undefined) {
       updateData.isVerified = validatedData.isVerified;
       if (validatedData.isVerified) updateData.emailVerified = new Date();
       else updateData.emailVerified = null;
     }
 
-    // Other profile data
     if (validatedData.fullName !== undefined) updateData.fullName = validatedData.fullName;
     if (validatedData.name !== undefined) updateData.name = validatedData.name;
     if (validatedData.phone !== undefined) updateData.phone = validatedData.phone;
@@ -150,7 +147,9 @@ export async function PUT(
             "joinDate", "kelasId", "mataPelajaran", "firebaseUid", "createdAt", "updatedAt"
         ]
     });
-    return NextResponse.json(updatedUser);
+
+    const { image, ...rest } = updatedUser!;
+    return NextResponse.json({ ...rest, avatarUrl: image });
 
   } catch (error) {
     console.error("Error updating user:", error);
@@ -188,7 +187,6 @@ export async function DELETE(
     if (userToDelete.role === 'superadmin') {
         return NextResponse.json({ message: "Superadmin tidak dapat dihapus." }, { status: 403 });
     }
-    // Admin tidak bisa menghapus admin lain, kecuali updater adalah superadmin
     if (userToDelete.role === 'admin' && authenticatedUser.role !== 'superadmin') {
         return NextResponse.json({ message: "Admin hanya bisa dihapus oleh Superadmin." }, { status: 403 });
     }
@@ -196,7 +194,6 @@ export async function DELETE(
     const deleteResult = await userRepo.delete(userIdToDelete);
 
     if (deleteResult.affected === 0) {
-      // This case should be rare if findOneBy succeeded, but good for completeness
       return NextResponse.json({ message: "Pengguna tidak ditemukan untuk dihapus." }, { status: 404 });
     }
     

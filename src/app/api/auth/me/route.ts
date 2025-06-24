@@ -31,8 +31,14 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ message: "Pengguna tidak ditemukan" }, { status: 404 });
     }
+    
+    const { image, ...rest } = user;
+    const userResponse = {
+      ...rest,
+      avatarUrl: image,
+    };
 
-    return NextResponse.json(user);
+    return NextResponse.json(userResponse);
 
   } catch (error) {
     console.error("Fetch current user error:", error);

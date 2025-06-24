@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import * as z from "zod";
-import { getAuthenticatedUser } from "@/lib/auth-utils-node"; // Use getAuthenticatedUser
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const profileUpdateSchema = z.object({
   fullName: z.string().min(2, { message: "Nama lengkap minimal 2 karakter."}).optional(),
@@ -16,7 +16,7 @@ const profileUpdateSchema = z.object({
 });
 
 export async function PUT(request: NextRequest) {
-  const authenticatedUser = getAuthenticatedUser(request); // Get authenticated user
+  const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Akses ditolak. Tidak terautentikasi." }, { status: 401 });
   }
@@ -29,7 +29,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const userId = authenticatedUser.id; // Use ID from token
+    const userId = authenticatedUser.id;
     const updateData: Partial<UserEntity> = {};
     const validatedData = validation.data;
 
@@ -61,7 +61,13 @@ export async function PUT(request: NextRequest) {
         ]
     });
 
-    return NextResponse.json(updatedUser, { status: 200 });
+    const { image, ...rest } = updatedUser!;
+    const userResponse = {
+      ...rest,
+      avatarUrl: image,
+    };
+
+    return NextResponse.json(userResponse, { status: 200 });
 
   } catch (error) {
     console.error("Update profile error:", error);
