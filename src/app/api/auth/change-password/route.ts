@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
 import bcrypt from "bcryptjs";
 import * as z from "zod";
-import { getAuthenticatedUser } from "@/lib/auth-utils-node"; // Use getAuthenticatedUser
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, { message: "Kata sandi saat ini wajib diisi." }),
@@ -13,7 +13,7 @@ const changePasswordSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const authenticatedUser = getAuthenticatedUser(request); // Get authenticated user
+  const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Akses ditolak. Tidak terautentikasi." }, { status: 401 });
   }
@@ -27,15 +27,14 @@ export async function POST(request: NextRequest) {
     }
 
     const { currentPassword, newPassword } = validation.data;
-    const userId = authenticatedUser.id; // Use ID from token
+    const userId = authenticatedUser.id;
 
     const dataSource = await getInitializedDataSource();
     const userRepo = dataSource.getRepository(UserEntity);
     const user = await userRepo.findOne({ where: { id: userId } });
 
     if (!user || !user.passwordHash) {
-      // This case should be rare if user is authenticated, but good for safety
-      return NextResponse.json({ message: "Pengguna tidak ditemukan atau tidak memiliki kata sandi (mungkin akun sosial?)." }, { status: 404 });
+      return NextResponse.json({ message: "Pengguna tidak ditemukan atau tidak memiliki kata sandi." }, { status: 404 });
     }
 
     const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);

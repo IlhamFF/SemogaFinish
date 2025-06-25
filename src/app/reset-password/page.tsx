@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast"; // Changed from useAuth
+import { useToast } from "@/hooks/use-toast";
 import { ROUTES, APP_NAME } from "@/lib/constants";
 import { Loader2, ShieldCheck } from "lucide-react";
 
@@ -86,7 +86,7 @@ function ResetPasswordContent() {
       return (
         <div className="flex min-h-screen items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            {pageLoading && <p className="ml-4">Memvalidasi tautan...</p>}
+            <p className="ml-4">Memvalidasi tautan...</p>
         </div>
     );
   }
@@ -104,7 +104,10 @@ function ResetPasswordContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {formError && (!email || !token) && <p className="mb-4 text-center text-sm font-medium text-destructive">{formError}</p>}
+          {formError && (!email || !token) ? (
+              <p className="mb-4 text-center text-sm font-medium text-destructive">{formError}</p>
+            ) : null
+          }
           {email && token && (
             <>
             <p className="mb-4 text-center text-sm">

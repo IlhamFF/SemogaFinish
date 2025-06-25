@@ -6,9 +6,11 @@ import { UserEntity } from "@/entities/user.entity";
 import * as z from "zod";
 import type { Role } from "@/types";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
+import bcrypt from "bcryptjs";
 
 const userCreateSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
+  password: z.string().min(6, { message: "Kata sandi minimal 6 karakter." }).optional().or(z.literal('')),
   role: z.enum(['admin', 'guru', 'siswa', 'pimpinan'], { required_error: "Peran wajib diisi." }),
   fullName: z.string().min(2, { message: "Nama lengkap minimal 2 karakter."}),
   name: z.string().min(2, { message: "Nama panggilan minimal 2 karakter."}).optional().nullable(),
@@ -76,7 +78,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const { email, role, fullName, name, firebaseUid, ...profileData } = validation.data;
+    const { email, password, role, fullName, name, firebaseUid, ...profileData } = validation.data;
 
     const dataSource = await getInitializedDataSource();
     const userRepo = dataSource.getRepository(UserEntity);
@@ -111,6 +113,10 @@ export async function POST(request: NextRequest) {
       kelasId: profileData.kelas, 
       mataPelajaran: profileData.mataPelajaran ? [profileData.mataPelajaran] : undefined,
     });
+    
+    if (password) {
+        newUserEntity.passwordHash = await bcrypt.hash(password, 10);
+    }
 
     const savedUser = await userRepo.save(newUserEntity);
     

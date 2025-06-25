@@ -29,16 +29,12 @@ export async function POST(request: NextRequest) {
     const user = await userRepo.findOne({ 
       where: { 
         email,
+        resetPasswordToken: token,
       } 
     });
     
-    if (!user || !user.resetPasswordToken || !user.resetPasswordExpires) {
+    if (!user || !user.resetPasswordExpires) {
       return NextResponse.json({ message: "Token reset tidak valid atau telah kedaluwarsa." }, { status: 400 });
-    }
-
-    const isTokenValid = await bcrypt.compare(token, user.resetPasswordToken);
-    if (!isTokenValid) {
-        return NextResponse.json({ message: "Token reset tidak valid." }, { status: 400 });
     }
 
     if (user.resetPasswordExpires < new Date()) {
@@ -49,7 +45,6 @@ export async function POST(request: NextRequest) {
     user.passwordHash = hashedPassword;
     user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
-    // Optionally, mark email as verified if it wasn't already
     if (!user.isVerified) {
         user.isVerified = true;
         user.emailVerified = new Date();

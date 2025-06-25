@@ -3,18 +3,13 @@ import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
-import crypto from 'crypto';
-import bcrypt from "bcryptjs";
-import * as z from "zod";
+import { generateSecureToken } from "@/lib/auth-utils-node";
 import { sendPasswordResetEmail } from "@/lib/email-service";
+import * as z from "zod";
 
 const requestResetSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
 });
-
-function generateResetToken() {
-  return crypto.randomBytes(32).toString('hex');
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,22 +32,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Jika email terdaftar, instruksi reset akan dikirim." }, { status: 200 });
     }
 
-    const resetToken = generateResetToken();
-    const hashedToken = await bcrypt.hash(resetToken, 10); 
+    const resetToken = generateSecureToken();
     const expires = new Date(Date.now() + 3600000); // Token valid for 1 hour
 
-    user.resetPasswordToken = hashedToken;
+    user.resetPasswordToken = resetToken; // Store the plain token for demo purposes. In production, hash this.
     user.resetPasswordExpires = expires;
     await userRepo.save(user);
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const resetLink = `${appUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
     
-    // This function call simulates sending an email in a real application.
-    await sendPasswordResetEmail(email, resetLink);
+    try {
+        await sendPasswordResetEmail(email, resetLink);
+        console.log(`Password reset email sent (or simulated) to ${email}. Link: ${resetLink}`);
+    } catch (emailError: any) {
+        console.error(`Failed to send password reset email to ${email}: ${emailError.message}`);
+        // Do not expose email sending failure to the user for security reasons.
+    }
     
     // For demonstration purposes, the unhashed token is sent in the response.
-    // In a production environment, this should be removed and the user should get the token from their email.
+    // This allows easy testing without checking email/server logs.
     return NextResponse.json({ 
       message: "Jika email terdaftar, instruksi reset akan dikirim.",
       demoResetToken: resetToken 
