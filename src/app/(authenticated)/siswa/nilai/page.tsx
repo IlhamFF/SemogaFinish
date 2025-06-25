@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -12,6 +13,7 @@ import { Award, FileSignature, TrendingUp, Download, Eye, UserCircle, CalendarDa
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { NilaiSemesterSiswa } from '@/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 
 const chartConfig = {
   nilaiAkhir: { label: "Nilai Akhir", color: "hsl(var(--primary))" },
@@ -23,6 +25,9 @@ export default function SiswaNilaiPage() {
 
   const [semesterGrades, setSemesterGrades] = useState<NilaiSemesterSiswa[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedGrade, setSelectedGrade] = useState<NilaiSemesterSiswa | null>(null);
 
   const fetchGrades = useCallback(async () => {
     if (!user) return;
@@ -53,9 +58,14 @@ export default function SiswaNilaiPage() {
     return <p>Silakan verifikasi email Anda untuk mengakses fitur ini.</p>;
   }
 
-  const handlePlaceholderAction = (action: string, detail?: string) => {
-    alert(`Fungsi "${action}" ${detail ? `untuk ${detail} ` : ''}belum diimplementasikan.`);
+  const handleShowDetails = (grade: NilaiSemesterSiswa) => {
+    setSelectedGrade(grade);
+    setIsDetailOpen(true);
   };
+  
+  const handleDownloadRapor = () => {
+    toast({ title: "Fitur Dalam Pengembangan", description: "Fungsi untuk mengunduh rapor dalam format PDF akan segera tersedia." });
+  }
 
   const { averageGrade, totalGradedItems, chartData } = useMemo(() => {
     const validGrades = semesterGrades.filter(item => typeof item.nilaiAkhir === 'number');
@@ -78,6 +88,7 @@ export default function SiswaNilaiPage() {
 
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
         <div>
@@ -87,7 +98,7 @@ export default function SiswaNilaiPage() {
           </h1>
           <p className="text-muted-foreground">Lihat rekapitulasi nilai, kemajuan akademik, dan unduh rapor Anda.</p>
         </div>
-        <Button onClick={() => handlePlaceholderAction("Unduh Rapor PDF")} variant="outline" className="w-full md:w-auto">
+        <Button onClick={handleDownloadRapor} variant="outline" className="w-full md:w-auto">
             <Download className="mr-2 h-4 w-4" /> Unduh Rapor (PDF)
         </Button>
       </div>
@@ -189,7 +200,7 @@ export default function SiswaNilaiPage() {
                             {item.predikat ? <Badge variant={getPredikatBadgeVariant(item.predikat)}>{item.predikat}</Badge> : "-"}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => handlePlaceholderAction("Lihat Detail Nilai", item.mapel?.nama)}>
+                          <Button variant="ghost" size="sm" onClick={() => handleShowDetails(item)}>
                             <Eye className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -204,5 +215,52 @@ export default function SiswaNilaiPage() {
         </CardContent>
       </Card>
     </div>
+
+    <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Detail Nilai: {selectedGrade?.mapel?.nama}</DialogTitle>
+                <DialogDescription>
+                    Rincian komponen nilai untuk semester {selectedGrade?.semester} {selectedGrade?.tahunAjaran}.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <Card className="p-4">
+                        <CardDescription>Nilai Tugas</CardDescription>
+                        <CardTitle>{selectedGrade?.nilaiTugas ?? "-"}</CardTitle>
+                    </Card>
+                    <Card className="p-4">
+                        <CardDescription>Nilai UTS</CardDescription>
+                        <CardTitle>{selectedGrade?.nilaiUTS ?? "-"}</CardTitle>
+                    </Card>
+                    <Card className="p-4">
+                        <CardDescription>Nilai UAS</CardDescription>
+                        <CardTitle>{selectedGrade?.nilaiUAS ?? "-"}</CardTitle>
+                    </Card>
+                    <Card className="p-4">
+                        <CardDescription>Nilai Harian</CardDescription>
+                        <CardTitle>{selectedGrade?.nilaiHarian ?? "-"}</CardTitle>
+                    </Card>
+                </div>
+                <div>
+                    <h4 className="text-sm font-medium mb-1">Catatan dari Guru:</h4>
+                    <p className="text-sm text-muted-foreground p-3 bg-muted rounded-md min-h-[60px]">
+                        {selectedGrade?.catatanGuru || "Tidak ada catatan."}
+                    </p>
+                </div>
+                <div>
+                     <h4 className="text-sm font-medium mb-1">Dinilai oleh:</h4>
+                     <p className="text-sm text-muted-foreground">
+                        {selectedGrade?.dicatatOlehGuru?.fullName || selectedGrade?.dicatatOlehGuru?.name || "Guru"}
+                     </p>
+                </div>
+            </div>
+            <DialogFooter>
+                <DialogClose asChild><Button variant="outline">Tutup</Button></DialogClose>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
