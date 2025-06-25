@@ -139,13 +139,14 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+      <DialogContent className="md:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editingUser ? "Edit Pengguna" : "Buat Pengguna Baru"}</DialogTitle>
           <DialogDescription>
             {editingUser ? "Perbarui detail pengguna." : "Isi detail untuk membuat profil pengguna baru."}
           </DialogDescription>
         </DialogHeader>
+        <div className="p-1">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 pt-4">
             <FormField
@@ -449,9 +450,7 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
                   </FormItem>
                 )}
               />
-
-
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-4 sticky bottom-0 bg-background/95 pb-6">
               <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>Batal</Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -460,6 +459,7 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
             </DialogFooter>
           </form>
         </Form>
+        </div>
       </DialogContent>
     </Dialog>
   );

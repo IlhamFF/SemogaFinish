@@ -436,7 +436,7 @@ export default function GuruTugasPage() {
       </Card>
 
       <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingTugas(null); }}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
                 <DialogTitle>{editingTugas ? "Edit Tugas" : "Buat Tugas Baru"}</DialogTitle>
                 <DialogDescription>{editingTugas ? `Perbarui detail untuk tugas "${editingTugas.judul}".` : "Isi detail tugas baru di bawah ini."}</DialogDescription>
@@ -505,7 +505,7 @@ export default function GuruTugasPage() {
                       <TableCell>{format(parseISO(sub.dikumpulkanPada), "dd MMM yyyy, HH:mm", { locale: localeID })}</TableCell>
                       <TableCell>
                         {sub.fileUrlJawaban ? (
-                          <Button variant="link" size="sm" asChild className="p-0 h-auto">
+                          <Button variant="link" size="sm" asChild className="p-0 h-auto text-xs">
                             <a href={sub.fileUrlJawaban} target="_blank" rel="noopener noreferrer" className="text-xs">
                               {sub.namaFileJawaban || "Lihat File"} <ExternalLink className="inline-block ml-1 h-3 w-3"/>
                             </a>
