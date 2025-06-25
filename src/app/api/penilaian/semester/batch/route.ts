@@ -7,6 +7,7 @@ import { UserEntity } from "@/entities/user.entity";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import * as z from "zod";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
+import { In } from "typeorm";
 
 const nilaiSemesterEntrySchema = z.object({
   siswaId: z.string().uuid("ID Siswa tidak valid."),
