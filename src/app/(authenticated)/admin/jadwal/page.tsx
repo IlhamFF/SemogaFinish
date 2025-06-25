@@ -98,6 +98,11 @@ export default function AdminJadwalPage() {
   const [isJadwalEntryFormOpen, setIsJadwalEntryFormOpen] = useState(false);
   const jadwalPelajaranEntryForm = useForm<JadwalPelajaranEntryFormValues>({ resolver: zodResolver(jadwalPelajaranEntrySchema), defaultValues: { slotWaktuId: undefined, mapelId: undefined, guruId: undefined, ruanganId: undefined, catatan: "" },});
   
+  // State for import dialog
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  
   // Data State
   const [ruanganList, setRuanganList] = useState<Ruangan[]>([]);
   const [slotsWaktu, setSlotsWaktu] = useState<SlotWaktu[]>([]);
@@ -172,11 +177,30 @@ export default function AdminJadwalPage() {
   const handleDeleteJadwalEntry = async (entryId: string) => { if (entryId.startsWith('draft-')) { setJadwalPelajaranList(prev => prev.filter(j => j.id !== entryId)); toast({title: "Entri Dihapus dari Draf", description: "Entri jadwal telah dihapus dari daftar saat ini."}); return; } setIsJadwalPelajaranSubmitting(true); try { const response = await fetch(`/api/jadwal/pelajaran/${entryId}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus entri jadwal.'); } toast({ title: "Entri Dihapus!", description: "Entri jadwal telah dihapus dari database."}); if(selectedKelas && selectedHari) fetchJadwalPelajaran(selectedKelas, selectedHari); } catch (error: any) { toast({ title: "Error Hapus Entri", description: error.message, variant: "destructive" }); } finally { setIsJadwalPelajaranSubmitting(false); } };
   const handleClearJadwalKelasHari = async () => { if (!selectedKelas || !selectedHari) return; setIsJadwalPelajaranSubmitting(true); try { const response = await fetch(`/api/jadwal/pelajaran/by-criteria?kelas=${encodeURIComponent(selectedKelas)}&hari=${encodeURIComponent(selectedHari)}`, { method: 'DELETE', }); if (!response.ok && response.status !== 404) { const errorData = await response.json(); throw new Error(errorData.message || `Gagal membersihkan jadwal untuk ${selectedKelas} - ${selectedHari}.`); } toast({ title: "Jadwal Dikosongkan", description: `Semua jadwal untuk ${selectedKelas} - ${selectedHari} telah dihapus.`}); setJadwalPelajaranList([]); } catch (error: any) { toast({ title: "Error Kosongkan Jadwal", description: error.message, variant: "destructive" }); } finally { setIsJadwalPelajaranSubmitting(false); } };
 
-  const showPlaceholderToast = (featureName: string) => {
-    toast({
-      title: "Fitur Dalam Pengembangan",
-      description: `Fungsi "${featureName}" akan segera tersedia. Untuk saat ini, fitur impor hanya simulasi.`,
-    });
+  const handleImportJadwal = async () => {
+    if (!importFile) {
+      toast({ title: "Tidak Ada File", description: "Silakan pilih file CSV untuk diimpor.", variant: "destructive" });
+      return;
+    }
+    setIsImporting(true);
+    const formData = new FormData();
+    formData.append('file', importFile);
+    
+    try {
+      const response = await fetch('/api/jadwal/import', { method: 'POST', body: formData });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Gagal mengimpor jadwal.');
+      
+      toast({ title: "Impor (Simulasi) Berhasil", description: data.message, duration: 7000 });
+      setIsImportDialogOpen(false);
+      setImportFile(null);
+      // Optionally refetch data if the import was real
+      // fetchJadwalPelajaran(selectedKelas, selectedHari); 
+    } catch (error: any) {
+      toast({ title: "Error Impor Jadwal", description: error.message, variant: "destructive" });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   return (
@@ -193,7 +217,7 @@ export default function AdminJadwalPage() {
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Button variant="outline" onClick={() => setIsKonfigurasiOpen(true)} className="justify-start text-left h-auto py-3"><Clock className="mr-3 h-5 w-5" /><div><p className="font-semibold">Konfigurasi Jam & Hari</p><p className="text-xs text-muted-foreground">Atur slot waktu dan hari efektif.</p></div></Button>
             <Button variant="outline" onClick={handleOpenBuatJadwalManual} className="justify-start text-left h-auto py-3"><CalendarCheck className="mr-3 h-5 w-5" /><div><p className="font-semibold">Buat Jadwal per Kelas</p><p className="text-xs text-muted-foreground">Susun jadwal untuk satu kelas.</p></div></Button>
-            <Button variant="outline" onClick={() => showPlaceholderToast("Impor Jadwal")} className="justify-start text-left h-auto py-3"><Upload className="mr-3 h-5 w-5" /><div><p className="font-semibold">Impor Jadwal</p><p className="text-xs text-muted-foreground">Unggah jadwal dari template.</p></div></Button>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(true)} className="justify-start text-left h-auto py-3"><Upload className="mr-3 h-5 w-5" /><div><p className="font-semibold">Impor Jadwal</p><p className="text-xs text-muted-foreground">Unggah jadwal dari template.</p></div></Button>
         </CardContent>
       </Card>
       
@@ -203,9 +227,9 @@ export default function AdminJadwalPage() {
           <CardDescription>Tetapkan guru pengampu untuk setiap mata pelajaran dan alokasikan ruangan kelas atau laboratorium.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" onClick={() => showPlaceholderToast("Ketersediaan Guru")} className="justify-start text-left h-auto py-3"><Users className="mr-3 h-5 w-5" /><div><p className="font-semibold">Ketersediaan Guru</p><p className="text-xs text-muted-foreground">Lihat dan atur jadwal guru.</p></div></Button>
+            <Button variant="outline" onClick={() => toast({ title: "Fitur Dalam Pengembangan" })} className="justify-start text-left h-auto py-3"><Users className="mr-3 h-5 w-5" /><div><p className="font-semibold">Ketersediaan Guru</p><p className="text-xs text-muted-foreground">Lihat dan atur jadwal guru.</p></div></Button>
             <Button variant="outline" onClick={() => setIsRuanganDialogOpen(true)} className="justify-start text-left h-auto py-3"><Building className="mr-3 h-5 w-5" /><div><p className="font-semibold">Manajemen Ruangan</p><p className="text-xs text-muted-foreground">Kelola daftar dan kapasitas.</p></div></Button>
-            <Button variant="outline" onClick={() => showPlaceholderToast("Deteksi Konflik")} className="justify-start text-left h-auto py-3"><Search className="mr-3 h-5 w-5" /><div><p className="font-semibold">Deteksi Konflik</p><p className="text-xs text-muted-foreground">Periksa bentrok jadwal.</p></div></Button>
+            <Button variant="outline" onClick={() => toast({ title: "Fitur Dalam Pengembangan" })} className="justify-start text-left h-auto py-3"><Search className="mr-3 h-5 w-5" /><div><p className="font-semibold">Deteksi Konflik</p><p className="text-xs text-muted-foreground">Periksa bentrok jadwal.</p></div></Button>
         </CardContent>
       </Card>
 
@@ -215,6 +239,42 @@ export default function AdminJadwalPage() {
       <Dialog open={isKonfigurasiOpen} onOpenChange={setIsKonfigurasiOpen}><DialogContent className="sm:max-w-xl"><DialogHeader><DialogTitle>Konfigurasi Jam & Hari</DialogTitle><DialogDescription>Atur slot waktu dan hari efektif.</DialogDescription></DialogHeader><Form {...konfigurasiForm}><form onSubmit={konfigurasiForm.handleSubmit(handleKonfigurasiSubmit)} className="space-y-6 py-4"><div><h3 className="text-lg font-medium mb-2">Slot Waktu</h3>{isLoadingSlots ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : (<ScrollArea className="max-h-72 pr-2"><div className="space-y-3">{slotFields.map((field, index) => (<Card key={field.id || `new-${index}`} className="p-3 relative"><div className="flex items-start gap-2"><div className="flex-grow grid grid-cols-1 sm:grid-cols-3 gap-3"><FormField control={konfigurasiForm.control} name={`slots.${index}.namaSlot`} render={({ field:ff }) => (<FormItem><FormLabel className="text-xs">Nama Slot</FormLabel><FormControl><Input placeholder="Jam ke-1" {...ff} /></FormControl><FormMessage className="text-xs"/></FormItem>)} /><FormField control={konfigurasiForm.control} name={`slots.${index}.waktuMulai`} render={({ field:ff }) => (<FormItem><FormLabel className="text-xs">Mulai</FormLabel><FormControl><Input type="time" {...ff} /></FormControl><FormMessage className="text-xs"/></FormItem>)} /><FormField control={konfigurasiForm.control} name={`slots.${index}.waktuSelesai`} render={({ field:ff }) => (<FormItem><FormLabel className="text-xs">Selesai</FormLabel><FormControl><Input type="time" {...ff} /></FormControl><FormMessage className="text-xs"/></FormItem>)} /></div><Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveSlot(index)} className="text-destructive hover:text-destructive/80 absolute top-1 right-1 h-7 w-7"><Trash2 className="h-4 w-4" /></Button></div></Card>))}</div></ScrollArea>)}<Button type="button" variant="outline" size="sm" onClick={() => appendSlot({ namaSlot: "", waktuMulai: "00:00", waktuSelesai: "00:00", urutan: slotsWaktu.length + 1 })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4"/> Tambah Slot</Button><FormMessage>{konfigurasiForm.formState.errors.slots?.message || konfigurasiForm.formState.errors.slots?.root?.message}</FormMessage></div><div> <h3 className="text-lg font-medium mb-2">Hari Efektif</h3><FormField control={konfigurasiForm.control} name="hariEfektif" render={() => (<FormItem className="grid grid-cols-2 sm:grid-cols-3 gap-2">{NAMA_HARI.slice(0,6).map((hari) => (<FormField key={hari} control={konfigurasiForm.control} name="hariEfektif" render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0 p-2 border rounded-md hover:bg-muted/50"><FormControl><Checkbox checked={field.value?.includes(hari)} onCheckedChange={(checked) => { return checked ? field.onChange([...field.value, hari]) : field.onChange(field.value?.filter(v => v !== hari))}}/></FormControl><FormLabel className="font-normal text-sm">{hari}</FormLabel></FormItem>)} />))} <FormMessage className="col-span-full">{konfigurasiForm.formState.errors.hariEfektif?.message}</FormMessage></FormItem>)} /></div><DialogFooter className="pt-4"><Button type="button" variant="outline" onClick={() => setIsKonfigurasiOpen(false)} disabled={isKonfigurasiSubmitting}>Batal</Button><Button type="submit" disabled={isKonfigurasiSubmitting || isLoadingSlots}>{isKonfigurasiSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Simpan</Button></DialogFooter></form></Form></DialogContent></Dialog>
       <Dialog open={isBuatJadwalManualOpen} onOpenChange={setIsBuatJadwalManualOpen}><DialogContent className="max-w-4xl max-h-[90vh] flex flex-col"><DialogHeader><DialogTitle>Buat/Edit Jadwal Pelajaran Manual</DialogTitle><DialogDescription>Pilih kelas dan hari, lalu susun jadwal pelajarannya.</DialogDescription></DialogHeader><div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 border-b pb-6"><div><Label htmlFor="select-kelas-jadwal">Pilih Kelas</Label><Select value={selectedKelas} onValueChange={setSelectedKelas}><SelectTrigger id="select-kelas-jadwal"><SelectValue placeholder="Pilih Kelas" /></SelectTrigger><SelectContent>{mockKelasList.map(kls => <SelectItem key={kls} value={kls}>{kls}</SelectItem>)}</SelectContent></Select></div><div><Label htmlFor="select-hari-jadwal">Pilih Hari</Label><Select value={selectedHari} onValueChange={setSelectedHari}><SelectTrigger id="select-hari-jadwal"><SelectValue placeholder="Pilih Hari" /></SelectTrigger><SelectContent>{hariEfektif.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent></Select></div></div><div className="flex-grow overflow-y-auto py-4">{isLoadingJadwalPelajaran && (<div className="flex justify-center items-center h-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /> <p className="ml-3">Memuat jadwal...</p></div>)}{!isLoadingJadwalPelajaran && selectedKelas && selectedHari && (<><div className="flex justify-between items-center mb-4"><h3 className="text-lg font-semibold">Jadwal untuk: {selectedKelas} - {selectedHari}</h3><Button size="sm" onClick={() => { setEditingJadwalPelajaranEntry(null); jadwalPelajaranEntryForm.reset(); setIsJadwalEntryFormOpen(true); }}><PlusCircle className="mr-2 h-4 w-4"/> Tambah Pelajaran</Button></div>{jadwalPelajaranList.length > 0 ? (<ScrollArea className="max-h-[calc(90vh-350px)]"><Table><TableHeader><TableRow><TableHead>Slot Waktu</TableHead><TableHead>Mapel</TableHead><TableHead>Guru</TableHead><TableHead>Ruangan</TableHead><TableHead>Catatan</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader><TableBody>{jadwalPelajaranList.sort((a,b) => a.slotWaktu?.waktuMulai.localeCompare(b.slotWaktu?.waktuMulai || '') || 0).map(j => (<TableRow key={j.id}><TableCell>{j.slotWaktu?.namaSlot} ({j.slotWaktu?.waktuMulai}-{j.slotWaktu?.waktuSelesai})</TableCell><TableCell>{j.mapel?.nama}</TableCell><TableCell>{j.guru?.fullName || j.guru?.name}</TableCell><TableCell>{j.ruangan?.nama}</TableCell><TableCell className="max-w-[150px] truncate" title={j.catatan || ""}>{j.catatan || "-"}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleEditJadwalEntry(j)} className="mr-1 h-7 w-7"><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={() => handleDeleteJadwalEntry(j.id)} className="text-destructive h-7 w-7"><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody></Table></ScrollArea>) : (<p className="text-muted-foreground text-center py-6">Belum ada jadwal pelajaran untuk kelas dan hari ini.</p>)}</>)}{!selectedKelas && !selectedHari && <p className="text-muted-foreground text-center py-6">Pilih kelas dan hari untuk melihat atau membuat jadwal.</p>}</div><DialogFooter className="pt-6 border-t"><Button variant="outline" onClick={() => setIsBuatJadwalManualOpen(false)} disabled={isJadwalPelajaranSubmitting}>Batal</Button><Button onClick={handleClearJadwalKelasHari} variant="destructive" className="mr-auto" disabled={isJadwalPelajaranSubmitting || jadwalPelajaranList.length === 0 || isLoadingJadwalPelajaran}><Eraser className="mr-2 h-4 w-4"/> Kosongkan Jadwal Hari Ini</Button><Button onClick={handleSaveJadwalKelasHari} disabled={isJadwalPelajaranSubmitting || jadwalPelajaranList.length === 0 || isLoadingJadwalPelajaran}><Save className="mr-2 h-4 w-4"/> Simpan Jadwal Kelas Ini</Button></DialogFooter></DialogContent></Dialog>
       <Dialog open={isJadwalEntryFormOpen} onOpenChange={setIsJadwalEntryFormOpen}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>{editingJadwalPelajaranEntry ? "Edit Entri Jadwal" : "Tambah Entri Jadwal Baru"}</DialogTitle><DialogDescription>Untuk {selectedKelas} - {selectedHari}</DialogDescription></DialogHeader><Form {...jadwalPelajaranEntryForm}><form onSubmit={jadwalPelajaranEntryForm.handleSubmit(handleJadwalEntryFormSubmit)} className="space-y-4 py-4"><FormField control={jadwalPelajaranEntryForm.control} name="slotWaktuId" render={({ field }) => (<FormItem><FormLabel>Slot Waktu</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih slot waktu" /></SelectTrigger></FormControl><SelectContent>{slotsWaktu.sort((a,b)=> a.waktuMulai.localeCompare(b.waktuMulai)).map(s => <SelectItem key={s.id} value={s.id}>{s.namaSlot} ({s.waktuMulai}-{s.waktuSelesai})</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={jadwalPelajaranEntryForm.control} name="mapelId" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih mapel" /></SelectTrigger></FormControl><SelectContent>{mapelOptions.map(m => <SelectItem key={m.id} value={m.id}>{m.nama} ({m.kode})</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={jadwalPelajaranEntryForm.control} name="guruId" render={({ field }) => (<FormItem><FormLabel>Guru Pengampu</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih guru" /></SelectTrigger></FormControl><SelectContent>{guruOptions.map(g => <SelectItem key={g.id} value={g.id}>{g.fullName || g.name} ({g.email})</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={jadwalPelajaranEntryForm.control} name="ruanganId" render={({ field }) => (<FormItem><FormLabel>Ruangan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih ruangan" /></SelectTrigger></FormControl><SelectContent>{ruanganList.map(r => <SelectItem key={r.id} value={r.id}>{r.nama} ({r.kode}) - Kap: {r.kapasitas}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={jadwalPelajaranEntryForm.control} name="catatan" render={({ field }) => (<FormItem><FormLabel>Catatan (Opsional)</FormLabel><FormControl><Textarea placeholder="Catatan tambahan..." {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>)} /><DialogFooter><Button type="button" variant="outline" onClick={() => setIsJadwalEntryFormOpen(false)}>Batal</Button><Button type="submit">Simpan Entri</Button></DialogFooter></form></Form></DialogContent></Dialog>
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Impor Jadwal (Simulasi)</DialogTitle>
+            <DialogDescription>
+              Unggah file CSV untuk mengimpor jadwal pelajaran secara massal. Fitur ini masih dalam tahap simulasi dan belum akan memproses data file.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+              <div>
+                  <Label htmlFor="jadwal-import-file" className="block text-sm font-medium mb-1">
+                      Pilih File CSV
+                  </Label>
+                  <Input
+                      id="jadwal-import-file"
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => setImportFile(e.target.files ? e.target.files[0] : null)}
+                  />
+                  {importFile && <p className="text-xs text-muted-foreground mt-2">File terpilih: {importFile.name}</p>}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                  Format yang diharapkan: CSV dengan kolom: `hari`, `kelas`, `slotWaktuId`, `mapelId`, `guruId`, `ruanganId`, `catatan`.
+              </p>
+          </div>
+          <DialogFooter>
+              <Button variant="outline" onClick={() => setIsImportDialogOpen(false)} disabled={isImporting}>
+                  Batal
+              </Button>
+              <Button onClick={handleImportJadwal} disabled={isImporting || !importFile}>
+                  {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Impor Jadwal
+              </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

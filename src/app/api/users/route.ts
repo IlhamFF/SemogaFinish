@@ -7,6 +7,7 @@ import * as z from "zod";
 import type { Role } from "@/types";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 import bcrypt from "bcryptjs";
+import type { FindOptionsWhere } from "typeorm";
 
 const userCreateSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
@@ -33,14 +34,24 @@ export async function GET(request: NextRequest) {
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
-  if (!['admin', 'superadmin'].includes(authenticatedUser.role)) {
-    return NextResponse.json({ message: "Akses ditolak. Hanya admin yang dapat melihat daftar pengguna." }, { status: 403 });
+  if (!['admin', 'superadmin', 'guru'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak. Anda tidak memiliki izin untuk melihat daftar pengguna." }, { status: 403 });
   }
 
   try {
+    const { searchParams } = new URL(request.url);
+    const role = searchParams.get('role');
+
     const dataSource = await getInitializedDataSource();
     const userRepo = dataSource.getRepository(UserEntity);
+
+    const where: FindOptionsWhere<UserEntity> = {};
+    if (role && ['admin', 'guru', 'siswa', 'pimpinan'].includes(role)) {
+        where.role = role as Role;
+    }
+    
     const users = await userRepo.find({
+      where,
       select: [ 
         "id", "name", "email", "emailVerified", "image", "role", "isVerified", 
         "fullName", "phone", "address", "birthDate", "bio", "nis", "nip", 
