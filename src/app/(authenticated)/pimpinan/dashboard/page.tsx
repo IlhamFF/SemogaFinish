@@ -302,7 +302,7 @@ export default function PimpinanDashboardPage() {
                         <TableCell className="sticky left-10 bg-card z-10 font-medium">{student.name}</TableCell>
                         {detailedClassData.subjects.map(subject => (
                           <TableCell key={subject} className="text-center">
-                            {student.grades[subject]?.toFixed(2) ?? '-'}
+                            {student.grades[subject] != null ? Number(student.grades[subject]).toFixed(2) : '-'}
                           </TableCell>
                         ))}
                         <TableCell className="text-right font-semibold text-primary">{student.average.toFixed(2)}</TableCell>

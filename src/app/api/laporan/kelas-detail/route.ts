@@ -56,7 +56,8 @@ export async function GET(request: NextRequest) {
                 });
             }
             if (grade.mapel?.nama) {
-                studentsDataMap.get(grade.siswa.id)!.grades[grade.mapel.nama] = grade.nilaiAkhir;
+                const nilai = grade.nilaiAkhir !== null && grade.nilaiAkhir !== undefined ? parseFloat(String(grade.nilaiAkhir)) : null;
+                studentsDataMap.get(grade.siswa.id)!.grades[grade.mapel.nama] = isNaN(nilai as number) ? null : nilai;
             }
         }
     });
