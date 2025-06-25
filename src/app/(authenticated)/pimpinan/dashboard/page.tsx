@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, TrendingUp, BookOpenCheck, BarChartHorizontalBig, Loader2, Trophy, Star, CheckCircle } from "lucide-react";
+import { Users, TrendingUp, BookOpenCheck, BarChartHorizontalBig, Loader2, Trophy, Star, CheckCircle, BookCopy } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ROLES } from "@/lib/constants";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 interface AkademikData {
   rataRataKelas: { name: string; rataRata: number }[];
@@ -20,6 +22,19 @@ interface AkademikData {
   totalGuru: number;
   totalKelas: number;
   totalMataPelajaran: number;
+}
+
+interface DetailedStudentGrade {
+    id: string;
+    name: string;
+    nis: string | null;
+    average: number;
+    grades: Record<string, number | null>;
+}
+
+interface DetailedClassData {
+    students: DetailedStudentGrade[];
+    subjects: string[];
 }
 
 const initialAkademikData: AkademikData = {
@@ -36,6 +51,10 @@ export default function PimpinanDashboardPage() {
   const { toast } = useToast();
   const [akademikData, setAkademikData] = useState<AkademikData>(initialAkademikData);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  
+  const [selectedKelas, setSelectedKelas] = useState<string | undefined>();
+  const [detailedClassData, setDetailedClassData] = useState<DetailedClassData>({ students: [], subjects: [] });
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   const fetchAllData = useCallback(async () => {
     setIsLoadingData(true);
@@ -53,6 +72,27 @@ export default function PimpinanDashboardPage() {
       setIsLoadingData(false);
     }
   }, [toast]);
+  
+  const fetchDetailedData = useCallback(async () => {
+    if (!selectedKelas) {
+      setDetailedClassData({ students: [], subjects: [] });
+      return;
+    }
+    setIsLoadingDetails(true);
+    try {
+      const res = await fetch(`/api/laporan/kelas-detail?kelasId=${encodeURIComponent(selectedKelas)}`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Gagal mengambil data detail kelas.");
+      }
+      setDetailedClassData(await res.json());
+    } catch (e: any) {
+      toast({ title: "Error Detail Kelas", description: e.message, variant: "destructive" });
+      setDetailedClassData({ students: [], subjects: [] });
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  }, [selectedKelas, toast]);
 
   useEffect(() => {
     if (currentUserAuth && (currentUserAuth.role === 'pimpinan' || currentUserAuth.role === 'superadmin')) {
@@ -61,6 +101,19 @@ export default function PimpinanDashboardPage() {
         setIsLoadingData(false);
     }
   }, [currentUserAuth, fetchAllData]);
+  
+  useEffect(() => {
+    if (!selectedKelas && akademikData.rataRataKelas.length > 0) {
+      setSelectedKelas(akademikData.rataRataKelas[0].name);
+    }
+  }, [akademikData.rataRataKelas, selectedKelas]);
+  
+  useEffect(() => {
+    if (selectedKelas) {
+      fetchDetailedData();
+    }
+  }, [selectedKelas, fetchDetailedData]);
+
 
   const pimpinanStats = useMemo(() => {
     return [
@@ -89,7 +142,7 @@ export default function PimpinanDashboardPage() {
     return <p>Akses Ditolak. Anda harus menjadi Pimpinan untuk melihat halaman ini.</p>;
   }
   
-  if (isLoadingData) {
+  if (isLoadingData && !selectedKelas) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /> <span className="ml-3">Memuat data dasbor...</span></div>;
   }
 
@@ -200,6 +253,71 @@ export default function PimpinanDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+       <div className="mt-6">
+        <Card className="shadow-lg col-span-1 lg:col-span-2">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div>
+                <CardTitle className="flex items-center">
+                  <BookCopy className="mr-2 h-5 w-5 text-primary" />
+                  Detail Nilai per Kelas
+                </CardTitle>
+                <CardDescription>Pilih kelas untuk melihat rincian nilai semua siswa.</CardDescription>
+              </div>
+              <Select value={selectedKelas} onValueChange={setSelectedKelas} disabled={akademikData.rataRataKelas.length === 0}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Pilih Kelas" />
+                </SelectTrigger>
+                <SelectContent>
+                  {akademikData.rataRataKelas.map(k => (
+                    <SelectItem key={k.name} value={k.name}>{k.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoadingDetails ? (
+              <div className="flex h-60 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : detailedClassData.students.length > 0 ? (
+              <ScrollArea className="max-h-[500px] w-full">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[40px] sticky left-0 bg-card z-10">#</TableHead>
+                      <TableHead className="min-w-[180px] sticky left-10 bg-card z-10">Nama Siswa</TableHead>
+                      {detailedClassData.subjects.map(subject => (
+                        <TableHead key={subject} className="text-center">{subject}</TableHead>
+                      ))}
+                      <TableHead className="text-right font-semibold">Rata-rata</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {detailedClassData.students.map((student, index) => (
+                      <TableRow key={student.id}>
+                        <TableCell className="sticky left-0 bg-card z-10">{index + 1}</TableCell>
+                        <TableCell className="sticky left-10 bg-card z-10 font-medium">{student.name}</TableCell>
+                        {detailedClassData.subjects.map(subject => (
+                          <TableCell key={subject} className="text-center">
+                            {student.grades[subject]?.toFixed(2) ?? '-'}
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-right font-semibold text-primary">{student.average.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">Pilih kelas untuk menampilkan data atau tidak ada data nilai untuk kelas ini.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
     </div>
   );
 }
