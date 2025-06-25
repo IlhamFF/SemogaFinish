@@ -1,7 +1,8 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, TrendingUp, BookOpenCheck, BarChartHorizontalBig, Loader2, Trophy } from "lucide-react";
+import { Users, TrendingUp, BookOpenCheck, BarChartHorizontalBig, Loader2, Trophy, Star, CheckCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
@@ -10,6 +11,7 @@ import type { User as AppUser, Role } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { ROLES } from "@/lib/constants";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AkademikData {
   rataRataKelas: { name: string; rataRata: number }[];
@@ -61,15 +63,11 @@ export default function PimpinanDashboardPage() {
   }, [currentUserAuth, fetchAllData]);
 
   const pimpinanStats = useMemo(() => {
-    const rataRataSekolah = akademikData.rataRataKelas.length > 0
-      ? (akademikData.rataRataKelas.reduce((acc, curr) => acc + curr.rataRata, 0) / akademikData.rataRataKelas.length).toFixed(2)
-      : 0;
-    
     return [
-      { title: "Total Siswa Aktif", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalSiswa.toString(), icon: Users, color: "text-primary" },
-      { title: "Total Guru", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalGuru.toString(), icon: Users, color: "text-green-500" },
-      { title: "Jumlah Kelas", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalKelas.toString(), icon: BookOpenCheck, color: "text-yellow-500" },
-      { title: "Nilai Rata-rata Sekolah", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : rataRataSekolah.toString(), icon: TrendingUp, color: "text-indigo-500" },
+      { title: "Total Siswa", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalSiswa.toString(), icon: Users, color: "text-primary", description: "SMA Az-Bail" },
+      { title: "Total Guru", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalGuru.toString(), icon: Users, color: "text-green-500", description: "Tenaga Pengajar" },
+      { title: "Jumlah Kelas", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalKelas.toString(), icon: BookOpenCheck, color: "text-yellow-500", description: "IPA & IPS" },
+      { title: "Tingkat Kelulusan (Simulasi)", value: "95%", icon: CheckCircle, color: "text-indigo-500", description: "Target: 90%" },
     ];
   }, [isLoadingData, akademikData]);
   
@@ -80,6 +78,11 @@ export default function PimpinanDashboardPage() {
       color: "hsl(var(--primary))",
     },
   } satisfies ChartConfig;
+
+  const sortedClassAverages = useMemo(() => {
+    if (isLoadingData) return [];
+    return [...akademikData.rataRataKelas].sort((a,b) => b.rataRata - a.rataRata);
+  }, [akademikData.rataRataKelas, isLoadingData])
 
 
   if (!currentUserAuth || (currentUserAuth.role !== 'pimpinan' && currentUserAuth.role !== 'superadmin')) {
@@ -104,6 +107,7 @@ export default function PimpinanDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{card.value}</div>
+              <p className="text-xs text-muted-foreground">{card.description}</p>
             </CardContent>
           </Card>
         ))}
@@ -114,23 +118,44 @@ export default function PimpinanDashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <BarChartHorizontalBig className="mr-2 h-5 w-5 text-primary" />
-              Performa Rata-rata per Kelas
+              Rata-rata Nilai per Kelas
             </CardTitle>
-            <CardDescription>Perbandingan nilai rata-rata akhir dari semua mata pelajaran di setiap kelas.</CardDescription>
+            <CardDescription>Visualisasi dan tabel rata-rata nilai akhir siswa per kelas.</CardDescription>
           </CardHeader>
           <CardContent>
-            {akademikData.rataRataKelas.length > 0 ? (
-              <div className="h-[400px]">
+            {sortedClassAverages.length > 0 ? (
+              <>
+                <div className="h-[300px] mb-6">
                   <ChartContainer config={chartConfigClassDist} className="w-full h-full">
                     <BarChart data={akademikData.rataRataKelas} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                       <XAxis type="number" stroke="hsl(var(--foreground))" fontSize={12} domain={[0, 100]} />
                       <YAxis dataKey="name" type="category" stroke="hsl(var(--foreground))" fontSize={10} width={80} interval={0} />
                       <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }}/>
+                       <Legend />
                       <Bar dataKey="rataRata" fill="var(--color-rataRata)" radius={[0, 4, 4, 0]} barSize={15} />
                     </BarChart>
                   </ChartContainer>
                 </div>
+                 <div className="max-h-[200px] overflow-y-auto">
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead>Kelas</TableHead>
+                            <TableHead className="text-right">Rata-rata Nilai</TableHead>
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {sortedClassAverages.map((item) => (
+                            <TableRow key={item.name}>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell className="text-right font-semibold">{item.rataRata.toFixed(2)}</TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                </div>
+              </>
             ) : (
               <p className="text-muted-foreground text-center py-4">Data nilai rata-rata kelas belum tersedia.</p>
             )}
@@ -140,17 +165,18 @@ export default function PimpinanDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
-              Peringkat Teratas Siswa
+              <Star className="mr-2 h-5 w-5 text-yellow-500" />
+              Peringkat Siswa Terbaik (Keseluruhan)
             </CardTitle>
-            <CardDescription>5 siswa dengan nilai rata-rata keseluruhan tertinggi.</CardDescription>
+            <CardDescription>10 siswa dengan rata-rata nilai tertinggi di seluruh sekolah.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[400px]">
+          <CardContent className="h-auto">
              {akademikData.peringkatSiswa.length > 0 ? (
+              <ScrollArea className="max-h-[500px]">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Peringkat</TableHead>
+                      <TableHead className="w-[50px]">Peringkat</TableHead>
                       <TableHead>Nama Siswa</TableHead>
                       <TableHead>Kelas</TableHead>
                       <TableHead className="text-right">Rata-rata</TableHead>
@@ -167,6 +193,7 @@ export default function PimpinanDashboardPage() {
                     ))}
                   </TableBody>
                 </Table>
+              </ScrollArea>
             ) : (
               <p className="text-muted-foreground text-center py-4">Data peringkat siswa belum tersedia.</p>
             )}

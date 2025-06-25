@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
         .andWhere("nilai.nilaiAkhir IS NOT NULL")
         .groupBy("user.id")
         .orderBy('AVG("nilai"."nilaiAkhir")', "DESC")
-        .limit(5)
+        .limit(10)
         .getRawMany(),
       // Counts
       userRepo.count({ where: { role: 'siswa' } }),
