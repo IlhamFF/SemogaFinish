@@ -8,7 +8,7 @@ import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import { RuanganEntity } from "@/entities/ruangan.entity";
 import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import * as z from "zod";
-import { FindOptionsWhere, In } from "typeorm";
+import { FindOptionsWhere, In, Not } from "typeorm";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const jadwalPelajaranCreateSchema = z.object({
@@ -128,21 +128,17 @@ export async function GET(request: NextRequest) {
   const filters: FindOptionsWhere<JadwalPelajaranEntity> = {};
   
   // Admin dan superadmin dapat filter bebas
-  if (['admin', 'superadmin'].includes(authenticatedUser.role)) {
+  if (['admin', 'superadmin', 'pimpinan'].includes(authenticatedUser.role)) {
     if (searchParams.get("kelas")) filters.kelas = searchParams.get("kelas")!;
     if (searchParams.get("guruId")) filters.guruId = searchParams.get("guruId")!;
   } else if (authenticatedUser.role === 'guru') {
     filters.guruId = authenticatedUser.id; // Guru hanya lihat jadwalnya sendiri
     if (searchParams.get("kelas")) filters.kelas = searchParams.get("kelas")!; // Guru bisa filter kelas yang diajarnya
   } else if (authenticatedUser.role === 'siswa') {
-    if (!(authenticatedUser as any).kelasId) { // Assuming kelasId is available for siswa in token/user object
+    if (!(authenticatedUser as any).kelasId) { 
         return NextResponse.json({ message: "Informasi kelas siswa tidak ditemukan." }, { status: 400 });
     }
     filters.kelas = (authenticatedUser as any).kelasId; // Siswa hanya lihat jadwal kelasnya
-  } else if (authenticatedUser.role === 'pimpinan') {
-    // Pimpinan mungkin punya akses lebih luas atau berdasarkan filter tertentu
-    if (searchParams.get("kelas")) filters.kelas = searchParams.get("kelas")!;
-    if (searchParams.get("guruId")) filters.guruId = searchParams.get("guruId")!;
   }
 
 

@@ -32,6 +32,7 @@ export const ROUTES = {
   GURU_MATERI: '/guru/materi',
   GURU_TEST: '/guru/test',
   GURU_PENILAIAN: '/guru/penilaian',
+  GURU_JADWAL: '/guru/jadwal',
 
   SISWA_DASHBOARD: '/siswa/dashboard',
   SISWA_JADWAL: '/siswa/jadwal',

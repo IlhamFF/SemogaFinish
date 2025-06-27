@@ -28,6 +28,7 @@ export const NAV_LINKS_CONFIG: NavLink[] = [
   { href: ROUTES.ADMIN_JADWAL, label: 'Manajemen Jadwal', icon: CalendarDays, roles: ['admin', 'superadmin'] as Role[] },
 
   // Guru Links
+  { href: ROUTES.GURU_JADWAL, label: 'Jadwal Mengajar', icon: CalendarDays, roles: ['guru', 'superadmin'] as Role[] },
   { href: ROUTES.GURU_PENGAJARAN, label: 'Pengajaran', icon: Presentation, roles: ['guru', 'superadmin'] as Role[] },
   { href: ROUTES.GURU_TUGAS, label: 'Manajemen Tugas', icon: FilePlus2, roles: ['guru', 'superadmin'] as Role[] },
   { href: ROUTES.GURU_ABSENSI, label: 'Absensi Siswa', icon: UserCheck, roles: ['guru', 'superadmin'] as Role[] },
