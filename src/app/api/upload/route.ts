@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const uploadsDir = path.join(process.cwd(), "/public/uploads");
 
@@ -14,6 +15,11 @@ async function ensureDirExists(dirPath: string) {
 }
 
 export async function POST(request: NextRequest) {
+  const authenticatedUser = getAuthenticatedUser(request);
+  if (!authenticatedUser) {
+    return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
+  }
+
   await ensureDirExists(uploadsDir);
   
   try {

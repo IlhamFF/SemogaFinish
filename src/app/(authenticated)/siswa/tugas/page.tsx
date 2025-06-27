@@ -47,10 +47,9 @@ export default function SiswaTugasPage() {
     }
     setIsLoading(true);
     try {
-      // Fetch both tasks and user's submissions in parallel
       const [tugasRes, submissionsRes] = await Promise.all([
-        fetch(`/api/tugas`), // API filters by class for siswa
-        fetch(`/api/tugas/submissions/me`) // API gets all submissions for the current user
+        fetch(`/api/tugas`),
+        fetch(`/api/tugas/submissions/me`)
       ]);
       
       if (!tugasRes.ok || !submissionsRes.ok) {

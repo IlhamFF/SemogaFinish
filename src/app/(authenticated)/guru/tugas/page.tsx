@@ -444,7 +444,8 @@ export default function GuruTugasPage() {
             </DialogHeader>
             <Form {...tugasForm}>
                 <form onSubmit={tugasForm.handleSubmit(handleFormSubmit)} className="flex-grow flex flex-col overflow-y-hidden">
-                  <div className="flex-grow overflow-y-auto -m-6 p-6 space-y-4">
+                  <ScrollArea className="-m-6 p-6">
+                  <div className="space-y-4">
                     <FormField control={tugasForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Tugas</FormLabel><FormControl><Input placeholder="Contoh: Latihan Soal Bab 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FormField control={tugasForm.control} name="mapel" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger>{isLoadingTeachingSubjects ? <Loader2 className="h-4 w-4 animate-spin" /> : <SelectValue placeholder="Pilih mapel" />}</SelectTrigger></FormControl><SelectContent>{teachingSubjects.map(subject => (<SelectItem key={subject} value={subject}>{subject}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
@@ -454,7 +455,8 @@ export default function GuruTugasPage() {
                     <FormField control={tugasForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi Tugas (Opsional)</FormLabel><FormControl><Textarea placeholder="Instruksi detail untuk siswa..." {...field} value={field.value ?? ""} rows={3} /></FormControl><FormMessage /></FormItem>)} />
                     <FormField control={tugasForm.control} name="fileLampiranInput" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>File Lampiran (Opsional) {editingTugas?.namaFileLampiran ? `(File saat ini: ${editingTugas.namaFileLampiran}. Kosongkan jika tidak diubah)` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>PDF, DOC, dll.</FormDescription><FormMessage /></FormItem>)} />
                   </div>
-                  <DialogFooter className="flex-shrink-0 border-t pt-4"><Button type="button" variant="outline" onClick={() => {setIsFormOpen(false); setEditingTugas(null);}} disabled={isSubmitting}>Batal</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingTugas ? "Simpan Perubahan" : "Simpan Tugas"}</Button></DialogFooter>
+                  </ScrollArea>
+                  <DialogFooter className="flex-shrink-0 border-t pt-4 mt-6"><Button type="button" variant="outline" onClick={() => {setIsFormOpen(false); setEditingTugas(null);}} disabled={isSubmitting}>Batal</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingTugas ? "Simpan Perubahan" : "Simpan Tugas"}</Button></DialogFooter>
                 </form>
             </Form>
         </DialogContent>
@@ -566,4 +568,3 @@ export default function GuruTugasPage() {
     </div>
   );
 }
-
