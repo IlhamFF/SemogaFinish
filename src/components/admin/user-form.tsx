@@ -121,9 +121,9 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
   const handleFormSubmit = async (values: UserFormValues) => {
     const submitValues: any = { ...values };
 
-    if (values.role === 'guru' && typeof values.mataPelajaran === 'string') {
-        submitValues.mataPelajaran = [values.mataPelajaran];
-    } else if (values.role !== 'guru') {
+    if (values.role === 'guru' && typeof values.mataPelajaran === 'string' && values.mataPelajaran) {
+        submitValues.mataPelajaran = values.mataPelajaran.split(',').map(s => s.trim()).filter(Boolean);
+    } else {
         submitValues.mataPelajaran = null;
     }
 
@@ -464,4 +464,3 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
     </Dialog>
   );
 }
-

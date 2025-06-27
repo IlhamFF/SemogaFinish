@@ -24,7 +24,7 @@ const userCreateSchema = z.object({
   joinDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Format tanggal bergabung YYYY-MM-DD" }).optional().nullable(),
   avatarUrl: z.string().optional().nullable().or(z.literal('')),
   kelas: z.string().optional().nullable(), 
-  mataPelajaran: z.string().optional().nullable(), 
+  mataPelajaran: z.array(z.string()).optional().nullable(),
   isVerified: z.boolean().optional().default(false),
   firebaseUid: z.string().optional().nullable(), 
 });
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
       nip: profileData.nip,
       joinDate: profileData.joinDate || new Date().toISOString().split('T')[0],
       kelasId: profileData.kelas, 
-      mataPelajaran: profileData.mataPelajaran ? [profileData.mataPelajaran] : undefined,
+      mataPelajaran: profileData.mataPelajaran || undefined,
     });
     
     if (password) {

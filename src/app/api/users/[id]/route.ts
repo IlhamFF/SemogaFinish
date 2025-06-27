@@ -20,8 +20,8 @@ const userUpdateSchema = z.object({
   nip: z.string().optional().nullable(),
   joinDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Format tanggal bergabung YYYY-MM-DD" }).optional().nullable(),
   avatarUrl: z.string().optional().nullable().or(z.literal('')),
-  kelas: z.string().optional().nullable(), // Maps to kelasId
-  mataPelajaran: z.string().optional().nullable(),
+  kelas: z.string().optional().nullable(),
+  mataPelajaran: z.array(z.string()).optional().nullable(),
 });
 
 export async function GET(
@@ -126,7 +126,7 @@ export async function PUT(
     if (validatedData.joinDate !== undefined) updateData.joinDate = validatedData.joinDate;
     if (validatedData.avatarUrl !== undefined) updateData.image = validatedData.avatarUrl;
     if (validatedData.kelas !== undefined) updateData.kelasId = validatedData.kelas;
-    if (validatedData.mataPelajaran !== undefined) updateData.mataPelajaran = [validatedData.mataPelajaran];
+    if (validatedData.mataPelajaran !== undefined) updateData.mataPelajaran = validatedData.mataPelajaran;
 
 
     if (Object.keys(updateData).length === 0) {
