@@ -1,3 +1,4 @@
+
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
@@ -12,6 +13,9 @@ import { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
 import { JadwalPelajaranEntity } from "@/entities/jadwal-pelajaran.entity";
 import { TugasEntity } from "@/entities/tugas.entity";
 import { TugasSubmissionEntity } from "@/entities/tugas-submission.entity";
+import { TestEntity } from "@/entities/test.entity";
+import { TestSubmissionEntity } from "@/entities/test-submission.entity";
+import { AbsensiSiswaEntity, type StatusKehadiran } from "@/entities/absensi-siswa.entity";
 import { NilaiSemesterSiswaEntity, type SemesterTypeEntity } from "@/entities/nilai-semester-siswa.entity";
 import type { Role } from "@/types";
 import { KATEGORI_MAPEL } from "@/lib/constants";
@@ -44,7 +48,9 @@ const GURU_DATA = [
 
 const RUANGAN_DATA = [
     { nama: "Kelas X IPA 1", kode: "X-IPA-1", kapasitas: 36 },
-    { nama: "Kelas XI IPS 2", kode: "XI-IPS-2", kapasitas: 36 },
+    { nama: "Kelas X IPS 1", kode: "X-IPS-1", kapasitas: 36 },
+    { nama: "Kelas XI IPA 1", kode: "XI-IPA-1", kapasitas: 36 },
+    { nama: "Kelas XI IPS 1", kode: "XI-IPS-1", kapasitas: 36 },
     { nama: "Laboratorium Fisika", kode: "LAB-FIS", kapasitas: 40 },
     { nama: "Laboratorium Biologi", kode: "LAB-BIO", kapasitas: 40 },
     { nama: "Ruang Multimedia", kode: "MULTI-1", kapasitas: 50 },
@@ -111,7 +117,7 @@ export async function GET(request: NextRequest) {
         console.log("Menghapus data lama...");
         const superAdmin = await queryRunner.manager.findOne(UserEntity, { where: { role: 'superadmin' } });
         const tablesToClear = [
-            "nilai_semester_siswa", "tugas_submissions", "tugas", "jadwal_pelajaran", "slot_waktu", "ruangan", "mata_pelajaran"
+            "nilai_semester_siswa", "absensi_siswa", "test_submissions", "tugas_submissions", "tugas", "tests", "jadwal_pelajaran", "slot_waktu", "ruangan", "mata_pelajaran"
         ];
         for (const table of tablesToClear) {
             await queryRunner.query(`DELETE FROM ${table};`);
@@ -190,17 +196,37 @@ export async function GET(request: NextRequest) {
                     const slot = createdSlots[i];
                     const ruangan = createdRuangans[Math.floor(Math.random() * createdRuangans.length)];
 
-                    // Cek konflik sederhana
-                     const isSlotTaken = await jadwalRepo.findOne({ where: { kelas, hari, slotWaktuId: slot.id } });
-                     const isGuruTaken = await jadwalRepo.findOne({ where: { guruId: guru.id, hari, slotWaktuId: slot.id }});
-                     if (!isSlotTaken && !isGuruTaken) {
+                    const isSlotTaken = await jadwalRepo.findOne({ where: { kelas, hari, slotWaktuId: slot.id } });
+                    const isGuruTaken = await jadwalRepo.findOne({ where: { guruId: guru.id, hari, slotWaktuId: slot.id }});
+                    if (!isSlotTaken && !isGuruTaken) {
                         const newJadwal = jadwalRepo.create({ kelas, hari, guruId: guru.id, mapelId: mapel.id, slotWaktuId: slot.id, ruanganId: ruangan.id });
                         createdJadwal.push(await jadwalRepo.save(newJadwal));
-                     }
+                    }
                 }
             }
         }
         console.log(`${createdJadwal.length} jadwal pelajaran berhasil dibuat.`);
+        
+        // --- Seed Absensi ---
+        const absensiRepo = queryRunner.manager.getRepository(AbsensiSiswaEntity);
+        let createdAbsensiCount = 0;
+        const absensiStatuses: StatusKehadiran[] = ["Hadir", "Hadir", "Hadir", "Hadir", "Hadir", "Hadir", "Sakit", "Izin", "Alpha"];
+        for (const jadwal of createdJadwal.slice(0, 50)) { // Ambil 50 jadwal acak untuk diisi absensinya
+            const siswaDiKelas = createdSiswa.filter(s => s.kelasId === jadwal.kelas);
+            for(const siswa of siswaDiKelas) {
+                const status = absensiStatuses[Math.floor(Math.random() * absensiStatuses.length)];
+                const newAbsensi = absensiRepo.create({
+                    siswaId: siswa.id,
+                    jadwalPelajaranId: jadwal.id,
+                    tanggalAbsensi: new Date().toISOString().split('T')[0],
+                    statusKehadiran: status
+                });
+                await absensiRepo.save(newAbsensi);
+                createdAbsensiCount++;
+            }
+        }
+        console.log(`${createdAbsensiCount} absensi berhasil dibuat.`);
+
 
         // --- Seed Tugas & Submissions ---
         const tugasRepo = queryRunner.manager.getRepository(TugasEntity);
@@ -244,6 +270,37 @@ export async function GET(request: NextRequest) {
         }
         console.log(`${createdTugasCount} tugas dan ${createdSubmissionCount} submission berhasil dibuat.`);
         
+        // --- Seed Test & Submissions ---
+        const testRepo = queryRunner.manager.getRepository(TestEntity);
+        const testSubmissionRepo = queryRunner.manager.getRepository(TestSubmissionEntity);
+        let createdTestCount = 0;
+        for (const jadwal of createdJadwal.slice(0,10)) { // Buat test untuk 10 jadwal
+            const newTest = testRepo.create({
+                judul: `Kuis ${jadwal.mapel.nama}`,
+                mapel: jadwal.mapel.nama,
+                kelas: jadwal.kelas,
+                tanggal: new Date(),
+                durasi: 60,
+                tipe: "Kuis",
+                status: "Selesai",
+                uploaderId: jadwal.guruId
+            });
+            const savedTest = await testRepo.save(newTest);
+            createdTestCount++;
+            const siswaDiKelas = createdSiswa.filter(s => s.kelasId === jadwal.kelas);
+            for(const siswa of siswaDiKelas) {
+                const newSubmission = testSubmissionRepo.create({
+                    siswaId: siswa.id,
+                    testId: savedTest.id,
+                    waktuMulai: new Date(),
+                    waktuSelesai: new Date(Date.now() + 30 * 60 * 1000), // 30 menit kemudian
+                    status: "Selesai"
+                });
+                await testSubmissionRepo.save(newSubmission);
+            }
+        }
+        console.log(`${createdTestCount} test berhasil dibuat.`);
+
         // --- Seed Nilai Semester ---
         const nilaiRepo = queryRunner.manager.getRepository(NilaiSemesterSiswaEntity);
         const createdNilai = [];
@@ -308,3 +365,5 @@ export async function GET(request: NextRequest) {
         await queryRunner.release();
     }
 }
+
+    
