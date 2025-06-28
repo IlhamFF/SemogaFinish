@@ -14,6 +14,7 @@ import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/u
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { NilaiSemesterSiswa } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { ROUTES } from '@/lib/constants';
 
 const chartConfig = {
   nilaiAkhir: { label: "Nilai Akhir", color: "hsl(var(--primary))" },
@@ -64,7 +65,7 @@ export default function SiswaNilaiPage() {
   };
   
   const handleDownloadRapor = () => {
-    toast({ title: "Fitur Dalam Pengembangan", description: "Fungsi untuk mengunduh rapor dalam format PDF akan segera tersedia." });
+    window.open(`/siswa/rapor/cetak`, '_blank');
   }
 
   const { averageGrade, totalGradedItems, chartData } = useMemo(() => {

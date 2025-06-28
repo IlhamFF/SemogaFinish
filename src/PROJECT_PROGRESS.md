@@ -71,7 +71,7 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - [x] Pengumpulan tugas online (termasuk unggah file jawaban).
 - [x] Pelaksanaan ujian online (Alur start/finish test dan bank soal terintegrasi penuh).
 - [x] Halaman Nilai & Rapor (Menampilkan nilai akhir per semester & grafik).
-- [ ] Halaman Rapor (Cetak PDF belum diimplementasikan).
+- [x] Halaman Rapor (Cetak PDF fungsional via Print-to-PDF).
 
 ## 10. Struktur & Antarmuka Pengguna (UI) Aplikasi (100%)
 - [x] Tata letak aplikasi responsif dengan Sidebar dan Header.
@@ -94,14 +94,14 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - [x] Proses Absensi Siswa yang Detail.
 - [x] Proses Penilaian Siswa yang Detail.
 - [x] Visualisasi data kehadiran di dasbor.
-- [/] Generate rapor dalam format HTML/Cetak PDF (Tombol ada, fungsi belum).
+- [x] Generate rapor dalam format HTML untuk dicetak ke PDF.
 
 ## 13. Fitur yang Masih Berupa Simulasi atau Belum Selesai
 - **Impor Pengguna**: Antarmuka dan API sudah ada, namun backend hanya memberikan respons berhasil tanpa mem-parsing file CSV/Excel.
 - **Impor Jadwal**: Sama seperti Impor Pengguna, API hanya memberikan respons berhasil tanpa mem-parsing file.
 - **Deteksi Konflik Jadwal**: Tombol "Deteksi Konflik" dan "Ketersediaan Guru" di halaman jadwal admin adalah placeholder dan belum memiliki fungsi.
 - **Pengiriman Email**: Menggunakan Nodemailer dengan Ethereal untuk simulasi di lingkungan pengembangan. Perlu diubah ke layanan SMTP produksi (seperti SendGrid, Mailgun, dll).
-- **Cetak Laporan**: Tombol untuk mencetak rapor atau laporan lain adalah placeholder dan belum menghasilkan dokumen PDF atau HTML untuk dicetak.
+- **Cetak Laporan Admin/Pimpinan**: Tombol untuk mencetak laporan lain (selain rapor siswa) adalah placeholder.
 ---
 **Perkiraan Progres Keseluruhan Proyek (Non-AI): Sekitar 99%**
 ---
