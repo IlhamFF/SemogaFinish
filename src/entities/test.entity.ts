@@ -3,9 +3,10 @@ import "reflect-metadata"; // Ensure this is the very first import
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from "typeorm";
 import type { UserEntity } from "./user.entity";
 import type { TestSubmissionEntity } from "./test-submission.entity";
+import type { BankSoalTestEntity } from "./bank-soal-test.entity";
 
 export type TestTipe = "Kuis" | "Ulangan Harian" | "UTS" | "UAS" | "Lainnya";
-export type TestStatus = "Draf" | "Terjadwal" | "Berlangsung" | "Selesai" | "Menunggu Hasil" | "Dinilai";
+export type TestStatus = "Draf" | "Terjadwal" | "Berlangsung" | "Selesai" | "Dinilai";
 
 @Entity({ name: "tests" })
 export class TestEntity {
@@ -35,16 +36,13 @@ export class TestEntity {
 
   @Column({
     type: "enum",
-    enum: ["Draf", "Terjadwal", "Berlangsung", "Selesai", "Menunggu Hasil", "Dinilai"],
+    enum: ["Draf", "Terjadwal", "Berlangsung", "Selesai", "Dinilai"],
     default: "Draf",
   })
   status!: TestStatus;
 
   @Column({ type: "text", nullable: true })
   deskripsi?: string | null;
-
-  @Column({ type: "int", nullable: true })
-  jumlahSoal?: number | null;
 
   @Column({ type: "uuid" })
   uploaderId!: string;
@@ -55,6 +53,9 @@ export class TestEntity {
   
   @OneToMany("TestSubmissionEntity", (submission: TestSubmissionEntity) => submission.test)
   submissions?: TestSubmissionEntity[];
+
+  @OneToMany("BankSoalTestEntity", (bankSoalTest) => bankSoalTest.test)
+  bankSoalTest?: BankSoalTestEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;

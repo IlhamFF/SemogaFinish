@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
-import { ScrollText, PlusCircle, Search, Edit3, Trash2, PlayCircle, Loader2, CalendarClock, Users as UsersIcon } from "lucide-react";
+import { ScrollText, PlusCircle, Search, Edit3, Trash2, PlayCircle, Loader2, CalendarClock, Users as UsersIcon, ListPlus } from "lucide-react";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
@@ -22,10 +22,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { SCHOOL_CLASSES_PER_MAJOR_GRADE, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS } from "@/lib/constants";
-import type { Test as TestType, TestStatus, TestTipe, TestSubmission, JadwalPelajaran } from "@/types"; 
+import type { Test as TestType, TestStatus, TestTipe, TestSubmission, JadwalPelajaran, Soal } from "@/types"; 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 
 const testSchema = z.object({
@@ -35,7 +37,6 @@ const testSchema = z.object({
   tanggal: z.date({ required_error: "Tanggal pelaksanaan wajib diisi." }),
   durasi: z.coerce.number().min(5, { message: "Durasi minimal 5 menit." }),
   tipe: z.enum(["Kuis", "Ulangan Harian", "UTS", "UAS", "Lainnya"], { required_error: "Tipe test wajib dipilih."}),
-  jumlahSoal: z.coerce.number().min(1, { message: "Jumlah soal minimal 1."}).optional().nullable(),
   deskripsi: z.string().optional().nullable(),
   status: z.enum(["Draf", "Terjadwal", "Berlangsung", "Selesai", "Dinilai"]).optional(),
 });
@@ -66,6 +67,15 @@ export default function GuruTestPage() {
   
   const [teachingSubjects, setTeachingSubjects] = useState<string[]>([]);
   const [isLoadingTeachingSubjects, setIsLoadingTeachingSubjects] = useState(true);
+  
+  // Soal Manager State
+  const [isSoalManagerOpen, setIsSoalManagerOpen] = useState(false);
+  const [currentTestForSoal, setCurrentTestForSoal] = useState<TestType | null>(null);
+  const [allBankSoal, setAllBankSoal] = useState<Soal[]>([]);
+  const [isLoadingBankSoal, setIsLoadingBankSoal] = useState(false);
+  const [selectedSoalIds, setSelectedSoalIds] = useState<Set<string>>(new Set());
+  const [isSoalSubmitting, setIsSoalSubmitting] = useState(false);
+
 
   const mockKelasList = React.useMemo(() => {
     const kls: string[] = ["Semua Kelas X", "Semua Kelas XI", "Semua Kelas XII"];
@@ -81,7 +91,7 @@ export default function GuruTestPage() {
 
   const testForm = useForm<TestFormValues>({
     resolver: zodResolver(testSchema),
-    defaultValues: { judul: "", mapel: undefined, kelas: undefined, tanggal: new Date(), durasi: 60, tipe: undefined, jumlahSoal: undefined, deskripsi: "", status: "Draf" },
+    defaultValues: { judul: "", mapel: undefined, kelas: undefined, tanggal: new Date(), durasi: 60, tipe: undefined, deskripsi: "", status: "Draf" },
   });
   
   const fetchTests = useCallback(async () => {
@@ -135,7 +145,6 @@ export default function GuruTestPage() {
           tanggal: editingTest.tanggal ? parseISO(editingTest.tanggal) : new Date(),
           durasi: editingTest.durasi,
           tipe: editingTest.tipe as TestTipe,
-          jumlahSoal: editingTest.jumlahSoal ?? undefined,
           deskripsi: editingTest.deskripsi || "",
           status: editingTest.status
         });
@@ -143,7 +152,7 @@ export default function GuruTestPage() {
         const defaultDate = new Date();
         defaultDate.setDate(defaultDate.getDate() + 7);
         defaultDate.setHours(8, 0, 0, 0);
-        testForm.reset({ judul: "", mapel: undefined, kelas: undefined, tanggal: defaultDate, durasi: 60, tipe: undefined, jumlahSoal: undefined, deskripsi: "", status: "Draf" });
+        testForm.reset({ judul: "", mapel: undefined, kelas: undefined, tanggal: defaultDate, durasi: 60, tipe: undefined, deskripsi: "", status: "Draf" });
       }
     }
   }, [editingTest, testForm, isFormOpen]);
@@ -268,6 +277,64 @@ export default function GuruTestPage() {
     }
   };
 
+  const handleOpenSoalManager = async (test: TestType) => {
+    setCurrentTestForSoal(test);
+    setIsSoalManagerOpen(true);
+    setIsLoadingBankSoal(true);
+    try {
+      const [bankSoalRes, testSoalRes] = await Promise.all([
+        fetch('/api/bank-soal'),
+        fetch(`/api/test/${test.id}/soal`)
+      ]);
+      if(!bankSoalRes.ok) throw new Error("Gagal mengambil bank soal.");
+      if(!testSoalRes.ok) throw new Error("Gagal mengambil soal test ini.");
+
+      const bankSoalData: Soal[] = await bankSoalRes.json();
+      const testSoalData: Soal[] = await testSoalRes.json();
+
+      setAllBankSoal(bankSoalData);
+      setSelectedSoalIds(new Set(testSoalData.map(s => s.id)));
+
+    } catch (error:any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoadingBankSoal(false);
+    }
+  }
+
+  const handleToggleSoalSelection = (soalId: string) => {
+    setSelectedSoalIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(soalId)) {
+        newSet.delete(soalId);
+      } else {
+        newSet.add(soalId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSaveTestSoal = async () => {
+    if (!currentTestForSoal) return;
+    setIsSoalSubmitting(true);
+    try {
+      const response = await fetch(`/api/test/${currentTestForSoal.id}/soal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ soalIds: Array.from(selectedSoalIds) }),
+      });
+      if (!response.ok) throw new Error((await response.json()).message || "Gagal menyimpan perubahan soal.");
+      toast({ title: "Berhasil!", description: `Daftar soal untuk test "${currentTestForSoal.judul}" telah diperbarui.` });
+      setIsSoalManagerOpen(false);
+      fetchTests(); // Refresh the main test list to update soalCount
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSoalSubmitting(false);
+    }
+  }
+
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -295,17 +362,54 @@ export default function GuruTestPage() {
           ) : filteredTests.length > 0 ? (
             <ScrollArea className="h-[60vh] border rounded-md">
               <Table>
-                <TableHeader className="bg-muted/50 sticky top-0"><TableRow><TableHead className="min-w-[200px]">Judul Test/Ujian</TableHead><TableHead>Mapel & Kelas</TableHead><TableHead>Tanggal & Durasi</TableHead><TableHead>Tipe</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Tindakan</TableHead></TableRow></TableHeader>
-                <TableBody>{filteredTests.map((test) => (<TableRow key={test.id}><TableCell className="max-w-xs"><div className="font-medium truncate" title={test.judul}>{test.judul}</div>{test.deskripsi && <p className="text-xs text-muted-foreground truncate" title={test.deskripsi}>{test.deskripsi}</p>}</TableCell><TableCell><div className="text-sm">{test.mapel}</div><div className="text-xs text-muted-foreground">{test.kelas}</div></TableCell><TableCell><div className="text-sm">{format(parseISO(test.tanggal), "dd MMM yyyy, HH:mm", { locale: localeID })}</div><div className="text-xs text-muted-foreground">{test.durasi} Menit</div></TableCell><TableCell className="text-sm">{test.tipe}</TableCell><TableCell><span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusBadgeClass(test.status)}`}>{test.status}</span></TableCell><td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">{(test.status === "Selesai" || test.status === "Dinilai") && <Button variant="ghost" size="sm" onClick={() => handleOpenSubmissionDialog(test)} className="mr-1"><UsersIcon className="h-4 w-4"/> Submissions</Button>}<Button variant="ghost" size="icon" onClick={() => openFormDialog(test)} className="mr-1 h-8 w-8"><Edit3 className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={() => openDeleteDialog(test)} className="text-destructive hover:text-destructive/80 h-8 w-8"><Trash2 className="h-4 w-4" /></Button></td></TableRow>))}</TableBody>
+                <TableHeader className="bg-muted/50 sticky top-0"><TableRow><TableHead className="min-w-[200px]">Judul Test/Ujian</TableHead><TableHead>Mapel & Kelas</TableHead><TableHead>Jadwal</TableHead><TableHead className="text-center">Soal</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Tindakan</TableHead></TableRow></TableHeader>
+                <TableBody>{filteredTests.map((test) => (<TableRow key={test.id}><TableCell className="max-w-xs"><div className="font-medium truncate" title={test.judul}>{test.judul}</div>{test.deskripsi && <p className="text-xs text-muted-foreground truncate" title={test.deskripsi}>{test.deskripsi}</p>}</TableCell><TableCell><div className="text-sm">{test.mapel}</div><div className="text-xs text-muted-foreground">{test.kelas}</div></TableCell><TableCell><div className="text-sm">{format(parseISO(test.tanggal), "dd MMM yyyy, HH:mm", { locale: localeID })}</div><div className="text-xs text-muted-foreground">{test.durasi} Menit</div></TableCell><TableCell className="text-center">{test.soalCount ?? 0}</TableCell><TableCell><span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusBadgeClass(test.status)}`}>{test.status}</span></TableCell><td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium"><Button variant="outline" size="sm" onClick={() => handleOpenSoalManager(test)} className="mr-1"><ListPlus className="h-4 w-4 mr-1"/>Kelola Soal</Button>{(test.status === "Selesai" || test.status === "Dinilai") && <Button variant="ghost" size="sm" onClick={() => handleOpenSubmissionDialog(test)} className="mr-1"><UsersIcon className="h-4 w-4"/></Button>}<Button variant="ghost" size="icon" onClick={() => openFormDialog(test)} className="mr-1 h-8 w-8"><Edit3 className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={() => openDeleteDialog(test)} className="text-destructive hover:text-destructive/80 h-8 w-8"><Trash2 className="h-4 w-4" /></Button></td></TableRow>))}</TableBody>
               </Table>
             </ScrollArea>
           ) : (<div className="text-center py-8 text-muted-foreground"><ScrollText className="mx-auto h-12 w-12" /><p className="mt-2">Belum ada test/ujian yang dibuat atau filter tidak menemukan hasil.</p></div>)}
         </CardContent>
       </Card>
-      <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingTest(null); }}><DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col"><DialogHeader className="flex-shrink-0"><DialogTitle>{editingTest ? "Edit Test/Ujian" : "Buat Test/Ujian Baru"}</DialogTitle><DialogDescription>{editingTest ? `Perbarui detail untuk "${editingTest.judul}".` : "Isi detail test/ujian baru di bawah ini."}</DialogDescription></DialogHeader><Form {...testForm}><form onSubmit={testForm.handleSubmit(handleFormSubmit)} className="flex-grow flex flex-col overflow-y-hidden"><div className="flex-grow overflow-y-auto -m-6 p-6 space-y-4"><FormField control={testForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Test/Ujian</FormLabel><FormControl><Input placeholder="Ujian Tengah Semester Gasal" {...field} /></FormControl><FormMessage /></FormItem>)} /><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><FormField control={testForm.control} name="mapel" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger>{isLoadingTeachingSubjects ? <Loader2 className="h-4 w-4 animate-spin" /> : <SelectValue placeholder="Pilih mapel" />}</SelectTrigger></FormControl><SelectContent>{teachingSubjects.map(subject => (<SelectItem key={subject} value={subject}>{subject}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={testForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas Ditugaskan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kelas" /></SelectTrigger></FormControl><SelectContent><ScrollArea className="h-60">{mockKelasList.map(kls => (<SelectItem key={kls} value={kls}>{kls}</SelectItem>))}</ScrollArea></SelectContent></Select><FormDescription className="text-xs">Bisa spesifik atau umum.</FormDescription><FormMessage /></FormItem>)} /></div><FormField control={testForm.control} name="tanggal" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Tanggal & Waktu</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP HH:mm", { locale: localeID }) : <span>Pilih tanggal & waktu</span>}<CalendarClock className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /><div className="p-3 border-t border-border"><Input type="time" defaultValue={field.value ? format(field.value, "HH:mm") : "08:00"} onChange={(e) => { const time = e.target.value.split(':'); const newDate = new Date(field.value || new Date()); newDate.setHours(parseInt(time[0]), parseInt(time[1])); field.onChange(newDate); }} className="w-full"/></div></PopoverContent></Popover><FormMessage /></FormItem>)} /><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><FormField control={testForm.control} name="durasi" render={({ field }) => (<FormItem><FormLabel>Durasi (Menit)</FormLabel><FormControl><Input type="number" placeholder="90" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={testForm.control} name="tipe" render={({ field }) => (<FormItem><FormLabel>Tipe Test</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih tipe" /></SelectTrigger></FormControl><SelectContent>{ (["Kuis", "Ulangan Harian", "UTS", "UAS", "Lainnya"] as TestTipe[]).map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} /></div><FormField control={testForm.control} name="jumlahSoal" render={({ field }) => (<FormItem><FormLabel>Jumlah Soal (Opsional)</FormLabel><FormControl><Input type="number" placeholder="25" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>)} /><FormField control={testForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi/Instruksi (Opsional)</FormLabel><FormControl><Textarea placeholder="Instruksi tambahan..." {...field} value={field.value ?? ""} rows={3} /></FormControl><FormMessage /></FormItem>)} /><FormField control={testForm.control} name="status" render={({ field }) => (<FormItem><FormLabel>Status Test</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih status" /></SelectTrigger></FormControl><SelectContent>{(["Draf", "Terjadwal", "Berlangsung", "Selesai", "Dinilai"] as TestStatus[]).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormDescription>Atur status test.</FormDescription><FormMessage /></FormItem>)} /></div><DialogFooter className="flex-shrink-0 border-t pt-4"><Button type="button" variant="outline" onClick={() => {setIsFormOpen(false); setEditingTest(null);}} disabled={isSubmitting}>Batal</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingTest ? "Simpan Perubahan" : "Simpan Test"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
+      <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingTest(null); }}><DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col"><DialogHeader className="flex-shrink-0"><DialogTitle>{editingTest ? "Edit Test/Ujian" : "Buat Test/Ujian Baru"}</DialogTitle><DialogDescription>{editingTest ? `Perbarui detail untuk "${editingTest.judul}".` : "Isi detail test/ujian baru di bawah ini."}</DialogDescription></DialogHeader><Form {...testForm}><form onSubmit={testForm.handleSubmit(handleFormSubmit)} className="flex-grow flex flex-col overflow-y-hidden"><div className="flex-grow overflow-y-auto -m-6 p-6 space-y-4"><FormField control={testForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Test/Ujian</FormLabel><FormControl><Input placeholder="Ujian Tengah Semester Gasal" {...field} /></FormControl><FormMessage /></FormItem>)} /><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><FormField control={testForm.control} name="mapel" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger>{isLoadingTeachingSubjects ? <Loader2 className="h-4 w-4 animate-spin" /> : <SelectValue placeholder="Pilih mapel" />}</SelectTrigger></FormControl><SelectContent>{teachingSubjects.map(subject => (<SelectItem key={subject} value={subject}>{subject}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} /><FormField control={testForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas Ditugaskan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kelas" /></SelectTrigger></FormControl><SelectContent><ScrollArea className="h-60">{mockKelasList.map(kls => (<SelectItem key={kls} value={kls}>{kls}</SelectItem>))}</ScrollArea></SelectContent></Select><FormDescription className="text-xs">Bisa spesifik atau umum.</FormDescription><FormMessage /></FormItem>)} /></div><FormField control={testForm.control} name="tanggal" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Tanggal & Waktu</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP HH:mm", { locale: localeID }) : <span>Pilih tanggal & waktu</span>}<CalendarClock className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus /><div className="p-3 border-t border-border"><Input type="time" defaultValue={field.value ? format(field.value, "HH:mm") : "08:00"} onChange={(e) => { const time = e.target.value.split(':'); const newDate = new Date(field.value || new Date()); newDate.setHours(parseInt(time[0]), parseInt(time[1])); field.onChange(newDate); }} className="w-full"/></div></PopoverContent></Popover><FormMessage /></FormItem>)} /><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><FormField control={testForm.control} name="durasi" render={({ field }) => (<FormItem><FormLabel>Durasi (Menit)</FormLabel><FormControl><Input type="number" placeholder="90" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={testForm.control} name="tipe" render={({ field }) => (<FormItem><FormLabel>Tipe Test</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih tipe" /></SelectTrigger></FormControl><SelectContent>{ (["Kuis", "Ulangan Harian", "UTS", "UAS", "Lainnya"] as TestTipe[]).map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} /></div><FormField control={testForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi/Instruksi (Opsional)</FormLabel><FormControl><Textarea placeholder="Instruksi tambahan..." {...field} value={field.value ?? ""} rows={3} /></FormControl><FormMessage /></FormItem>)} /><FormField control={testForm.control} name="status" render={({ field }) => (<FormItem><FormLabel>Status Test</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih status" /></SelectTrigger></FormControl><SelectContent>{(["Draf", "Terjadwal", "Berlangsung", "Selesai", "Dinilai"] as TestStatus[]).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormDescription>Atur status test.</FormDescription><FormMessage /></FormItem>)} /></div><DialogFooter className="flex-shrink-0 border-t pt-4"><Button type="button" variant="outline" onClick={() => {setIsFormOpen(false); setEditingTest(null);}} disabled={isSubmitting}>Batal</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingTest ? "Simpan Perubahan" : "Simpan Test"}</Button></DialogFooter></form></Form></DialogContent></Dialog>
       <AlertDialog open={!!testToDelete} onOpenChange={(open) => !open && setTestToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Hapus Test</AlertDialogTitle><AlertDialogDescription>Yakin ingin hapus test "{testToDelete?.judul}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setTestToDelete(null)} disabled={isSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       <Dialog open={isSubmissionDialogOpen} onOpenChange={setIsSubmissionDialogOpen}><DialogContent className="max-w-4xl max-h-[90vh] flex flex-col"><DialogHeader className="flex-shrink-0"><DialogTitle>Submission Test: {selectedTestForSubmissions?.judul}</DialogTitle><DialogDescription>Daftar siswa yang telah mengerjakan test ini. Mapel: {selectedTestForSubmissions?.mapel}, Kelas: {selectedTestForSubmissions?.kelas}</DialogDescription></DialogHeader><div className="flex-grow overflow-y-auto py-4">{isLoadingSubmissions ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : submissionsForTest.length > 0 ? (<Table><TableHeader><TableRow><TableHead className="w-[200px]">Nama Siswa</TableHead><TableHead>Waktu Mulai</TableHead><TableHead>Waktu Selesai</TableHead><TableHead>Status</TableHead><TableHead className="w-[100px]">Nilai</TableHead><TableHead>Catatan Guru</TableHead><TableHead className="text-right w-[120px]">Aksi</TableHead></TableRow></TableHeader><TableBody>{submissionsForTest.map((sub) => (<TableRow key={sub.id}><TableCell className="font-medium">{sub.siswa?.fullName || sub.siswa?.name || sub.siswaId}</TableCell><TableCell>{format(parseISO(sub.waktuMulai), "dd MMM, HH:mm:ss", { locale: localeID })}</TableCell><TableCell>{sub.waktuSelesai ? format(parseISO(sub.waktuSelesai), "dd MMM, HH:mm:ss", { locale: localeID }) : "-"}</TableCell><TableCell><Badge variant={sub.status === "Dinilai" ? "default" : sub.status === "Selesai" ? "secondary" : "outline"}>{sub.status}</Badge></TableCell><TableCell><Input type="number" min="0" max="100" value={gradingValues[sub.id]?.nilai || ""} onChange={(e) => handleGradingInputChange(sub.id, "nilai", e.target.value)} className="h-8 text-sm" disabled={isGradingSubmitting[sub.id] || sub.status === "Dinilai"} /></TableCell><TableCell><Textarea value={gradingValues[sub.id]?.catatanGuru || ""} onChange={(e) => handleGradingInputChange(sub.id, "catatanGuru", e.target.value)} className="text-xs min-h-[40px]" rows={1} placeholder="Catatan..." disabled={isGradingSubmitting[sub.id] || sub.status === "Dinilai"} /></TableCell><TableCell className="text-right">{sub.status !== "Dinilai" ? (<Button size="sm" onClick={() => handleGradeTestSubmission(sub)} disabled={isGradingSubmitting[sub.id]}>{isGradingSubmitting[sub.id] && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}Simpan Nilai</Button>) : (<Button variant="outline" size="sm" onClick={() => { setIsGradingSubmitting(prev => ({...prev, [sub.id]: false})); setSubmissionsForTest(prevSubs => prevSubs.map(s => s.id === sub.id ? {...s, status: "Selesai" as TestType['status']} : s)); }}><Edit3 className="mr-1 h-3 w-3" /> Ubah Nilai</Button>)}</TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-center text-muted-foreground py-6">Belum ada siswa yang mengerjakan test ini.</p>)}</div><DialogFooter className="flex-shrink-0 border-t pt-4"><DialogClose asChild><Button variant="outline">Tutup</Button></DialogClose></DialogFooter></DialogContent></Dialog>
+      
+      <Dialog open={isSoalManagerOpen} onOpenChange={setIsSoalManagerOpen}>
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle>Kelola Soal untuk: {currentTestForSoal?.judul}</DialogTitle>
+            <DialogDescription>Pilih soal dari bank soal untuk ditambahkan ke dalam test ini. Total dipilih: {selectedSoalIds.size} soal.</DialogDescription>
+          </DialogHeader>
+          <div className="flex-grow overflow-y-auto -mx-6 px-6 py-4 border-y">
+            {isLoadingBankSoal ? (
+              <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+            ) : allBankSoal.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow><TableHead className="w-10"></TableHead><TableHead>Pertanyaan</TableHead><TableHead>Paket</TableHead><TableHead>Tipe</TableHead></TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allBankSoal.map(soal => (
+                    <TableRow key={soal.id}>
+                      <TableCell><Checkbox checked={selectedSoalIds.has(soal.id)} onCheckedChange={() => handleToggleSoalSelection(soal.id)} /></TableCell>
+                      <TableCell className="max-w-md truncate" title={soal.pertanyaan}>{soal.pertanyaan}</TableCell>
+                      <TableCell>{soal.paketSoal}</TableCell>
+                      <TableCell>{soal.tipeSoal}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">Bank soal Anda kosong. Silakan buat soal terlebih dahulu di menu Bank Soal.</p>
+            )}
+          </div>
+          <DialogFooter className="flex-shrink-0">
+            <Button variant="outline" onClick={() => setIsSoalManagerOpen(false)}>Batal</Button>
+            <Button onClick={handleSaveTestSoal} disabled={isSoalSubmitting}>
+              {isSoalSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Simpan Perubahan Soal
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-

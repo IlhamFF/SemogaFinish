@@ -20,6 +20,7 @@ import { TestSubmissionEntity } from "@/entities/test-submission.entity";
 import { AbsensiSiswaEntity } from "@/entities/absensi-siswa.entity";
 import { NilaiSemesterSiswaEntity } from "@/entities/nilai-semester-siswa.entity";
 import { SoalEntity } from "@/entities/soal.entity";
+import { BankSoalTestEntity } from "@/entities/bank-soal-test.entity";
 
 export const dataSourceOptions: DataSourceOptions = {
   type: "postgres",
@@ -50,6 +51,7 @@ export const dataSourceOptions: DataSourceOptions = {
     AbsensiSiswaEntity,
     NilaiSemesterSiswaEntity,
     SoalEntity,
+    BankSoalTestEntity,
   ],
   migrations: [], 
   subscribers: [],

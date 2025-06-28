@@ -6,7 +6,8 @@ import { TestEntity, type TestTipe, type TestStatus } from "@/entities/test.enti
 import * as z from "zod";
 import { formatISO } from 'date-fns';
 import type { FindManyOptions } from "typeorm";
-import { getAuthenticatedUser } from "@/lib/auth-utils-node"; // Import new auth util
+import { getAuthenticatedUser } from "@/lib/auth-utils-node"; 
+import { BankSoalTestEntity } from "@/entities/bank-soal-test.entity";
 
 const testCreateSchema = z.object({
   judul: z.string().min(5, { message: "Judul test minimal 5 karakter." }),
@@ -15,13 +16,10 @@ const testCreateSchema = z.object({
   tanggal: z.date({ required_error: "Tanggal pelaksanaan wajib diisi." }),
   durasi: z.coerce.number().min(5, { message: "Durasi minimal 5 menit." }),
   tipe: z.enum(["Kuis", "Ulangan Harian", "UTS", "UAS", "Lainnya"], { required_error: "Tipe test wajib dipilih."}),
-  jumlahSoal: z.coerce.number().min(1, { message: "Jumlah soal minimal 1."}).optional().nullable(),
   deskripsi: z.string().optional().nullable(),
   status: z.enum(["Draf", "Terjadwal", "Berlangsung", "Selesai", "Dinilai"]).optional().default("Draf"),
-  // uploaderId is removed, will be taken from token
 });
 
-// GET /api/test - Mendapatkan daftar test
 export async function GET(request: NextRequest) {
   const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
@@ -35,30 +33,35 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const filterKelas = searchParams.get("kelas"); 
     
-    const queryOptions: FindManyOptions<TestEntity> = {
-      relations: ["uploader"],
-      order: { tanggal: "DESC", createdAt: "DESC" } as any,
-      where: {} as any,
-    };
+    let qb = testRepo.createQueryBuilder("test")
+      .leftJoinAndSelect("test.uploader", "uploader")
+      .loadRelationCountAndMap("test.soalCount", "test.bankSoalTest")
+      .orderBy("test.tanggal", "DESC")
+      .addOrderBy("test.createdAt", "DESC");
 
     if (authenticatedUser.role === 'guru') {
-        queryOptions.where.uploaderId = authenticatedUser.id;
-        if (filterKelas) { // Guru bisa filter by kelas juga jika mereka mengajar banyak kelas
-            queryOptions.where.kelas = filterKelas;
+        qb = qb.where("test.uploaderId = :uploaderId", { uploaderId: authenticatedUser.id });
+        if (filterKelas) {
+            qb = qb.andWhere("test.kelas = :kelas", { kelas: filterKelas });
         }
     } else if (authenticatedUser.role === 'siswa') {
         const siswaKelas = (authenticatedUser as any).kelasId; 
         if (!siswaKelas) {
              return NextResponse.json({ message: "Informasi kelas siswa tidak ditemukan untuk filter test." }, { status: 400 });
         }
-        queryOptions.where.kelas = siswaKelas;
+        qb = qb.where("test.kelas = :kelas", { kelas: siswaKelas });
         // Siswa hanya boleh melihat test yang statusnya bukan Draf
-        queryOptions.where.status = z.enum(["Terjadwal", "Berlangsung", "Selesai", "Dinilai", "Menunggu Hasil"]).parse(searchParams.get("status") || "Terjadwal"); 
+        const statusFilter = z.enum(["Terjadwal", "Berlangsung", "Selesai", "Dinilai"]).optional().parse(searchParams.get("status"));
+        if(statusFilter){
+           qb = qb.andWhere("test.status = :status", { status: statusFilter });
+        } else {
+           qb = qb.andWhere("test.status != 'Draf'");
+        }
     } else if (['admin', 'superadmin'].includes(authenticatedUser.role) && filterKelas) {
-        queryOptions.where.kelas = filterKelas;
+        qb = qb.where("test.kelas = :kelas", { kelas: filterKelas });
     }
     
-    const testList = await testRepo.find(queryOptions);
+    const testList = await qb.getMany();
 
     return NextResponse.json(testList.map(t => ({
         ...t,
@@ -93,7 +96,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const { judul, mapel, kelas, tanggal, durasi, tipe, jumlahSoal, deskripsi, status } = validation.data;
+    const { judul, mapel, kelas, tanggal, durasi, tipe, deskripsi, status } = validation.data;
 
     const dataSource = await getInitializedDataSource();
     const testRepo = dataSource.getRepository(TestEntity);
@@ -106,7 +109,6 @@ export async function POST(request: NextRequest) {
       durasi,
       tipe: tipe as TestTipe,
       status: status as TestStatus,
-      jumlahSoal: jumlahSoal ?? undefined,
       deskripsi,
       uploaderId,
     });

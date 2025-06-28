@@ -1,3 +1,4 @@
+
 import "reflect-metadata"; 
 import { KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR } from "@/lib/constants";
 import type { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
@@ -232,7 +233,7 @@ export interface Test {
   tipe: TestTipe;
   status: TestStatus;
   deskripsi?: string | null;
-  jumlahSoal?: number | null;
+  soalCount?: number;
   uploaderId: string;
   uploader?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>;
   createdAt?: string;

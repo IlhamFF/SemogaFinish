@@ -1,8 +1,10 @@
+
 import "reflect-metadata";
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from "typeorm";
 import type { UserEntity } from "./user.entity";
 import type { MataPelajaranEntity } from "./mata-pelajaran.entity";
 import type { TipeSoal } from "@/types";
+import type { BankSoalTestEntity } from "./bank-soal-test.entity";
 
 export type TingkatKesulitanEntity = "Mudah" | "Sedang" | "Sulit";
 export interface PilihanJawabanEntity {
@@ -50,6 +52,9 @@ export class SoalEntity {
   @ManyToOne("UserEntity", (user) => user.id, { onDelete: "CASCADE" })
   @JoinColumn({ name: "pembuatId" })
   pembuat!: UserEntity;
+
+  @OneToMany("BankSoalTestEntity", (bankSoalTest) => bankSoalTest.soal)
+  bankSoalTest?: BankSoalTestEntity[];
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   createdAt!: Date;
