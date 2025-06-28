@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
@@ -62,6 +63,7 @@ export default function GuruBankSoalPage() {
   const [editingSoal, setEditingSoal] = useState<Soal | null>(null);
   const [soalToDelete, setSoalToDelete] = useState<Soal | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPaket, setCurrentPaket] = useState<string | null>(null);
   
   const [mapelOptions, setMapelOptions] = useState<MataPelajaran[]>([]);
 
@@ -128,6 +130,12 @@ export default function GuruBankSoalPage() {
   }, [user, fetchBankSoal, fetchMapelOptions]);
   
   const getInitialOptions = () => [ { id: 'A', text: "" }, { id: 'B', text: "" }, { id: 'C', text: "" }, { id: 'D', text: "" } ];
+  
+  const handleOpenForm = (paket?: string | null, soal?: Soal | null) => {
+    setCurrentPaket(paket || null);
+    setEditingSoal(soal || null);
+    setIsFormOpen(true);
+  }
 
   useEffect(() => {
     if(isFormOpen) {
@@ -138,12 +146,12 @@ export default function GuruBankSoalPage() {
                 pertanyaan: editingSoal.pertanyaan,
                 mapelId: editingSoal.mapel.id,
                 tingkatKesulitan: editingSoal.tingkatKesulitan,
-                pilihanJawaban: editingSoal.pilihanJawaban || getInitialOptions(),
+                pilihanJawaban: editingSoal.pilihanJawaban && editingSoal.pilihanJawaban.length > 0 ? editingSoal.pilihanJawaban : getInitialOptions(),
                 kunciJawaban: editingSoal.kunciJawaban || undefined
             });
         } else {
             soalForm.reset({
-                paketSoal: "",
+                paketSoal: currentPaket || "",
                 tipeSoal: "Pilihan Ganda",
                 pertanyaan: "",
                 mapelId: undefined,
@@ -153,7 +161,7 @@ export default function GuruBankSoalPage() {
             });
         }
     }
-  }, [isFormOpen, editingSoal, soalForm]);
+  }, [isFormOpen, editingSoal, currentPaket, soalForm]);
 
 
   const handleFormSubmit = async (values: SoalFormValues) => {
@@ -220,7 +228,7 @@ export default function GuruBankSoalPage() {
           <h1 className="text-3xl font-headline font-semibold">Bank Soal</h1>
           <p className="text-muted-foreground mt-1">Kelola koleksi paket soal untuk kuis dan ujian.</p>
         </div>
-        <Button onClick={() => { setEditingSoal(null); setIsFormOpen(true); }} disabled={isLoading}>
+        <Button onClick={() => handleOpenForm(null, null)} disabled={isLoading}>
           <PackagePlus className="mr-2 h-4 w-4" /> Buat Soal / Paket Baru
         </Button>
       </div>
@@ -247,6 +255,11 @@ export default function GuruBankSoalPage() {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
+                    <div className="flex justify-end mb-4">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenForm(paket, null)}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Tambah Soal ke Paket Ini
+                        </Button>
+                    </div>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -265,7 +278,7 @@ export default function GuruBankSoalPage() {
                             <TableCell>{soal.mapel?.nama}</TableCell>
                             <TableCell>{soal.tingkatKesulitan}</TableCell>
                             <TableCell className="text-right">
-                                <Button variant="ghost" size="sm" onClick={() => { setEditingSoal(soal); setIsFormOpen(true); }}><Edit className="h-4 w-4"/></Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleOpenForm(paket, soal)}><Edit className="h-4 w-4"/></Button>
                                 <Button variant="ghost" size="sm" onClick={() => setSoalToDelete(soal)} className="text-destructive"><Trash2 className="h-4 w-4"/></Button>
                             </TableCell>
                           </TableRow>
@@ -289,13 +302,13 @@ export default function GuruBankSoalPage() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>{editingSoal ? 'Edit Soal' : 'Buat Soal Baru'}</DialogTitle>
+            <DialogTitle>{editingSoal ? `Edit Soal di Paket "${editingSoal.paketSoal}"` : (currentPaket ? `Tambah Soal Baru ke Paket "${currentPaket}"` : 'Buat Soal & Paket Baru')}</DialogTitle>
             <DialogDescription>Isi detail pertanyaan dan pilihan jawaban di bawah ini.</DialogDescription>
           </DialogHeader>
           <Form {...soalForm}>
             <form onSubmit={soalForm.handleSubmit(handleFormSubmit)} className="flex-grow flex flex-col overflow-y-hidden">
                 <ScrollArea className="-m-6 p-6 space-y-6">
-                    <FormField control={soalForm.control} name="paketSoal" render={({ field }) => (<FormItem><FormLabel>Nama Paket Soal</FormLabel><FormControl><Input placeholder="Contoh: UTS Matematika 2024" {...field} /></FormControl><FormDescription>Kelompokkan soal dalam satu paket yang sama.</FormDescription><FormMessage /></FormItem>)} />
+                    <FormField control={soalForm.control} name="paketSoal" render={({ field }) => (<FormItem><FormLabel>Nama Paket Soal</FormLabel><FormControl><Input placeholder="Contoh: UTS Matematika 2024" {...field} disabled={!!currentPaket && !editingSoal} /></FormControl><FormDescription>Kelompokkan soal dalam satu paket yang sama.</FormDescription><FormMessage /></FormItem>)} />
                     <FormField control={soalForm.control} name="tipeSoal" render={({ field }) => (<FormItem><FormLabel>Tipe Soal</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Tipe Soal" /></SelectTrigger></FormControl><SelectContent>{(["Pilihan Ganda", "Esai"] as TipeSoal[]).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                     <FormField control={soalForm.control} name="pertanyaan" render={({ field }) => (<FormItem><FormLabel>Teks Pertanyaan</FormLabel><FormControl><Textarea rows={4} placeholder="Tuliskan pertanyaan di sini..." {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -328,7 +341,7 @@ export default function GuruBankSoalPage() {
                         </div>
                     )}
                 </ScrollArea>
-                <DialogFooter className="flex-shrink-0 pt-4 border-t">
+                <DialogFooter className="flex-shrink-0 pt-4 border-t mt-4">
                     <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSubmitting}>Batal</Button>
                     <Button type="submit" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : "Simpan Soal"}</Button>
                 </DialogFooter>
@@ -354,3 +367,6 @@ export default function GuruBankSoalPage() {
 
     </div>
   );
+}
+
+    
