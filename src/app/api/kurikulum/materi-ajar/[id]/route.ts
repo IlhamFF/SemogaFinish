@@ -13,7 +13,7 @@ const materiAjarUpdateSchema = z.object({
   mapelNama: z.string().optional(),
   jenisMateri: z.enum(JENIS_MATERI_AJAR).optional(),
   namaFileOriginal: z.string().optional().nullable(),
-  fileUrl: z.string().url({ message: "URL tidak valid." }).optional().nullable(),
+  fileUrl: z.string().optional().nullable(),
 }).refine(data => Object.keys(data).length > 0, {
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });

@@ -16,7 +16,7 @@ const rppUpdateSchema = z.object({
   kegiatanPembelajaran: z.string().optional().nullable(),
   penilaian: z.string().optional().nullable(),
   namaFileOriginal: z.string().optional().nullable(),
-  fileUrl: z.string().url().optional().nullable(),
+  fileUrl: z.string().optional().nullable(),
 }).refine(data => Object.keys(data).length > 0, {
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });

@@ -14,7 +14,7 @@ const materiAjarCreateSchema = z.object({
   mapelNama: z.string({ required_error: "Mata pelajaran wajib dipilih." }),
   jenisMateri: z.enum(JENIS_MATERI_AJAR, { required_error: "Jenis materi wajib dipilih." }),
   namaFileOriginal: z.string().optional().nullable(),
-  fileUrl: z.string().url({ message: "URL tidak valid." }).optional().nullable(),
+  fileUrl: z.string().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {

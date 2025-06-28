@@ -15,7 +15,7 @@ const tugasCreateSchema = z.object({
   tenggat: z.date({ required_error: "Tanggal tenggat wajib diisi." }),
   deskripsi: z.string().optional().nullable(),
   namaFileLampiran: z.string().optional().nullable(),
-  fileUrlLampiran: z.string().url().optional().nullable(),
+  fileUrlLampiran: z.string().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {

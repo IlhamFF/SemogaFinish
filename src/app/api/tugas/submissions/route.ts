@@ -11,7 +11,7 @@ import { isPast, parseISO } from "date-fns";
 const submissionCreateSchema = z.object({
   tugasId: z.string().uuid("ID tugas tidak valid."),
   namaFileJawaban: z.string().optional().nullable(),
-  fileUrlJawaban: z.string().url().optional().nullable(),
+  fileUrlJawaban: z.string().optional().nullable(),
   catatanSiswa: z.string().optional().nullable(),
 });
 

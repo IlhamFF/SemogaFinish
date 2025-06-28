@@ -13,7 +13,7 @@ const silabusUpdateSchema = z.object({
   kelas: z.string().min(1, { message: "Kelas wajib diisi." }).max(100).optional(),
   deskripsiSingkat: z.string().optional().nullable(),
   namaFileOriginal: z.string().optional().nullable(),
-  fileUrl: z.string().url().optional().nullable(),
+  fileUrl: z.string().optional().nullable(),
 }).refine(data => Object.keys(data).length > 0, {
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });

@@ -16,7 +16,7 @@ const rppCreateSchema = z.object({
   kegiatanPembelajaran: z.string().optional().nullable(),
   penilaian: z.string().optional().nullable(),
   namaFileOriginal: z.string().optional().nullable(),
-  fileUrl: z.string().url().optional().nullable(),
+  fileUrl: z.string().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {

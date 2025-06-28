@@ -14,7 +14,7 @@ const tugasUpdateSchema = z.object({
   tenggat: z.date().optional(),
   deskripsi: z.string().optional().nullable(),
   namaFileLampiran: z.string().optional().nullable(),
-  fileUrlLampiran: z.string().url().optional().nullable(),
+  fileUrlLampiran: z.string().optional().nullable(),
 }).refine(data => Object.keys(data).length > 0, {
   message: "Minimal satu field harus diisi untuk melakukan pembaruan.",
 });

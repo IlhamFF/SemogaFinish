@@ -13,7 +13,7 @@ const silabusCreateSchema = z.object({
   kelas: z.string().min(1, { message: "Kelas wajib diisi." }).max(100),
   deskripsiSingkat: z.string().optional().nullable(),
   namaFileOriginal: z.string().optional().nullable(),
-  fileUrl: z.string().url().optional().nullable(),
+  fileUrl: z.string().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
