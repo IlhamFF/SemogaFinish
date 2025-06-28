@@ -1,3 +1,4 @@
+
 import type { Role } from '@/types';
 
 export const APP_NAME = 'EduCentral SMA Az-Bail';
@@ -31,6 +32,7 @@ export const ROUTES = {
   GURU_ABSENSI: '/guru/absensi',
   GURU_MATERI: '/guru/materi',
   GURU_TEST: '/guru/test',
+  GURU_BANK_SOAL: '/guru/bank-soal',
   GURU_PENILAIAN: '/guru/penilaian',
   GURU_JADWAL: '/guru/jadwal',
 

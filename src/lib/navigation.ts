@@ -1,9 +1,10 @@
+
 import type { Role } from '@/types';
 import { 
     LayoutDashboard, Users, BarChart3, Settings, LogOut, BookOpenText, 
     BookOpenCheck, CalendarDays, ClipboardList, Presentation, FilePlus2, UserCheck, 
     UploadCloud, ScrollText, GraduationCap, ClipboardCheck as ClipboardCheckSiswa, 
-    BookOpen, FileText as FileTextSiswa, Award, BookCopy 
+    BookOpen, FileText as FileTextSiswa, Award, BookCopy, FileQuestion
 } from 'lucide-react';
 import { ROUTES } from './constants'; 
 
@@ -34,6 +35,7 @@ export const NAV_LINKS_CONFIG: NavLink[] = [
   { href: ROUTES.GURU_ABSENSI, label: 'Absensi Siswa', icon: UserCheck, roles: ['guru', 'superadmin'] as Role[] },
   { href: ROUTES.GURU_MATERI, label: 'Upload Materi', icon: UploadCloud, roles: ['guru', 'superadmin'] as Role[] },
   { href: ROUTES.GURU_TEST, label: 'Manajemen Test', icon: ScrollText, roles: ['guru', 'superadmin'] as Role[] },
+  { href: ROUTES.GURU_BANK_SOAL, label: 'Bank Soal', icon: FileQuestion, roles: ['guru', 'superadmin'] as Role[] },
   { href: ROUTES.GURU_PENILAIAN, label: 'Penilaian Siswa', icon: GraduationCap, roles: ['guru', 'superadmin'] as Role[] },
 
   // Siswa Links

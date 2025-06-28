@@ -6,7 +6,7 @@ import { SoalEntity } from "@/entities/soal.entity";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 import * as z from "zod";
-import type { TingkatKesulitan } from "@/types";
+import type { TingkatKesulitanEntity } from "@/entities/soal.entity";
 
 const pilihanJawabanSchema = z.object({
   id: z.string().min(1),
@@ -31,7 +31,6 @@ export async function GET(request: NextRequest) {
     const dataSource = await getInitializedDataSource();
     const soalRepo = dataSource.getRepository(SoalEntity);
 
-    // Guru hanya bisa melihat soal yang mereka buat, admin/superadmin bisa lihat semua
     const whereCondition = authenticatedUser.role === 'guru' 
       ? { pembuatId: authenticatedUser.id } 
       : {};
@@ -74,7 +73,7 @@ export async function POST(request: NextRequest) {
     const newSoal = soalRepo.create({
       pertanyaan,
       mapelId,
-      tingkatKesulitan: tingkatKesulitan as TingkatKesulitan,
+      tingkatKesulitan: tingkatKesulitan as TingkatKesulitanEntity,
       pilihanJawaban,
       kunciJawaban,
       pembuatId: authenticatedUser.id,

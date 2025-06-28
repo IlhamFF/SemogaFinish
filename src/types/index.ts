@@ -1,3 +1,4 @@
+
 import "reflect-metadata"; 
 import { KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR } from "@/lib/constants";
 import type { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
@@ -30,7 +31,7 @@ export interface User {
   joinDate?: string | null;
   kelasId?: string | null; 
   kelas?: string | null;
-  mataPelajaran?: string | null; 
+  mataPelajaran?: string[] | null; 
 }
 
 export interface NavItem {
@@ -171,7 +172,7 @@ export interface JadwalPelajaran {
   slotWaktuId: string;
   slotWaktu?: Pick<SlotWaktuEntity, 'id' | 'namaSlot' | 'waktuMulai' | 'waktuSelesai'>;
   mapelId: string;
-  mapel?: Pick<MataPelajaranEntity, 'id' | 'nama' | 'kode'>;
+  mapel: Pick<MataPelajaranEntity, 'id' | 'nama' | 'kode'>;
   guruId: string;
   guru?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email' | 'nip'>; 
   ruanganId: string;
@@ -295,6 +296,25 @@ export interface NilaiSemesterSiswa {
   catatanGuru?: string | null;
   dicatatOlehGuruId: string;
   dicatatOlehGuru?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type TingkatKesulitan = "Mudah" | "Sedang" | "Sulit";
+export interface PilihanJawaban {
+  id: string;
+  text: string;
+}
+export interface Soal {
+  id: string;
+  pertanyaan: string;
+  pilihanJawaban: PilihanJawaban[];
+  kunciJawaban: string;
+  tingkatKesulitan: TingkatKesulitan;
+  mapelId: string;
+  mapel: Pick<MataPelajaranEntity, 'id' | 'nama' | 'kode'>;
+  pembuatId: string;
+  pembuat?: Pick<UserEntity, 'id' | 'name' | 'fullName' | 'email'>;
   createdAt?: string;
   updatedAt?: string;
 }

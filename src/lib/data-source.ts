@@ -1,3 +1,4 @@
+
 import "reflect-metadata";
 import { DataSource, type DataSourceOptions } from "typeorm";
 import { UserEntity } from "@/entities/user.entity";
@@ -18,6 +19,7 @@ import { TugasSubmissionEntity } from "@/entities/tugas-submission.entity";
 import { TestSubmissionEntity } from "@/entities/test-submission.entity";
 import { AbsensiSiswaEntity } from "@/entities/absensi-siswa.entity";
 import { NilaiSemesterSiswaEntity } from "@/entities/nilai-semester-siswa.entity";
+import { SoalEntity } from "@/entities/soal.entity";
 
 export const dataSourceOptions: DataSourceOptions = {
   type: "postgres",
@@ -47,6 +49,7 @@ export const dataSourceOptions: DataSourceOptions = {
     TestSubmissionEntity,
     AbsensiSiswaEntity,
     NilaiSemesterSiswaEntity,
+    SoalEntity,
   ],
   migrations: [], 
   subscribers: [],

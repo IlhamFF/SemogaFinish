@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { FileQuestion, PlusCircle, Edit, Trash2, Loader2, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,6 +20,7 @@ import type { Soal, MataPelajaran, JadwalPelajaran, TingkatKesulitan } from "@/t
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 const pilihanJawabanSchema = z.object({
   id: z.string().min(1, "ID Opsi tidak boleh kosong"),
@@ -199,7 +200,7 @@ export default function GuruBankSoalPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {soalList.map(soal => (
+                        {soalList.length > 0 ? soalList.map(soal => (
                             <TableRow key={soal.id}>
                                 <TableCell className="font-medium max-w-lg truncate" title={soal.pertanyaan}>{soal.pertanyaan}</TableCell>
                                 <TableCell>{soal.mapel?.nama}</TableCell>
@@ -209,7 +210,13 @@ export default function GuruBankSoalPage() {
                                     <Button variant="ghost" size="sm" onClick={() => setSoalToDelete(soal)} className="text-destructive"><Trash2 className="h-4 w-4"/></Button>
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        )) : (
+                          <TableRow>
+                            <TableCell colSpan={4} className="h-24 text-center">
+                              Belum ada soal. Silakan buat soal baru.
+                            </TableCell>
+                          </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </ScrollArea>
@@ -217,7 +224,6 @@ export default function GuruBankSoalPage() {
         </CardContent>
       </Card>
       
-      {/* Dialog Form Soal */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
@@ -240,8 +246,10 @@ export default function GuruBankSoalPage() {
                                 <RadioGroup onValueChange={field.onChange} value={field.value} className="space-y-2 pt-2">
                                     {fields.map((item, index) => (
                                         <div key={item.id} className="flex items-center gap-2">
-                                            <RadioGroupItem value={item.id} id={`kunci-${item.id}`} />
-                                            <FormField control={soalForm.control} name={`pilihanJawaban.${index}.text`} render={({ field }) => (<FormItem className="flex-grow"><FormControl><Input placeholder={`Teks untuk Opsi ${item.id}`} {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormControl>
+                                              <RadioGroupItem value={item.id} id={`kunci-${item.id}`} />
+                                            </FormControl>
+                                            <FormField control={soalForm.control} name={`pilihanJawaban.${index}.text`} render={({ field: optionField }) => (<FormItem className="flex-grow"><FormControl><Input placeholder={`Teks untuk Opsi ${item.id}`} {...optionField} /></FormControl><FormMessage /></FormItem>)} />
                                         </div>
                                     ))}
                                 </RadioGroup>
@@ -259,7 +267,6 @@ export default function GuruBankSoalPage() {
         </DialogContent>
       </Dialog>
       
-      {/* Alert Dialog Hapus Soal */}
       <AlertDialog open={!!soalToDelete} onOpenChange={() => setSoalToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

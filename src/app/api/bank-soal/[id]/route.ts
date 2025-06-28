@@ -2,10 +2,9 @@
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
-import { SoalEntity } from "@/entities/soal.entity";
+import { SoalEntity, type TingkatKesulitanEntity } from "@/entities/soal.entity";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 import * as z from "zod";
-import type { TingkatKesulitan } from "@/types";
 
 const pilihanJawabanSchema = z.object({
   id: z.string().min(1),
@@ -48,10 +47,19 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (authenticatedUser.role === 'guru' && soalToUpdate.pembuatId !== authenticatedUser.id) {
         return NextResponse.json({ message: "Anda tidak berhak mengubah soal ini." }, { status: 403 });
     }
+    
+    const updatePayload = validation.data;
+    const finalPayload: Partial<SoalEntity> = {};
+
+    if (updatePayload.pertanyaan !== undefined) finalPayload.pertanyaan = updatePayload.pertanyaan;
+    if (updatePayload.mapelId !== undefined) finalPayload.mapelId = updatePayload.mapelId;
+    if (updatePayload.tingkatKesulitan !== undefined) finalPayload.tingkatKesulitan = updatePayload.tingkatKesulitan as TingkatKesulitanEntity;
+    if (updatePayload.pilihanJawaban !== undefined) finalPayload.pilihanJawaban = updatePayload.pilihanJawaban;
+    if (updatePayload.kunciJawaban !== undefined) finalPayload.kunciJawaban = updatePayload.kunciJawaban;
 
     const updatedSoal = await soalRepo.save({
         ...soalToUpdate,
-        ...validation.data,
+        ...finalPayload,
     });
     
     return NextResponse.json(updatedSoal);
@@ -89,7 +97,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ message: "Soal berhasil dihapus." });
   } catch (error: any) {
     console.error(`Error deleting soal ${id}:`, error);
-    // Cek jika error terkait foreign key constraint
     if (error.code === '23503') {
         return NextResponse.json({ message: "Gagal menghapus soal karena masih digunakan dalam satu atau lebih test.", error: error.message }, { status: 409 });
     }
