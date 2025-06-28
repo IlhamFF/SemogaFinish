@@ -1,22 +1,24 @@
-
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
-import { SoalEntity, type TingkatKesulitanEntity } from "@/entities/soal.entity";
+import { SoalEntity, type TingkatKesulitanEntity, type PilihanJawabanEntity } from "@/entities/soal.entity";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 import * as z from "zod";
+import type { TipeSoal } from "@/types";
 
 const pilihanJawabanSchema = z.object({
-  id: z.string().min(1),
+  id: z.string(),
   text: z.string().min(1),
 });
 
 const soalUpdateSchema = z.object({
+  paketSoal: z.string().min(3).optional(),
+  tipeSoal: z.enum(["Pilihan Ganda", "Esai"]).optional(),
   pertanyaan: z.string().min(10).optional(),
   mapelId: z.string().uuid().optional(),
   tingkatKesulitan: z.enum(["Mudah", "Sedang", "Sulit"]).optional(),
-  pilihanJawaban: z.array(pilihanJawabanSchema).min(2).optional(),
-  kunciJawaban: z.string().min(1).optional(),
+  pilihanJawaban: z.array(pilihanJawabanSchema).optional().nullable(),
+  kunciJawaban: z.string().optional().nullable(),
 });
 
 
@@ -51,11 +53,20 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const updatePayload = validation.data;
     const finalPayload: Partial<SoalEntity> = {};
 
+    if (updatePayload.paketSoal !== undefined) finalPayload.paketSoal = updatePayload.paketSoal;
+    if (updatePayload.tipeSoal !== undefined) finalPayload.tipeSoal = updatePayload.tipeSoal as TipeSoal;
     if (updatePayload.pertanyaan !== undefined) finalPayload.pertanyaan = updatePayload.pertanyaan;
     if (updatePayload.mapelId !== undefined) finalPayload.mapelId = updatePayload.mapelId;
     if (updatePayload.tingkatKesulitan !== undefined) finalPayload.tingkatKesulitan = updatePayload.tingkatKesulitan as TingkatKesulitanEntity;
-    if (updatePayload.pilihanJawaban !== undefined) finalPayload.pilihanJawaban = updatePayload.pilihanJawaban;
-    if (updatePayload.kunciJawaban !== undefined) finalPayload.kunciJawaban = updatePayload.kunciJawaban;
+    
+    const finalTipeSoal = finalPayload.tipeSoal || soalToUpdate.tipeSoal;
+    if (finalTipeSoal === 'Pilihan Ganda') {
+      if (updatePayload.pilihanJawaban !== undefined) finalPayload.pilihanJawaban = updatePayload.pilihanJawaban as PilihanJawabanEntity[] | undefined;
+      if (updatePayload.kunciJawaban !== undefined) finalPayload.kunciJawaban = updatePayload.kunciJawaban;
+    } else {
+      finalPayload.pilihanJawaban = null;
+      finalPayload.kunciJawaban = null;
+    }
 
     const updatedSoal = await soalRepo.save({
         ...soalToUpdate,

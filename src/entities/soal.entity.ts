@@ -1,8 +1,8 @@
-
 import "reflect-metadata";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import type { UserEntity } from "./user.entity";
 import type { MataPelajaranEntity } from "./mata-pelajaran.entity";
+import type { TipeSoal } from "@/types";
 
 export type TingkatKesulitanEntity = "Mudah" | "Sedang" | "Sulit";
 export interface PilihanJawabanEntity {
@@ -14,15 +14,21 @@ export interface PilihanJawabanEntity {
 export class SoalEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
+  
+  @Column({ type: "varchar", length: 255, default: "Default Paket" })
+  paketSoal!: string;
+
+  @Column({ type: "enum", enum: ["Pilihan Ganda", "Esai"], default: "Pilihan Ganda" })
+  tipeSoal!: TipeSoal;
 
   @Column({ type: "text" })
   pertanyaan!: string;
 
-  @Column({ type: "jsonb" })
-  pilihanJawaban!: PilihanJawabanEntity[];
+  @Column({ type: "jsonb", nullable: true })
+  pilihanJawaban?: PilihanJawabanEntity[] | null;
 
-  @Column({ type: "varchar" })
-  kunciJawaban!: string;
+  @Column({ type: "varchar", nullable: true })
+  kunciJawaban?: string | null;
 
   @Column({
     type: "enum",
@@ -34,7 +40,7 @@ export class SoalEntity {
   @Column({ type: "uuid" })
   mapelId!: string;
 
-  @ManyToOne("MataPelajaranEntity", (mapel) => mapel.id, { onDelete: "CASCADE" })
+  @ManyToOne("MataPelajaranEntity", (mapel) => mapel.id, { onDelete: "CASCADE", eager: true })
   @JoinColumn({ name: "mapelId" })
   mapel!: MataPelajaranEntity;
 

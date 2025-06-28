@@ -1,4 +1,3 @@
-
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
@@ -6,19 +5,22 @@ import { SoalEntity } from "@/entities/soal.entity";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 import * as z from "zod";
-import type { TingkatKesulitanEntity } from "@/entities/soal.entity";
+import type { TingkatKesulitanEntity, PilihanJawabanEntity } from "@/entities/soal.entity";
+import type { TipeSoal } from "@/types";
 
 const pilihanJawabanSchema = z.object({
-  id: z.string().min(1),
+  id: z.string(),
   text: z.string().min(1),
 });
 
 const soalCreateSchema = z.object({
+  paketSoal: z.string().min(3),
+  tipeSoal: z.enum(["Pilihan Ganda", "Esai"]),
   pertanyaan: z.string().min(10),
   mapelId: z.string().uuid(),
   tingkatKesulitan: z.enum(["Mudah", "Sedang", "Sulit"]),
-  pilihanJawaban: z.array(pilihanJawabanSchema).min(2),
-  kunciJawaban: z.string().min(1),
+  pilihanJawaban: z.array(pilihanJawabanSchema).optional().nullable(),
+  kunciJawaban: z.string().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
     const soalList = await soalRepo.find({
       where: whereCondition,
       relations: ["mapel", "pembuat"],
-      order: { createdAt: "DESC" },
+      order: { paketSoal: "ASC", createdAt: "ASC" },
     });
 
     return NextResponse.json(soalList.map(s => ({
@@ -65,17 +67,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const { pertanyaan, mapelId, tingkatKesulitan, pilihanJawaban, kunciJawaban } = validation.data;
+    const { paketSoal, tipeSoal, pertanyaan, mapelId, tingkatKesulitan, pilihanJawaban, kunciJawaban } = validation.data;
     
     const dataSource = await getInitializedDataSource();
     const soalRepo = dataSource.getRepository(SoalEntity);
 
     const newSoal = soalRepo.create({
+      paketSoal,
+      tipeSoal: tipeSoal as TipeSoal,
       pertanyaan,
       mapelId,
       tingkatKesulitan: tingkatKesulitan as TingkatKesulitanEntity,
-      pilihanJawaban,
-      kunciJawaban,
+      pilihanJawaban: tipeSoal === 'Pilihan Ganda' ? (pilihanJawaban as PilihanJawabanEntity[] | undefined) : null,
+      kunciJawaban: tipeSoal === 'Pilihan Ganda' ? kunciJawaban : null,
       pembuatId: authenticatedUser.id,
     });
     

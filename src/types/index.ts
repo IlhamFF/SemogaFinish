@@ -1,4 +1,3 @@
-
 import "reflect-metadata"; 
 import { KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR } from "@/lib/constants";
 import type { SlotWaktuEntity } from "@/entities/slot-waktu.entity";
@@ -301,15 +300,20 @@ export interface NilaiSemesterSiswa {
 }
 
 export type TingkatKesulitan = "Mudah" | "Sedang" | "Sulit";
+export type TipeSoal = "Pilihan Ganda" | "Esai";
+
 export interface PilihanJawaban {
   id: string;
   text: string;
 }
+
 export interface Soal {
   id: string;
+  paketSoal: string;
+  tipeSoal: TipeSoal;
   pertanyaan: string;
-  pilihanJawaban: PilihanJawaban[];
-  kunciJawaban: string;
+  pilihanJawaban?: PilihanJawaban[] | null;
+  kunciJawaban?: string | null;
   tingkatKesulitan: TingkatKesulitan;
   mapelId: string;
   mapel: Pick<MataPelajaranEntity, 'id' | 'nama' | 'kode'>;
