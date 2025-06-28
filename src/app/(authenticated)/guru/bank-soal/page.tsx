@@ -309,48 +309,50 @@ export default function GuruBankSoalPage() {
       )}
       
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-3xl h-[90vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>{editingSoal ? `Edit Soal di Paket "${editingSoal.paketSoal}"` : (currentPaket ? `Tambah Soal Baru ke Paket "${currentPaket}"` : 'Buat Soal & Paket Baru')}</DialogTitle>
             <DialogDescription>Isi detail pertanyaan dan pilihan jawaban di bawah ini.</DialogDescription>
           </DialogHeader>
           <Form {...soalForm}>
             <form onSubmit={soalForm.handleSubmit(handleFormSubmit)} className="flex-grow flex flex-col overflow-y-hidden">
-                <ScrollArea className="-m-6 p-6 space-y-6">
-                    <FormField control={soalForm.control} name="paketSoal" render={({ field }) => (<FormItem><FormLabel>Nama Paket Soal</FormLabel><FormControl><Input placeholder="Contoh: UTS Matematika 2024" {...field} disabled={!!currentPaket && !editingSoal} /></FormControl><FormDescription>Kelompokkan soal dalam satu paket yang sama.</FormDescription><FormMessage /></FormItem>)} />
-                    <FormField control={soalForm.control} name="tipeSoal" render={({ field }) => (<FormItem><FormLabel>Tipe Soal</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Tipe Soal" /></SelectTrigger></FormControl><SelectContent>{(["Pilihan Ganda", "Esai"] as TipeSoal[]).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
-                    <FormField control={soalForm.control} name="pertanyaan" render={({ field }) => (<FormItem><FormLabel>Teks Pertanyaan</FormLabel><FormControl><Textarea rows={4} placeholder="Tuliskan pertanyaan di sini..." {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField control={soalForm.control} name="mapelId" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Mapel" /></SelectTrigger></FormControl><SelectContent>{mapelOptions.map(m => <SelectItem key={m.id} value={m.id}>{m.nama}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
-                        <FormField control={soalForm.control} name="tingkatKesulitan" render={({ field }) => (<FormItem><FormLabel>Tingkat Kesulitan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Kesulitan" /></SelectTrigger></FormControl><SelectContent>{["Mudah", "Sedang", "Sulit"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
-                    </div>
-                    {tipeSoalWatch === 'Pilihan Ganda' && (
-                        <div>
-                            <FormField control={soalForm.control} name="kunciJawaban" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Pilihan Jawaban &amp; Kunci</FormLabel>
-                                    <FormDescription>Pilih salah satu opsi sebagai kunci jawaban yang benar.</FormDescription>
-                                    <RadioGroup onValueChange={field.onChange} value={field.value} className="space-y-3 pt-2">
-                                        {fields.map((item, index) => (
-                                            <div key={item.id} className="flex items-center gap-2">
-                                                <FormControl>
-                                                    <RadioGroupItem value={item.id} id={`kunci-${item.id}`} />
-                                                </FormControl>
-                                                <FormField control={soalForm.control} name={`pilihanJawaban.${index}.text`} render={({ field: optionField }) => (<FormItem className="flex-grow"><FormControl><Input placeholder={`Teks untuk Opsi ${String.fromCharCode(65 + index)}`} {...optionField} /></FormControl><FormMessage /></FormItem>)} />
-                                                <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveOption(index)} disabled={fields.length <= 2} className="text-destructive h-8 w-8"><Trash2 className="h-4 w-4"/></Button>
-                                            </div>
-                                        ))}
-                                    </RadioGroup>
-                                    <FormMessage>{soalForm.formState.errors.kunciJawaban?.message || soalForm.formState.errors.pilihanJawaban?.message}</FormMessage>
-                                </FormItem>
-                            )}/>
-                            <Button type="button" variant="outline" size="sm" onClick={handleAddNewOption} disabled={fields.length >= 5} className="mt-3">
-                                <PlusCircle className="mr-2 h-4 w-4"/> Tambah Opsi
-                            </Button>
+                <ScrollArea className="flex-grow -mx-6 px-6">
+                    <div className="py-4 space-y-6">
+                        <FormField control={soalForm.control} name="paketSoal" render={({ field }) => (<FormItem><FormLabel>Nama Paket Soal</FormLabel><FormControl><Input placeholder="Contoh: UTS Matematika 2024" {...field} disabled={!!currentPaket && !editingSoal} /></FormControl><FormDescription>Kelompokkan soal dalam satu paket yang sama.</FormDescription><FormMessage /></FormItem>)} />
+                        <FormField control={soalForm.control} name="tipeSoal" render={({ field }) => (<FormItem><FormLabel>Tipe Soal</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Tipe Soal" /></SelectTrigger></FormControl><SelectContent>{(["Pilihan Ganda", "Esai"] as TipeSoal[]).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                        <FormField control={soalForm.control} name="pertanyaan" render={({ field }) => (<FormItem><FormLabel>Teks Pertanyaan</FormLabel><FormControl><Textarea rows={4} placeholder="Tuliskan pertanyaan di sini..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField control={soalForm.control} name="mapelId" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Mapel" /></SelectTrigger></FormControl><SelectContent>{mapelOptions.map(m => <SelectItem key={m.id} value={m.id}>{m.nama}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                            <FormField control={soalForm.control} name="tingkatKesulitan" render={({ field }) => (<FormItem><FormLabel>Tingkat Kesulitan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih Kesulitan" /></SelectTrigger></FormControl><SelectContent>{["Mudah", "Sedang", "Sulit"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                         </div>
-                    )}
+                        {tipeSoalWatch === 'Pilihan Ganda' && (
+                            <div>
+                                <FormField control={soalForm.control} name="kunciJawaban" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Pilihan Jawaban &amp; Kunci</FormLabel>
+                                        <FormDescription>Pilih salah satu opsi sebagai kunci jawaban yang benar.</FormDescription>
+                                        <RadioGroup onValueChange={field.onChange} value={field.value} className="space-y-3 pt-2">
+                                            {fields.map((item, index) => (
+                                                <div key={item.id} className="flex items-center gap-2">
+                                                    <FormControl>
+                                                        <RadioGroupItem value={item.id} id={`kunci-${item.id}`} />
+                                                    </FormControl>
+                                                    <FormField control={soalForm.control} name={`pilihanJawaban.${index}.text`} render={({ field: optionField }) => (<FormItem className="flex-grow"><FormControl><Input placeholder={`Teks untuk Opsi ${String.fromCharCode(65 + index)}`} {...optionField} /></FormControl><FormMessage /></FormItem>)} />
+                                                    <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveOption(index)} disabled={fields.length <= 2} className="text-destructive h-8 w-8"><Trash2 className="h-4 w-4"/></Button>
+                                                </div>
+                                            ))}
+                                        </RadioGroup>
+                                        <FormMessage>{soalForm.formState.errors.kunciJawaban?.message || soalForm.formState.errors.pilihanJawaban?.message}</FormMessage>
+                                    </FormItem>
+                                )}/>
+                                <Button type="button" variant="outline" size="sm" onClick={handleAddNewOption} disabled={fields.length >= 5} className="mt-3">
+                                    <PlusCircle className="mr-2 h-4 w-4"/> Tambah Opsi
+                                </Button>
+                            </div>
+                        )}
+                    </div>
                 </ScrollArea>
-                <DialogFooter className="flex-shrink-0 pt-4 border-t mt-4">
+                <DialogFooter className="flex-shrink-0 pt-4 border-t">
                     <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSubmitting}>Batal</Button>
                     <Button type="submit" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : "Simpan Soal"}</Button>
                 </DialogFooter>

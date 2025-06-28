@@ -31,7 +31,7 @@ import { Label } from "@/components/ui/label";
 const tugasSchema = z.object({
   judul: z.string().min(5, { message: "Judul tugas minimal 5 karakter." }),
   mapel: z.string({ required_error: "Mata pelajaran wajib dipilih." }),
-  kelas: z.string({ required_error: "Kelas wajib dipilih." }),
+  kelas: z.string({ required_error: "Kelas wajib diisi." }),
   tenggat: z.date({ required_error: "Tanggal tenggat wajib diisi." }), 
   deskripsi: z.string().optional().nullable(),
   fileLampiranInput: z.any().optional(), 
@@ -437,26 +437,29 @@ export default function GuruTugasPage() {
       </Card>
 
       <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingTugas(null); }}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-lg h-[90vh] flex flex-col">
             <DialogHeader className="flex-shrink-0">
                 <DialogTitle>{editingTugas ? "Edit Tugas" : "Buat Tugas Baru"}</DialogTitle>
                 <DialogDescription>{editingTugas ? `Perbarui detail untuk tugas "${editingTugas.judul}".` : "Isi detail tugas baru di bawah ini."}</DialogDescription>
             </DialogHeader>
             <Form {...tugasForm}>
                 <form onSubmit={tugasForm.handleSubmit(handleFormSubmit)} className="flex-grow flex flex-col overflow-y-hidden">
-                  <ScrollArea className="-m-6 p-6">
-                  <div className="space-y-4">
-                    <FormField control={tugasForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Tugas</FormLabel><FormControl><Input placeholder="Contoh: Latihan Soal Bab 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <FormField control={tugasForm.control} name="mapel" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger>{isLoadingTeachingSubjects ? <Loader2 className="h-4 w-4 animate-spin" /> : <SelectValue placeholder="Pilih mapel" />}</SelectTrigger></FormControl><SelectContent>{teachingSubjects.map(subject => (<SelectItem key={subject} value={subject}>{subject}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-                        <FormField control={tugasForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas Ditugaskan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kelas" /></SelectTrigger></FormControl><SelectContent><ScrollArea className="h-60">{mockKelasList.map(kls => (<SelectItem key={kls} value={kls}>{kls}</SelectItem>))}</ScrollArea></SelectContent></Select><FormMessage /></FormItem>)} />
+                  <ScrollArea className="flex-grow px-6 -mx-6">
+                    <div className="py-4 space-y-4">
+                      <FormField control={tugasForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Tugas</FormLabel><FormControl><Input placeholder="Contoh: Latihan Soal Bab 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <FormField control={tugasForm.control} name="mapel" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger>{isLoadingTeachingSubjects ? <Loader2 className="h-4 w-4 animate-spin" /> : <SelectValue placeholder="Pilih mapel" />}</SelectTrigger></FormControl><SelectContent>{teachingSubjects.map(subject => (<SelectItem key={subject} value={subject}>{subject}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                          <FormField control={tugasForm.control} name="kelas" render={({ field }) => (<FormItem><FormLabel>Kelas Ditugaskan</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih kelas" /></SelectTrigger></FormControl><SelectContent><ScrollArea className="h-60">{mockKelasList.map(kls => (<SelectItem key={kls} value={kls}>{kls}</SelectItem>))}</ScrollArea></SelectContent></Select><FormMessage /></FormItem>)} />
+                      </div>
+                      <FormField control={tugasForm.control} name="tenggat" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Tanggal & Waktu Tenggat</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP HH:mm", { locale: localeID }) : <span>Pilih tanggal & waktu</span>}<CalendarClock className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /><div className="p-3 border-t border-border"><Input type="time" defaultValue={field.value ? format(field.value, "HH:mm") : "23:59"} onChange={(e) => { const time = e.target.value.split(':'); const newDate = new Date(field.value || new Date()); newDate.setHours(parseInt(time[0]), parseInt(time[1])); field.onChange(newDate); }} className="w-full"/></div></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                      <FormField control={tugasForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi Tugas (Opsional)</FormLabel><FormControl><Textarea placeholder="Instruksi detail untuk siswa..." {...field} value={field.value ?? ""} rows={3} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={tugasForm.control} name="fileLampiranInput" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>File Lampiran (Opsional) {editingTugas?.namaFileLampiran ? `(File saat ini: ${editingTugas.namaFileLampiran}. Kosongkan jika tidak diubah)` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>PDF, DOC, dll.</FormDescription><FormMessage /></FormItem>)} />
                     </div>
-                    <FormField control={tugasForm.control} name="tenggat" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Tanggal & Waktu Tenggat</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP HH:mm", { locale: localeID }) : <span>Pilih tanggal & waktu</span>}<CalendarClock className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /><div className="p-3 border-t border-border"><Input type="time" defaultValue={field.value ? format(field.value, "HH:mm") : "23:59"} onChange={(e) => { const time = e.target.value.split(':'); const newDate = new Date(field.value || new Date()); newDate.setHours(parseInt(time[0]), parseInt(time[1])); field.onChange(newDate); }} className="w-full"/></div></PopoverContent></Popover><FormMessage /></FormItem>)} />
-                    <FormField control={tugasForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi Tugas (Opsional)</FormLabel><FormControl><Textarea placeholder="Instruksi detail untuk siswa..." {...field} value={field.value ?? ""} rows={3} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={tugasForm.control} name="fileLampiranInput" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>File Lampiran (Opsional) {editingTugas?.namaFileLampiran ? `(File saat ini: ${editingTugas.namaFileLampiran}. Kosongkan jika tidak diubah)` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>PDF, DOC, dll.</FormDescription><FormMessage /></FormItem>)} />
-                  </div>
                   </ScrollArea>
-                  <DialogFooter className="flex-shrink-0 border-t pt-4 mt-6"><Button type="button" variant="outline" onClick={() => {setIsFormOpen(false); setEditingTugas(null);}} disabled={isSubmitting}>Batal</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingTugas ? "Simpan Perubahan" : "Simpan Tugas"}</Button></DialogFooter>
+                  <DialogFooter className="flex-shrink-0 pt-4 border-t">
+                    <Button type="button" variant="outline" onClick={() => {setIsFormOpen(false); setEditingTugas(null);}} disabled={isSubmitting}>Batal</Button>
+                    <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{editingTugas ? "Simpan Perubahan" : "Simpan Tugas"}</Button>
+                  </DialogFooter>
                 </form>
             </Form>
         </DialogContent>
@@ -566,5 +569,6 @@ export default function GuruTugasPage() {
       </Dialog>
 
     </div>
+    </>
   );
 }
