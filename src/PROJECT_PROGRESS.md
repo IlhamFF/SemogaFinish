@@ -13,16 +13,17 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - [x] Middleware untuk proteksi rute berdasarkan autentikasi dan peran.
 - [x] Halaman-halaman terkait: Login, Register, Lupa Password, Reset Password, Verifikasi Email.
 
-## 2. Manajemen Pengguna oleh Admin (100%)
+## 2. Manajemen Pengguna oleh Admin (95%)
 - [x] CRUD (Create, Read, Update, Delete) profil pengguna (Admin dapat membuat profil lokal, melihat, mengedit, dan menghapus).
 - [x] Verifikasi status pengguna (khususnya siswa) oleh Admin.
 - [x] Perubahan peran pengguna oleh Admin (dengan batasan peran).
-- [/] Impor pengguna (UI ada, backend masih simulasi, fitur tidak diaktifkan).
+- [/] Impor pengguna (UI & API fungsional, **logika parsing file masih simulasi**).
 - [x] Tampilan daftar pengguna dengan filter dan tabulasi berdasarkan peran.
 
 ## 3. Manajemen Profil oleh Pengguna (Settings) (100%)
 - [x] Pengguna dapat melihat dan memperbarui informasi profil pribadi mereka.
 - [x] Pengguna dapat mengubah kata sandi mereka sendiri.
+- [x] Fungsionalitas unggah foto profil.
 
 ## 4. Dasbor Pengguna (100%)
 - [x] Dasbor Admin: Menampilkan statistik pengguna, mata pelajaran, dan pengguna baru secara dinamis.
@@ -34,40 +35,42 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - [x] CRUD untuk SKL (Standar Kompetensi Lulusan).
 - [x] CRUD untuk CP (Capaian Pembelajaran).
 - [x] CRUD untuk Kategori Materi Ajar.
-- [x] CRUD untuk Materi Ajar (termasuk upload file simulasi dan tautan eksternal, `uploaderId` otomatis dari token).
+- [x] CRUD untuk Materi Ajar (termasuk upload file dan tautan eksternal).
 - [x] CRUD untuk Struktur Kurikulum per tingkat dan jurusan.
-- [x] CRUD untuk Silabus (termasuk upload file simulasi, `uploaderId` otomatis dari token).
-- [x] CRUD untuk RPP (Rencana Pelaksanaan Pembelajaran, termasuk upload file simulasi, `uploaderId` otomatis dari token).
+- [x] CRUD untuk Silabus (termasuk upload file).
+- [x] CRUD untuk RPP (Rencana Pelaksanaan Pembelajaran, termasuk upload file).
 
 ## 6. Manajemen Mata Pelajaran oleh Admin (100%)
 - [x] CRUD Mata Pelajaran (kode, nama, kategori, deskripsi).
 - [x] Tampilan daftar mata pelajaran dengan filter dan pencarian.
 
-## 7. Manajemen Jadwal Pelajaran oleh Admin (100%)
+## 7. Manajemen Jadwal Pelajaran oleh Admin (95%)
 - [x] CRUD Ruangan.
 - [x] CRUD untuk Slot Waktu dan Konfigurasi Hari Efektif.
 - [x] Pembuatan Jadwal Pelajaran manual per kelas/hari.
 - [x] Deteksi konflik jadwal dasar (sisi server).
-- [/] Impor jadwal (UI ada, backend masih simulasi, fitur tidak diaktifkan).
+- [/] Impor jadwal (UI & API fungsional, **logika parsing file masih simulasi**).
+- [ ] Tombol "Ketersediaan Guru" & "Deteksi Konflik" adalah placeholder.
 
 ## 8. Fitur Modul Guru (100%)
 - [x] Melihat jadwal mengajar yang dialokasikan.
-- [x] Upload dan manajemen Materi Ajar (terhubung ke API backend).
-- [x] Membuat dan manajemen Tugas (terhubung ke API backend).
-- [x] Membuat dan manajemen Test/Ujian (terhubung ke API backend).
+- [x] Upload dan manajemen Materi Ajar.
+- [x] Membuat dan manajemen Tugas.
+- [x] Membuat dan manajemen Test/Ujian.
 - [x] Halaman Absensi Siswa (Pencatatan harian dan rekapitulasi bulanan fungsional).
 - [x] Halaman Penilaian & Rapor Siswa (UI input nilai semester fungsional, backend batch save fungsional).
 - [x] Melihat pengumpulan tugas siswa dan memberikan nilai/feedback.
 - [x] Melihat pengumpulan test/ujian siswa dan memberikan nilai/feedback.
 
-## 9. Fitur Modul Siswa (100%)
+## 9. Fitur Modul Siswa (98%)
 - [x] Melihat jadwal pelajaran personal (harian & mingguan).
 - [x] Melihat daftar tugas yang relevan.
 - [x] Melihat dan mengakses materi pelajaran yang relevan.
 - [x] Melihat daftar test/ujian yang relevan.
-- [x] Pengumpulan tugas online (UI & API fungsional, simulasi penyimpanan file).
-- [x] Pelaksanaan ujian online (Alur start/finish test fungsional, UI timer & placeholder soal).
+- [x] Pengumpulan tugas online (termasuk unggah file jawaban).
+- [x] Pelaksanaan ujian online (Alur start/finish test fungsional, **soal masih simulasi/mock**).
 - [x] Halaman Nilai & Rapor (Menampilkan nilai akhir per semester & grafik).
+- [ ] Halaman Rapor (Cetak PDF belum diimplementasikan).
 
 ## 10. Struktur & Antarmuka Pengguna (UI) Aplikasi (100%)
 - [x] Tata letak aplikasi responsif dengan Sidebar dan Header.
@@ -77,28 +80,28 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - [x] Implementasi toggle mode Terang/Gelap.
 
 ## 11. Backend API & Database (100%)
-- [x] Entitas TypeORM untuk semua modul utama (termasuk Absensi & NilaiSemester).
+- [x] Entitas TypeORM untuk semua modul utama.
 - [x] API Routes untuk operasi CRUD pada semua modul utama.
 - [x] Perlindungan API dengan token JWT dan pemeriksaan peran (RBAC).
 - [x] Integrasi TypeORM dengan PostgreSQL.
 - [x] Layanan email dasar dengan Nodemailer untuk verifikasi.
+- [x] API untuk unggah file.
 
-## 12. Logika Bisnis Inti Tambahan (95%)
-- [x] Pengumpulan Tugas Online (Selesai).
-- [x] Pelaksanaan Ujian Online (Selesai untuk alur dasar).
-- [x] Proses Absensi Siswa yang Detail (Pencatatan harian & rekap bulanan fungsional).
-- [x] Proses Penilaian Siswa yang Detail (Input nilai & kalkulasi fungsional).
-- [x] Visualisasi data kehadiran di dasbor (Selesai).
-- [ ] Generate rapor dalam format PDF/HTML.
+## 12. Logika Bisnis Inti Tambahan (98%)
+- [x] Pengumpulan Tugas Online.
+- [x] Pelaksanaan Ujian Online.
+- [x] Proses Absensi Siswa yang Detail.
+- [x] Proses Penilaian Siswa yang Detail.
+- [x] Visualisasi data kehadiran di dasbor.
+- [/] Generate rapor dalam format HTML/Cetak PDF (Tombol ada, fungsi belum).
 
-## 13. Fitur Lanjutan & Penyempurnaan (5%)
-- [ ] Notifikasi yang lebih interaktif & real-time (misalnya, via WebSockets).
-- [ ] Implementasi penuh fitur impor data (parsing file CSV/Excel).
-- [ ] Pengujian menyeluruh (Unit, Integrasi, End-to-End).
-- [ ] Optimalisasi performa & database query.
-- [ ] Implementasi fitur AI dengan Genkit.
-- [ ] Dokumentasi pengguna dan teknis.
-
+## 13. Fitur yang Masih Berupa Simulasi atau Belum Selesai
+- **Impor Pengguna**: Antarmuka dan API sudah ada, namun backend hanya memberikan respons berhasil tanpa mem-parsing file CSV/Excel.
+- **Impor Jadwal**: Sama seperti Impor Pengguna, API hanya memberikan respons berhasil tanpa mem-parsing file.
+- **Deteksi Konflik Jadwal**: Tombol "Deteksi Konflik" dan "Ketersediaan Guru" di halaman jadwal admin adalah placeholder dan belum memiliki fungsi.
+- **Bank Soal**: Halaman pengerjaan ujian siswa sudah fungsional, namun masih menggunakan **soal simulasi (mock questions)** yang ada di dalam kode, bukan dari database. Fitur untuk membuat dan mengelola bank soal belum ada.
+- **Pengiriman Email**: Menggunakan Nodemailer dengan Ethereal untuk simulasi di lingkungan pengembangan. Perlu diubah ke layanan SMTP produksi (seperti SendGrid, Mailgun, dll).
+- **Cetak Laporan**: Tombol untuk mencetak rapor atau laporan lain adalah placeholder dan belum menghasilkan dokumen PDF atau HTML untuk dicetak.
 ---
 **Perkiraan Progres Keseluruhan Proyek (Non-AI): Sekitar 98%**
 ---

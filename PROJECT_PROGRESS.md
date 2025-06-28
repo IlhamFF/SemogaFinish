@@ -13,12 +13,12 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - [x] Middleware untuk proteksi rute berdasarkan autentikasi dan peran.
 - [x] Halaman-halaman terkait: Login, Register, Lupa Password, Reset Password, Verifikasi Email.
 
-## 2. Manajemen Pengguna oleh Admin (100%)
-- [x] CRUD (Create, Read, Update, Delete) profil pengguna.
+## 2. Manajemen Pengguna oleh Admin (95%)
+- [x] CRUD (Create, Read, Update, Delete) profil pengguna (Admin dapat membuat profil lokal, melihat, mengedit, dan menghapus).
 - [x] Verifikasi status pengguna (khususnya siswa) oleh Admin.
 - [x] Perubahan peran pengguna oleh Admin (dengan batasan peran).
+- [/] Impor pengguna (UI & API fungsional, **logika parsing file masih simulasi**).
 - [x] Tampilan daftar pengguna dengan filter dan tabulasi berdasarkan peran.
-- [x] Fitur impor pengguna (UI & API fungsional, **logika parsing file masih simulasi**).
 
 ## 3. Manajemen Profil oleh Pengguna (Settings) (100%)
 - [x] Pengguna dapat melihat dan memperbarui informasi profil pribadi mereka.
@@ -44,12 +44,13 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - [x] CRUD Mata Pelajaran (kode, nama, kategori, deskripsi).
 - [x] Tampilan daftar mata pelajaran dengan filter dan pencarian.
 
-## 7. Manajemen Jadwal Pelajaran oleh Admin (100%)
+## 7. Manajemen Jadwal Pelajaran oleh Admin (95%)
 - [x] CRUD Ruangan.
 - [x] CRUD untuk Slot Waktu dan Konfigurasi Hari Efektif.
 - [x] Pembuatan Jadwal Pelajaran manual per kelas/hari.
 - [x] Deteksi konflik jadwal dasar (sisi server).
-- [x] Fitur impor jadwal (UI & API fungsional, **logika parsing file masih simulasi**).
+- [/] Impor jadwal (UI & API fungsional, **logika parsing file masih simulasi**).
+- [ ] Tombol "Ketersediaan Guru" & "Deteksi Konflik" adalah placeholder.
 
 ## 8. Fitur Modul Guru (100%)
 - [x] Melihat jadwal mengajar yang dialokasikan.
@@ -61,15 +62,15 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - [x] Melihat pengumpulan tugas siswa dan memberikan nilai/feedback.
 - [x] Melihat pengumpulan test/ujian siswa dan memberikan nilai/feedback.
 
-## 9. Fitur Modul Siswa (100%)
+## 9. Fitur Modul Siswa (98%)
 - [x] Melihat jadwal pelajaran personal (harian & mingguan).
 - [x] Melihat daftar tugas yang relevan.
 - [x] Melihat dan mengakses materi pelajaran yang relevan.
 - [x] Melihat daftar test/ujian yang relevan.
 - [x] Pengumpulan tugas online (termasuk unggah file jawaban).
-- [x] Pelaksanaan ujian online (Alur start/finish test fungsional, UI timer & placeholder soal).
+- [x] Pelaksanaan ujian online (Alur start/finish test fungsional, **soal masih simulasi/mock**).
 - [x] Halaman Nilai & Rapor (Menampilkan nilai akhir per semester & grafik).
-- [x] Halaman Rapor (HTML/Cetak PDF).
+- [ ] Halaman Rapor (Cetak PDF belum diimplementasikan).
 
 ## 10. Struktur & Antarmuka Pengguna (UI) Aplikasi (100%)
 - [x] Tata letak aplikasi responsif dengan Sidebar dan Header.
@@ -92,15 +93,15 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - [x] Proses Absensi Siswa yang Detail.
 - [x] Proses Penilaian Siswa yang Detail.
 - [x] Visualisasi data kehadiran di dasbor.
-- [x] Generate rapor dalam format HTML yang mudah dicetak ke PDF.
+- [/] Generate rapor dalam format HTML/Cetak PDF (Tombol ada, fungsi belum).
 
-## 13. Fitur yang Masih Berupa Simulasi
-- **Impor Pengguna**: Antarmuka dan API sudah ada, namun backend belum mem-parsing file CSV/Excel.
-- **Impor Jadwal**: Antarmuka dan API sudah ada, namun backend belum mem-parsing file CSV/Excel.
-- **Deteksi Konflik Jadwal**: UI ada, namun logika backend untuk deteksi konflik otomatis belum diimplementasikan.
-- **Pengerjaan Soal Test/Ujian**: Alur mulai dan selesai test sudah ada, namun antarmuka untuk menampilkan dan menjawab soal belum dibuat.
-- **Pengiriman Email**: Menggunakan Nodemailer dengan Ethereal untuk simulasi. Di lingkungan produksi, perlu diubah ke layanan SMTP asli (misal: SendGrid, Mailgun).
-
+## 13. Fitur yang Masih Berupa Simulasi atau Belum Selesai
+- **Impor Pengguna**: Antarmuka dan API sudah ada, namun backend hanya memberikan respons berhasil tanpa mem-parsing file CSV/Excel.
+- **Impor Jadwal**: Sama seperti Impor Pengguna, API hanya memberikan respons berhasil tanpa mem-parsing file.
+- **Deteksi Konflik Jadwal**: Tombol "Deteksi Konflik" dan "Ketersediaan Guru" di halaman jadwal admin adalah placeholder dan belum memiliki fungsi.
+- **Bank Soal**: Halaman pengerjaan ujian siswa sudah fungsional, namun masih menggunakan **soal simulasi (mock questions)** yang ada di dalam kode, bukan dari database. Fitur untuk membuat dan mengelola bank soal belum ada.
+- **Pengiriman Email**: Menggunakan Nodemailer dengan Ethereal untuk simulasi di lingkungan pengembangan. Perlu diubah ke layanan SMTP produksi (seperti SendGrid, Mailgun, dll).
+- **Cetak Laporan**: Tombol untuk mencetak rapor atau laporan lain adalah placeholder dan belum menghasilkan dokumen PDF atau HTML untuk dicetak.
 ---
 **Perkiraan Progres Keseluruhan Proyek (Non-AI): Sekitar 98%**
 ---
