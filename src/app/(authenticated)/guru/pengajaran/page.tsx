@@ -85,10 +85,6 @@ export default function GuruPengajaranPage() {
     return <p>Akses Ditolak. Anda harus menjadi Guru untuk melihat halaman ini.</p>;
   }
 
-  const handlePlaceholderAction = (action: string) => {
-    toast({ title: "Fitur Dalam Pengembangan", description: `Fungsi "${action}" belum diimplementasikan.`});
-  };
-
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-headline font-semibold">Modul Pengajaran</h1>
@@ -132,7 +128,7 @@ export default function GuruPengajaranPage() {
                 <p className="text-muted-foreground text-center py-4">Belum ada data kelas dan mata pelajaran yang diajarkan.</p>
               )}
               <Button variant="link" asChild className="px-0 h-auto mt-2 text-sm">
-                <Link href={ROUTES.SISWA_JADWAL}>Lihat Jadwal Mengajar Lengkap</Link>
+                <Link href={ROUTES.GURU_JADWAL}>Lihat Jadwal Mengajar Lengkap</Link>
               </Button>
             </CardContent>
           </Card>
@@ -183,5 +179,3 @@ export default function GuruPengajaranPage() {
     </div>
   );
 }
-
-    

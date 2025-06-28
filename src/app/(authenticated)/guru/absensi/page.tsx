@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { UserCheck, CalendarDays, ListChecks, Printer, Loader2, BookOpen, Search } from "lucide-react";
+import { UserCheck, CalendarDays, ListChecks, Printer, Loader2, BookOpen, Search, BarChart } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -102,9 +102,10 @@ export default function GuruAbsensiPage() {
     }
   }, [selectedClass, selectedRekapKelas]);
 
-  const fetchScheduledLessons = useCallback(async () => {
+  const handleFetchScheduledLessons = useCallback(async () => {
     if (!user || !user.id || !selectedClass || !selectedDate) {
       setScheduledLessons([]);
+      toast({title: "Filter tidak lengkap", description: "Harap pilih kelas dan tanggal terlebih dahulu.", variant: "default"})
       return;
     }
     setIsLoadingScheduledLessons(true);
@@ -124,19 +125,16 @@ export default function GuruAbsensiPage() {
     }
   }, [user, selectedClass, selectedDate, toast]);
 
-  useEffect(() => {
-    fetchScheduledLessons();
-  }, [selectedClass, selectedDate, fetchScheduledLessons]);
-
-  const fetchAttendanceData = async () => {
-    if (!selectedJadwalPelajaranId || !selectedDate) {
+  const fetchAttendanceData = async (jadwalId: string) => {
+    if (!jadwalId || !selectedDate) {
       setSiswaListForAttendance([]);
       return;
     }
+    setSelectedJadwalPelajaranId(jadwalId);
     setIsLoadingSiswaForAttendance(true);
     try {
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
-      const response = await fetch(`/api/absensi?jadwalPelajaranId=${selectedJadwalPelajaranId}&tanggal=${formattedDate}`);
+      const response = await fetch(`/api/absensi?jadwalPelajaranId=${jadwalId}&tanggal=${formattedDate}`);
       if (!response.ok) throw new Error("Gagal mengambil data absensi siswa.");
       const data: { jadwalPelajaran: any; siswaDenganAbsensi: SiswaWithAbsensi[] } = await response.json();
       setSiswaListForAttendance(data.siswaDenganAbsensi);
@@ -146,10 +144,6 @@ export default function GuruAbsensiPage() {
     } finally {
       setIsLoadingSiswaForAttendance(false);
     }
-  };
-
-  const handleSelectJadwalPelajaran = (jadwalId: string) => {
-    setSelectedJadwalPelajaranId(jadwalId);
   };
   
   const handleAttendanceStatusChange = (siswaId: string, status: StatusKehadiran) => {
@@ -198,7 +192,7 @@ export default function GuruAbsensiPage() {
         throw new Error(responseData.message || "Gagal menyimpan absensi.");
       }
       toast({ title: "Absensi Disimpan", description: responseData.message || "Data kehadiran siswa telah disimpan." });
-      fetchAttendanceData(); 
+      await fetchAttendanceData(selectedJadwalPelajaranId); 
     } catch (error: any) {
       toast({ title: "Error Simpan Absensi", description: error.message, variant: "destructive" });
     } finally {
@@ -243,13 +237,13 @@ export default function GuruAbsensiPage() {
       
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center"><UserCheck className="mr-2 h-6 w-6 text-primary" />Pencatatan Kehadiran</CardTitle>
-          <CardDescription>Pilih kelas, tanggal, dan sesi pelajaran untuk mencatat kehadiran siswa.</CardDescription>
+          <CardTitle className="flex items-center"><UserCheck className="mr-2 h-6 w-6 text-primary" />Pencatatan Kehadiran Siswa</CardTitle>
+          <CardDescription>Catat dan kelola kehadiran siswa untuk setiap sesi pembelajaran atau kegiatan sekolah.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
-              <label htmlFor="kelas-select" className="block text-sm font-medium text-muted-foreground mb-1">Pilih Kelas</label>
+              <Label htmlFor="kelas-select">Pilih Kelas</Label>
               {isLoadingClasses ? ( <div className="flex items-center h-10"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Memuat kelas...</div> ) : (
                 <Select value={selectedClass} onValueChange={setSelectedClass} disabled={teachingClasses.length === 0}>
                   <SelectTrigger id="kelas-select"><SelectValue placeholder={teachingClasses.length === 0 ? "Tidak ada kelas diajar" : "Pilih Kelas"} /></SelectTrigger>
@@ -258,104 +252,112 @@ export default function GuruAbsensiPage() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">Pilih Tanggal</label>
+              <Label>Pilih Tanggal</Label>
               <Popover>
                 <PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-left font-normal">{selectedDate ? format(selectedDate, "PPP", { locale: localeID }) : <span>Pilih tanggal</span>}</Button></PopoverTrigger>
                 <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus /></PopoverContent>
               </Popover>
             </div>
+             <Button onClick={handleFetchScheduledLessons} disabled={isLoadingScheduledLessons || !selectedClass}>
+              {isLoadingScheduledLessons ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4"/>} Cari Sesi Pelajaran
+            </Button>
           </div>
+        </CardContent>
+      </Card>
 
-          {selectedClass && selectedDate && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Pilih Sesi Pelajaran untuk {selectedClass} ({format(selectedDate, "eeee, dd MMM yyyy", { locale: localeID })})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoadingScheduledLessons ? (<div className="flex justify-center items-center h-20"><Loader2 className="h-6 w-6 animate-spin" /></div>
-                ) : scheduledLessons.length > 0 ? (
-                  <div className="space-y-2">
-                    {scheduledLessons.map(lesson => (
-                      <Button 
-                        key={lesson.id} 
-                        variant={selectedJadwalPelajaranId === lesson.id ? "default" : "outline"} 
-                        className="w-full justify-start text-left"
-                        onClick={() => handleSelectJadwalPelajaran(lesson.id)}
-                      >
-                        <BookOpen className="mr-2 h-4 w-4" /> {lesson.mapel?.nama} ({lesson.slotWaktu?.waktuMulai} - {lesson.slotWaktu?.waktuSelesai}) - Ruang: {lesson.ruangan?.nama}
-                      </Button>
-                    ))}
-                     <Button onClick={fetchAttendanceData} disabled={!selectedJadwalPelajaranId || isLoadingSiswaForAttendance} className="mt-2">
-                        <Search className="mr-2 h-4 w-4"/> Ambil Data Absensi Sesi Ini
-                    </Button>
-                  </div>
-                ) : ( <p className="text-muted-foreground text-center">Tidak ada sesi pelajaran terjadwal untuk Anda pada kelas dan tanggal ini.</p> )}
-              </CardContent>
-            </Card>
-          )}
+      {scheduledLessons.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Pilih Sesi Pelajaran untuk {selectedClass} ({format(selectedDate!, "eeee, dd MMM yyyy", { locale: localeID })})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingScheduledLessons ? (<div className="flex justify-center items-center h-20"><Loader2 className="h-6 w-6 animate-spin" /></div>
+            ) : (
+              <div className="space-y-2">
+                {scheduledLessons.map(lesson => (
+                  <Button 
+                    key={lesson.id} 
+                    variant={selectedJadwalPelajaranId === lesson.id ? "default" : "outline"} 
+                    className="w-full justify-start text-left"
+                    onClick={() => fetchAttendanceData(lesson.id)}
+                    disabled={isLoadingSiswaForAttendance && selectedJadwalPelajaranId === lesson.id}
+                  >
+                    {isLoadingSiswaForAttendance && selectedJadwalPelajaranId === lesson.id 
+                        ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> 
+                        : <BookOpen className="mr-2 h-4 w-4" /> 
+                    }
+                    {lesson.mapel?.nama} ({lesson.slotWaktu?.waktuMulai} - {lesson.slotWaktu?.waktuSelesai}) - Ruang: {lesson.ruangan?.nama}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-          {selectedJadwalPelajaranId && selectedDate && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Absensi: {scheduledLessons.find(l=>l.id === selectedJadwalPelajaranId)?.mapel?.nama} - {selectedClass} - {format(selectedDate, "dd MMMM yyyy", { locale: localeID })}</CardTitle>
-                <CardDescription>Daftar kehadiran siswa. Silakan pilih status untuk setiap siswa.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoadingSiswaForAttendance ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin" /></div>
-                ) : siswaListForAttendance.length > 0 ? (
-                  <>
-                    <ScrollArea className="max-h-[50vh]">
-                      <Table>
-                        <TableHeader><TableRow><TableHead>Nama Siswa (NIS)</TableHead><TableHead className="w-[150px]">Status</TableHead><TableHead>Catatan (Opsional)</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                          {siswaListForAttendance.map(siswa => (
-                            <TableRow key={siswa.siswaId}>
-                              <TableCell className="font-medium">{siswa.fullName || "Nama Siswa"} <span className="text-xs text-muted-foreground">({siswa.nis || "N/A"})</span></TableCell>
-                              <TableCell>
-                                <Select 
-                                  value={siswa.statusKehadiran || ""} 
-                                  onValueChange={(value) => handleAttendanceStatusChange(siswa.siswaId, value as StatusKehadiran)}
-                                >
-                                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pilih Status" /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Hadir">Hadir</SelectItem>
-                                    <SelectItem value="Izin">Izin</SelectItem>
-                                    <SelectItem value="Sakit">Sakit</SelectItem>
-                                    <SelectItem value="Alpha">Alpha</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell>
-                                <Input 
-                                    type="text" 
-                                    placeholder="Catatan..." 
-                                    className="h-8 text-xs"
-                                    value={siswa.catatan || ""}
-                                    onChange={(e) => handleAttendanceCatatanChange(siswa.siswaId, e.target.value)}
-                                />
-                                </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </ScrollArea>
-                    <div className="mt-4 flex justify-end">
-                      <Button onClick={handleSaveAttendance} disabled={isSubmittingAttendance}>
-                        {isSubmittingAttendance && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Simpan Absensi
-                      </Button>
-                    </div>
-                  </>
-                ) : ( <p className="text-muted-foreground text-center py-4">Tidak ada data siswa untuk kelas ini, atau data absensi belum diambil.</p> )}
-              </CardContent>
-            </Card>
-          )}
-          <Card>
-            <CardHeader><CardTitle className="flex items-center text-xl"><CalendarDays className="mr-3 h-5 w-5 text-primary" />Laporan & Rekapitulasi Absensi</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-               <Button variant="outline" onClick={() => setIsRekapDialogOpen(true)} className="justify-start text-left h-auto py-3 col-span-full"><ListChecks className="mr-3 h-5 w-5" /><div><p className="font-semibold">Rekap & Cetak Absensi Bulanan</p><p className="text-xs text-muted-foreground">Lihat dan cetak rekapitulasi kehadiran per bulan.</p></div></Button>
-            </CardContent>
-          </Card>
+      {selectedJadwalPelajaranId && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Absensi: {scheduledLessons.find(l=>l.id === selectedJadwalPelajaranId)?.mapel?.nama} - {selectedClass} - {format(selectedDate!, "dd MMMM yyyy", { locale: localeID })}</CardTitle>
+            <CardDescription>Daftar kehadiran siswa. Silakan pilih status untuk setiap siswa.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingSiswaForAttendance ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin" /></div>
+            ) : siswaListForAttendance.length > 0 ? (
+              <>
+                <ScrollArea className="max-h-[50vh]">
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Nama Siswa (NIS)</TableHead><TableHead className="w-[150px]">Status</TableHead><TableHead>Catatan (Opsional)</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {siswaListForAttendance.map(siswa => (
+                        <TableRow key={siswa.siswaId}>
+                          <TableCell className="font-medium">{siswa.fullName || "Nama Siswa"} <span className="text-xs text-muted-foreground">({siswa.nis || "N/A"})</span></TableCell>
+                          <TableCell>
+                            <Select 
+                              value={siswa.statusKehadiran || ""} 
+                              onValueChange={(value) => handleAttendanceStatusChange(siswa.siswaId, value as StatusKehadiran)}
+                            >
+                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pilih Status" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Hadir">Hadir</SelectItem>
+                                <SelectItem value="Izin">Izin</SelectItem>
+                                <SelectItem value="Sakit">Sakit</SelectItem>
+                                <SelectItem value="Alpha">Alpha</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Input 
+                                type="text" 
+                                placeholder="Catatan..." 
+                                className="h-8 text-xs"
+                                value={siswa.catatan || ""}
+                                onChange={(e) => handleAttendanceCatatanChange(siswa.siswaId, e.target.value)}
+                            />
+                            </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+                <div className="mt-4 flex justify-end">
+                  <Button onClick={handleSaveAttendance} disabled={isSubmittingAttendance}>
+                    {isSubmittingAttendance && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Simpan Absensi
+                  </Button>
+                </div>
+              </>
+            ) : ( <p className="text-muted-foreground text-center py-4">Tidak ada data siswa untuk kelas ini.</p> )}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="shadow-lg">
+        <CardHeader><CardTitle className="flex items-center text-xl"><CalendarDays className="mr-3 h-5 w-5 text-primary" />Fitur Tambahan Absensi</CardTitle></CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+           <Button variant="outline" onClick={() => setIsRekapDialogOpen(true)} className="justify-start text-left h-auto py-3"><ListChecks className="mr-3 h-5 w-5" /><div><p className="font-semibold">Rekap Bulanan</p><p className="text-xs text-muted-foreground">Lihat rekapitulasi per bulan.</p></div></Button>
+           <Button variant="outline" onClick={() => toast({title: "Fitur Dalam Pengembangan"})} className="justify-start text-left h-auto py-3"><BarChart className="mr-3 h-5 w-5" /><div><p className="font-semibold">Statistik Kehadiran</p><p className="text-xs text-muted-foreground">Grafik dan analisis.</p></div></Button>
+           <Button variant="outline" onClick={() => toast({title: "Fitur Dalam Pengembangan"})} className="justify-start text-left h-auto py-3"><Printer className="mr-3 h-5 w-5" /><div><p className="font-semibold">Cetak Laporan</p><p className="text-xs text-muted-foreground">Ekspor data absensi.</p></div></Button>
         </CardContent>
       </Card>
 
@@ -440,7 +442,6 @@ export default function GuruAbsensiPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

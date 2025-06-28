@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,7 +56,6 @@ export default function GuruBankSoalPage() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [soalList, setSoalList] = useState<Soal[]>([]);
   const [groupedSoal, setGroupedSoal] = useState<SoalGroupedByPaket>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -64,6 +63,7 @@ export default function GuruBankSoalPage() {
   const [soalToDelete, setSoalToDelete] = useState<Soal | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPaket, setCurrentPaket] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   
   const [mapelOptions, setMapelOptions] = useState<MataPelajaran[]>([]);
 
@@ -94,7 +94,6 @@ export default function GuruBankSoalPage() {
       const response = await fetch('/api/bank-soal');
       if (!response.ok) throw new Error("Gagal mengambil data bank soal.");
       const data: Soal[] = await response.json();
-      setSoalList(data);
       const grouped = data.reduce((acc, soal) => {
         const paket = soal.paketSoal || "Tanpa Paket";
         if (!acc[paket]) {
@@ -219,7 +218,16 @@ export default function GuruBankSoalPage() {
     return <p>Akses Ditolak.</p>;
   }
   
-  const sortedPaketKeys = useMemo(() => Object.keys(groupedSoal).sort(), [groupedSoal]);
+  const filteredPaketKeys = useMemo(() => {
+    const allKeys = Object.keys(groupedSoal);
+    if (!searchTerm) {
+      return allKeys.sort();
+    }
+    return allKeys.filter(paket => 
+      paket.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      groupedSoal[paket].some(soal => soal.mapel?.nama.toLowerCase().includes(searchTerm.toLowerCase()))
+    ).sort();
+  }, [groupedSoal, searchTerm]);
 
   return (
     <div className="space-y-6">
@@ -228,76 +236,77 @@ export default function GuruBankSoalPage() {
           <h1 className="text-3xl font-headline font-semibold">Bank Soal</h1>
           <p className="text-muted-foreground mt-1">Kelola koleksi paket soal untuk kuis dan ujian.</p>
         </div>
-        <Button onClick={() => handleOpenForm(null, null)} disabled={isLoading}>
-          <PackagePlus className="mr-2 h-4 w-4" /> Buat Soal / Paket Baru
-        </Button>
-      </div>
-
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center"><Package className="mr-2 h-5 w-5 text-primary"/>Daftar Paket Soal</CardTitle>
-          <CardDescription>Total {sortedPaketKeys.length} paket soal tersedia.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin" /></div>
-          ) : sortedPaketKeys.length > 0 ? (
-            <Accordion type="single" collapsible className="w-full">
-              {sortedPaketKeys.map((paket) => (
-                <AccordionItem value={paket} key={paket}>
-                  <AccordionTrigger>
-                    <div className="flex items-center gap-3">
-                        <span className="text-lg font-medium text-primary">{paket}</span>
-                        <span className="flex items-center text-sm font-normal text-muted-foreground">
-                            <FileQuestion className="mr-1.5 h-4 w-4" />
-                            {groupedSoal[paket].length} Soal
-                        </span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="flex justify-end mb-4">
-                        <Button variant="outline" size="sm" onClick={() => handleOpenForm(paket, null)}>
-                            <PlusCircle className="mr-2 h-4 w-4"/> Tambah Soal ke Paket Ini
-                        </Button>
-                    </div>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                            <TableHead>Pertanyaan</TableHead>
-                            <TableHead>Tipe</TableHead>
-                            <TableHead>Mapel</TableHead>
-                            <TableHead>Kesulitan</TableHead>
-                            <TableHead className="text-right">Aksi</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {groupedSoal[paket].map(soal => (
-                          <TableRow key={soal.id}>
-                            <TableCell className="font-medium max-w-md truncate" title={soal.pertanyaan}>{soal.pertanyaan}</TableCell>
-                            <TableCell>{soal.tipeSoal}</TableCell>
-                            <TableCell>{soal.mapel?.nama}</TableCell>
-                            <TableCell>{soal.tingkatKesulitan}</TableCell>
-                            <TableCell className="text-right">
-                                <Button variant="ghost" size="sm" onClick={() => handleOpenForm(paket, soal)}><Edit className="h-4 w-4"/></Button>
-                                <Button variant="ghost" size="sm" onClick={() => setSoalToDelete(soal)} className="text-destructive"><Trash2 className="h-4 w-4"/></Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          ) : (
-            <div className="text-center py-8">
-                <FileQuestion className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-2 text-sm font-medium text-foreground">Belum Ada Soal</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Silakan buat paket soal pertama Anda.</p>
+        <div className="flex w-full sm:w-auto sm:items-center gap-2 flex-col sm:flex-row">
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Cari nama paket atau mapel..." 
+                className="pl-8" 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <Button onClick={() => handleOpenForm(null, null)} disabled={isLoading} className="w-full sm:w-auto">
+              <PackagePlus className="mr-2 h-4 w-4" /> Buat Paket Soal Baru
+            </Button>
+        </div>
+      </div>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin" /></div>
+      ) : filteredPaketKeys.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredPaketKeys.map((paket) => (
+            <Card key={paket} className="flex flex-col shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-primary">{paket}</CardTitle>
+                <CardDescription>
+                  {groupedSoal[paket]?.[0]?.mapel.nama} - {groupedSoal[paket].length} soal
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <Accordion type="single" collapsible>
+                    <AccordionItem value="item-1" className="border-b-0">
+                        <AccordionTrigger>Lihat Daftar Soal</AccordionTrigger>
+                        <AccordionContent>
+                           <ScrollArea className="h-48">
+                            <Table>
+                                <TableHeader><TableRow><TableHead>Pertanyaan</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                {groupedSoal[paket].map(soal => (
+                                    <TableRow key={soal.id}>
+                                        <TableCell className="font-medium max-w-xs truncate" title={soal.pertanyaan}>{soal.pertanyaan}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenForm(paket, soal)}><Edit className="h-4 w-4"/></Button>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setSoalToDelete(soal)}><Trash2 className="h-4 w-4"/></Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                </TableBody>
+                            </Table>
+                           </ScrollArea>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+              </CardContent>
+              <CardFooter>
+                 <Button variant="outline" size="sm" onClick={() => handleOpenForm(paket, null)} className="w-full">
+                    <PlusCircle className="mr-2 h-4 w-4"/> Tambah Soal ke Paket Ini
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+            <FileQuestion className="mx-auto h-12 w-12" />
+            <h3 className="mt-2 text-sm font-medium text-foreground">
+                {searchTerm ? "Paket Soal Tidak Ditemukan" : "Belum Ada Paket Soal"}
+            </h3>
+            <p className="mt-1 text-sm">
+                {searchTerm ? "Coba kata kunci lain atau buat paket soal baru." : "Silakan buat paket soal pertama Anda."}
+            </p>
+        </div>
+      )}
       
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
@@ -328,7 +337,7 @@ export default function GuruBankSoalPage() {
                                                     <RadioGroupItem value={item.id} id={`kunci-${item.id}`} />
                                                 </FormControl>
                                                 <FormField control={soalForm.control} name={`pilihanJawaban.${index}.text`} render={({ field: optionField }) => (<FormItem className="flex-grow"><FormControl><Input placeholder={`Teks untuk Opsi ${String.fromCharCode(65 + index)}`} {...optionField} /></FormControl><FormMessage /></FormItem>)} />
-                                                <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveOption(index)} disabled={fields.length <= 2} className="text-destructive"><Trash2 className="h-4 w-4"/></Button>
+                                                <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveOption(index)} disabled={fields.length <= 2} className="text-destructive h-8 w-8"><Trash2 className="h-4 w-4"/></Button>
                                             </div>
                                         ))}
                                     </RadioGroup>
@@ -368,5 +377,3 @@ export default function GuruBankSoalPage() {
     </div>
   );
 }
-
-    
