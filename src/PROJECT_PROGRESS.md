@@ -94,14 +94,14 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - [x] Proses Absensi Siswa yang Detail.
 - [x] Proses Penilaian Siswa yang Detail.
 - [x] Visualisasi data kehadiran di dasbor.
-- [x] Generate rapor dalam format HTML untuk dicetak ke PDF.
+- [x] Generate rapor siswa dalam format HTML untuk dicetak ke PDF.
+- [x] Cetak Laporan (Dasbor Pimpinan, Rekap Absensi Guru) fungsional via Print-to-PDF.
 
 ## 13. Fitur yang Masih Berupa Simulasi atau Belum Selesai
 - **Impor Pengguna**: Antarmuka dan API sudah ada, namun backend hanya memberikan respons berhasil tanpa mem-parsing file CSV/Excel.
 - **Impor Jadwal**: Sama seperti Impor Pengguna, API hanya memberikan respons berhasil tanpa mem-parsing file.
 - **Deteksi Konflik Jadwal**: Tombol "Deteksi Konflik" dan "Ketersediaan Guru" di halaman jadwal admin adalah placeholder dan belum memiliki fungsi.
 - **Pengiriman Email**: Menggunakan Nodemailer dengan Ethereal untuk simulasi di lingkungan pengembangan. Perlu diubah ke layanan SMTP produksi (seperti SendGrid, Mailgun, dll).
-- **Cetak Laporan Admin/Pimpinan**: Tombol untuk mencetak laporan lain (selain rapor siswa) adalah placeholder.
 ---
 **Perkiraan Progres Keseluruhan Proyek (Non-AI): Sekitar 99%**
 ---

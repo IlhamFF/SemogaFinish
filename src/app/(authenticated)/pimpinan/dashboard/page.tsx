@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, TrendingUp, BookOpenCheck, BarChartHorizontalBig, Loader2, Trophy, Star, CheckCircle, BookCopy } from "lucide-react";
+import { Users, TrendingUp, BookOpenCheck, BarChartHorizontalBig, Loader2, Trophy, Star, CheckCircle, BookCopy, Printer } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
@@ -13,6 +13,7 @@ import { ROLES } from "@/lib/constants";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 
 interface AkademikData {
@@ -148,8 +149,20 @@ export default function PimpinanDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-headline font-semibold">Dasbor Pimpinan SMA Az-Bail</h1>
-      <p className="text-muted-foreground">Selamat datang, {currentUserAuth.fullName || currentUserAuth.name || currentUserAuth.email}! Gambaran umum kinerja institusi dan metrik utama.</p>
+       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 print:hidden">
+        <div>
+          <h1 className="text-3xl font-headline font-semibold">Dasbor Pimpinan SMA Az-Bail</h1>
+          <p className="text-muted-foreground">Selamat datang, {currentUserAuth.fullName || currentUserAuth.name || currentUserAuth.email}! Gambaran umum kinerja institusi dan metrik utama.</p>
+        </div>
+        <Button onClick={() => window.print()} variant="outline" className="w-full md:w-auto">
+          <Printer className="mr-2 h-4 w-4" /> Cetak Laporan
+        </Button>
+      </div>
+
+      <div className="hidden print:block text-center mb-4">
+        <h1 className="text-2xl font-bold">Laporan Dasbor Pimpinan</h1>
+        <p className="text-sm text-muted-foreground">SMA Az-Bail - {new Date().toLocaleDateString('id-ID', { dateStyle: 'long' })}</p>
+      </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {pimpinanStats.map((card) => (
@@ -266,7 +279,7 @@ export default function PimpinanDashboardPage() {
                 <CardDescription>Pilih kelas untuk melihat rincian nilai semua siswa.</CardDescription>
               </div>
               <Select value={selectedKelas} onValueChange={setSelectedKelas} disabled={akademikData.rataRataKelas.length === 0}>
-                <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectTrigger className="w-full sm:w-[200px] print:hidden">
                   <SelectValue placeholder="Pilih Kelas" />
                 </SelectTrigger>
                 <SelectContent>

@@ -1,10 +1,11 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { UserCheck, CalendarDays, ListChecks, PieChart, Printer, PlusCircle, Loader2, BookOpen, Search } from "lucide-react";
+import { UserCheck, CalendarDays, ListChecks, Printer, Loader2, BookOpen, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -352,20 +353,19 @@ export default function GuruAbsensiPage() {
           <Card>
             <CardHeader><CardTitle className="flex items-center text-xl"><CalendarDays className="mr-3 h-5 w-5 text-primary" />Laporan & Rekapitulasi Absensi</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Button variant="outline" onClick={() => setIsRekapDialogOpen(true)} className="justify-start text-left h-auto py-3"><ListChecks className="mr-3 h-5 w-5" /><div><p className="font-semibold">Rekap Bulanan</p><p className="text-xs text-muted-foreground">Lihat rekapitulasi per bulan.</p></div></Button>
-              <Button variant="outline" onClick={() => toast({title:"Fitur Dalam Pengembangan", description:"Fungsi cetak laporan absensi akan segera tersedia."})} className="justify-start text-left h-auto py-3"><Printer className="mr-3 h-5 w-5" /><div><p className="font-semibold">Cetak Laporan</p><p className="text-xs text-muted-foreground">Ekspor data absensi (WIP).</p></div></Button>
+               <Button variant="outline" onClick={() => setIsRekapDialogOpen(true)} className="justify-start text-left h-auto py-3 col-span-full"><ListChecks className="mr-3 h-5 w-5" /><div><p className="font-semibold">Rekap & Cetak Absensi Bulanan</p><p className="text-xs text-muted-foreground">Lihat dan cetak rekapitulasi kehadiran per bulan.</p></div></Button>
             </CardContent>
           </Card>
         </CardContent>
       </Card>
 
       <Dialog open={isRekapDialogOpen} onOpenChange={setIsRekapDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
+        <DialogContent className="max-w-3xl print:shadow-none print:border-none">
+          <DialogHeader className="print:hidden">
             <DialogTitle>Rekap Absensi Bulanan</DialogTitle>
             <DialogDescription>Pilih kelas, bulan, dan tahun untuk melihat rekap absensi.</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-4 print:hidden">
             <div>
               <Label htmlFor="rekap-kelas-select" className="text-sm font-medium text-muted-foreground mb-1">Kelas</Label>
               <Select value={selectedRekapKelas} onValueChange={setSelectedRekapKelas} disabled={teachingClasses.length === 0}>
@@ -388,46 +388,54 @@ export default function GuruAbsensiPage() {
               </Select>
             </div>
           </div>
-          <Button onClick={handleShowRekap} disabled={isLoadingRekap || !selectedRekapKelas}>
+          <Button onClick={handleShowRekap} disabled={isLoadingRekap || !selectedRekapKelas} className="print:hidden">
             {isLoadingRekap && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Tampilkan Rekap
           </Button>
           
-          {isLoadingRekap ? (
-            <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin"/></div>
-          ) : rekapData.length > 0 ? (
-            <ScrollArea className="max-h-[50vh] mt-4 border rounded-md">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nama Siswa</TableHead>
-                    <TableHead>NIS</TableHead>
-                    <TableHead className="text-center">Hadir</TableHead>
-                    <TableHead className="text-center">Izin</TableHead>
-                    <TableHead className="text-center">Sakit</TableHead>
-                    <TableHead className="text-center">Alpha</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rekapData.map(item => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.nama}</TableCell>
-                      <TableCell>{item.nis || "N/A"}</TableCell>
-                      <TableCell className="text-center">{item.hadir}</TableCell>
-                      <TableCell className="text-center">{item.izin}</TableCell>
-                      <TableCell className="text-center">{item.sakit}</TableCell>
-                      <TableCell className="text-center">{item.alpha}</TableCell>
+          <div className="printable-rekap-area">
+            <div className="hidden print:block text-center mb-4">
+              <h2 className="text-lg font-bold">Rekap Absensi Bulanan</h2>
+              <p>Kelas: {selectedRekapKelas}</p>
+              <p>Periode: {MONTHS.find(m => m.value.toString() === selectedRekapBulan)?.label} {selectedRekapTahun}</p>
+            </div>
+            {isLoadingRekap ? (
+              <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin"/></div>
+            ) : rekapData.length > 0 ? (
+              <ScrollArea className="max-h-[50vh] mt-4 border rounded-md print:border-none print:max-h-full">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nama Siswa</TableHead>
+                      <TableHead>NIS</TableHead>
+                      <TableHead className="text-center">Hadir</TableHead>
+                      <TableHead className="text-center">Izin</TableHead>
+                      <TableHead className="text-center">Sakit</TableHead>
+                      <TableHead className="text-center">Alpha</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          ) : (
-            <p className="mt-4 text-center text-muted-foreground">
-              { (selectedRekapKelas) ? "Tidak ada data rekap untuk periode ini." : "Silakan pilih filter untuk menampilkan data."}
-            </p>
-          )}
-
-          <DialogFooter className="mt-4">
+                  </TableHeader>
+                  <TableBody>
+                    {rekapData.map(item => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.nama}</TableCell>
+                        <TableCell>{item.nis || "N/A"}</TableCell>
+                        <TableCell className="text-center">{item.hadir}</TableCell>
+                        <TableCell className="text-center">{item.izin}</TableCell>
+                        <TableCell className="text-center">{item.sakit}</TableCell>
+                        <TableCell className="text-center">{item.alpha}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            ) : (
+              <p className="mt-4 text-center text-muted-foreground">
+                { (selectedRekapKelas) ? "Tidak ada data rekap untuk periode ini." : "Silakan pilih filter untuk menampilkan data."}
+              </p>
+            )}
+          </div>
+          
+          <DialogFooter className="mt-4 print:hidden">
+            <Button variant="outline" onClick={() => window.print()} disabled={rekapData.length === 0}><Printer className="mr-2 h-4 w-4"/>Cetak Rekap</Button>
             <DialogClose asChild><Button variant="outline">Tutup</Button></DialogClose>
           </DialogFooter>
         </DialogContent>
