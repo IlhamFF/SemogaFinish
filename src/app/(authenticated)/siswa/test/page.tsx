@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -119,7 +120,7 @@ export default function SiswaTestPage() {
                     </div>
                     <div>
                         <p className="font-semibold">Jumlah Soal:</p>
-                        <p className="text-muted-foreground">{test.jumlahSoal || '-'}</p>
+                        <p className="text-muted-foreground">{test.soalCount ?? '-'}</p>
                     </div>
                 </div>
                 

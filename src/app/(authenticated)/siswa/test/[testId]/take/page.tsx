@@ -8,27 +8,14 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2, Clock, AlertTriangle, CheckCircle, ArrowLeft, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Test as TestType, TestSubmission } from "@/types";
+import type { Test as TestType, TestSubmission, Soal } from "@/types";
 import { format, parseISO, differenceInSeconds, intervalToDuration } from 'date-fns';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
 
-
-// --- MOCK QUESTIONS ---
-// In a real application, these would be fetched from the database based on the testId.
-const MOCK_QUESTIONS = Array.from({ length: 10 }, (_, i) => ({
-  id: `q${i + 1}`,
-  question: `Ini adalah pertanyaan nomor ${i + 1}. Apa jawaban yang paling tepat untuk soal simulasi ini?`,
-  options: [
-    { id: "A", text: `Opsi jawaban A untuk soal ${i + 1}` },
-    { id: "B", text: `Opsi jawaban B untuk soal ${i + 1}` },
-    { id: "C", text: `Opsi jawaban C untuk soal ${i + 1}` },
-    { id: "D", text: `Opsi jawaban D untuk soal ${i + 1}` },
-  ],
-}));
-// --- END MOCK QUESTIONS ---
 
 type Answers = Record<string, string>;
 
@@ -49,10 +36,9 @@ export default function SiswaTakeTestPage() {
   const [isTestFinished, setIsTestFinished] = useState(false);
 
   // State for test taking UI
-  const [questions, setQuestions] = useState(MOCK_QUESTIONS);
+  const [questions, setQuestions] = useState<Soal[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
-
 
   const fetchTestDetailsAndStart = useCallback(async () => {
     if (!testId || !user) return;
@@ -86,6 +72,15 @@ export default function SiswaTakeTestPage() {
         const endTime = new Date(parseISO(submissionData.waktuMulai)).getTime() + testData.durasi * 60 * 1000;
         const now = new Date().getTime();
         setTimeLeft(Math.max(0, Math.floor((endTime - now) / 1000)));
+      }
+
+      // Fetch questions for the test
+      const soalRes = await fetch(`/api/test/${testId}/soal`);
+      if(!soalRes.ok) throw new Error("Gagal memuat soal ujian.");
+      const soalData: Soal[] = await soalRes.json();
+      setQuestions(soalData);
+      if (soalData.length === 0) {
+        setError("Test ini belum memiliki soal. Hubungi guru Anda.");
       }
 
     } catch (err: any) {
@@ -137,8 +132,8 @@ export default function SiswaTakeTestPage() {
     return `${String(duration.hours || 0).padStart(2, '0')}:${String(duration.minutes || 0).padStart(2, '0')}:${String(duration.seconds || 0).padStart(2, '0')}`;
   };
 
-  const handleAnswerChange = (questionId: string, answerId: string) => {
-    setAnswers(prev => ({ ...prev, [questionId]: answerId }));
+  const handleAnswerChange = (questionId: string, answerValue: string) => {
+    setAnswers(prev => ({ ...prev, [questionId]: answerValue }));
   };
 
   if (isLoading) {
@@ -159,8 +154,18 @@ export default function SiswaTakeTestPage() {
     );
   }
   
-  if (!testDetails || !submission) {
-      return <div className="flex h-full items-center justify-center"><p className="text-muted-foreground">Test tidak ditemukan atau gagal memulai sesi.</p></div>;
+  if (!testDetails || !submission || questions.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-center p-6">
+          <Card className="w-full max-w-md shadow-lg">
+              <CardHeader><CardTitle className="text-2xl text-destructive flex items-center justify-center"><AlertTriangle className="mr-2"/> Terjadi Kesalahan</CardTitle></CardHeader>
+              <CardContent>
+                  <p className="text-muted-foreground mb-4">{error || "Test tidak dapat dimuat atau tidak memiliki soal."}</p>
+                  <Button onClick={() => router.push('/siswa/test')}>Kembali ke Daftar Test</Button>
+              </CardContent>
+          </Card>
+      </div>
+      );
   }
   
   const isTimeUp = timeLeft !== null && timeLeft <= 0;
@@ -200,19 +205,31 @@ export default function SiswaTakeTestPage() {
                 <p className="text-sm text-center text-muted-foreground mt-2">Soal {currentQuestionIndex + 1} dari {questions.length}</p>
               </div>
               <div className="flex-grow">
-                <p className="font-medium mb-4 leading-relaxed text-lg">{currentQuestion.question}</p>
-                <RadioGroup 
-                    value={answers[currentQuestion.id] || ""}
-                    onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
-                    className="space-y-3"
-                >
-                  {currentQuestion.options.map((option) => (
-                    <Label key={option.id} className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary cursor-pointer">
-                      <RadioGroupItem value={option.id} id={`${currentQuestion.id}-${option.id}`} />
-                      <span>{option.text}</span>
-                    </Label>
-                  ))}
-                </RadioGroup>
+                <p className="font-medium mb-4 leading-relaxed text-lg">{currentQuestion.pertanyaan}</p>
+                
+                {currentQuestion.tipeSoal === 'Pilihan Ganda' && (
+                    <RadioGroup 
+                        value={answers[currentQuestion.id] || ""}
+                        onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
+                        className="space-y-3"
+                    >
+                    {(currentQuestion.pilihanJawaban || []).map((option) => (
+                        <Label key={option.id} className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary cursor-pointer">
+                        <RadioGroupItem value={option.id} id={`${currentQuestion.id}-${option.id}`} />
+                        <span>{option.text}</span>
+                        </Label>
+                    ))}
+                    </RadioGroup>
+                )}
+
+                {currentQuestion.tipeSoal === 'Esai' && (
+                    <Textarea 
+                        rows={8}
+                        placeholder="Tulis jawaban Anda di sini..."
+                        value={answers[currentQuestion.id] || ""}
+                        onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                    />
+                )}
               </div>
             </>
           )}
