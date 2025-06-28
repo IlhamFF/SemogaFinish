@@ -45,23 +45,24 @@ export default function SiswaTakeTestPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const testRes = await fetch(`/api/test/${testId}`);
-      if (!testRes.ok) throw new Error((await testRes.json()).message || "Gagal mengambil detail test.");
-      const testData: TestType = await testRes.json();
-      setTestDetails(testData);
-
+      // Periksa submission yang sudah ada terlebih dahulu
       const submissionsRes = await fetch(`/api/test/submissions/me?testId=${testId}`);
       if (submissionsRes.ok) {
           const pastSubmissions: TestSubmission[] = await submissionsRes.json();
-          const existingSubmission = pastSubmissions.find(s => s.testId === testId && (s.status === "Selesai" || s.status === "Dinilai"));
-          if (existingSubmission) {
-              setIsTestFinished(true);
+          const existingSubmission = pastSubmissions.find(s => s.testId === testId);
+          if (existingSubmission && (existingSubmission.status === "Selesai" || existingSubmission.status === "Dinilai")) {
               setSubmission(existingSubmission);
+              setIsTestFinished(true);
               setError("Anda sudah menyelesaikan test ini.");
               setIsLoading(false);
               return;
           }
       }
+
+      const testRes = await fetch(`/api/test/${testId}`);
+      if (!testRes.ok) throw new Error((await testRes.json()).message || "Gagal mengambil detail test.");
+      const testData: TestType = await testRes.json();
+      setTestDetails(testData);
 
       const startRes = await fetch(`/api/test/${testId}/start`, { method: 'POST' });
       if (!startRes.ok) throw new Error((await startRes.json()).message || "Gagal memulai test.");
@@ -107,6 +108,8 @@ export default function SiswaTakeTestPage() {
       if (!response.ok) throw new Error((await response.json()).message || "Gagal menyelesaikan test.");
       toast({ title: "Test Selesai", description: autoSubmit ? "Waktu habis! Test telah diselesaikan secara otomatis." : "Test telah berhasil diselesaikan." });
       setIsTestFinished(true);
+      const finishedSubmission = await response.json();
+      setSubmission(finishedSubmission);
     } catch (err: any) {
       toast({ title: "Error Menyelesaikan Test", description: err.message, variant: "destructive" });
     } finally {
@@ -140,23 +143,30 @@ export default function SiswaTakeTestPage() {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /> <p className="ml-3">Memuat Test...</p></div>;
   }
 
-  if (error && !isTestFinished) {
+  // Final "Selesai" state should be rendered first
+  if (isTestFinished) {
+     return (
+        <div className="container mx-auto py-8 px-4 md:px-6 lg:px-8 max-w-4xl">
+        <Card className="shadow-xl">
+            <CardContent className="py-6 min-h-[350px] flex flex-col items-center justify-center text-center py-10">
+              <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
+              <h2 className="text-2xl font-semibold mb-2">Test Telah Selesai</h2>
+              <p className="text-muted-foreground mb-6">
+                {submission?.status === "Dinilai" 
+                    ? `Nilai Anda: ${submission.nilai}/100.` 
+                    : "Jawaban Anda telah dikirim. Mohon tunggu hasilnya."
+                }
+              </p>
+              <Button onClick={() => router.push('/siswa/test')}>Kembali ke Daftar Test</Button>
+            </CardContent>
+          </Card>
+        </div>
+     );
+  }
+
+  if (error || !testDetails || !submission || questions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-6">
-          <Card className="w-full max-w-md shadow-lg">
-              <CardHeader><CardTitle className="text-2xl text-destructive flex items-center justify-center"><AlertTriangle className="mr-2"/> Terjadi Kesalahan</CardTitle></CardHeader>
-              <CardContent>
-                  <p className="text-muted-foreground mb-4">{error}</p>
-                  <Button onClick={() => router.push('/siswa/test')}>Kembali ke Daftar Test</Button>
-              </CardContent>
-          </Card>
-      </div>
-    );
-  }
-  
-  if (!testDetails || !submission || questions.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-center p-6">
           <Card className="w-full max-w-md shadow-lg">
               <CardHeader><CardTitle className="text-2xl text-destructive flex items-center justify-center"><AlertTriangle className="mr-2"/> Terjadi Kesalahan</CardTitle></CardHeader>
               <CardContent>
@@ -165,7 +175,7 @@ export default function SiswaTakeTestPage() {
               </CardContent>
           </Card>
       </div>
-      );
+    );
   }
   
   const isTimeUp = timeLeft !== null && timeLeft <= 0;
@@ -189,16 +199,6 @@ export default function SiswaTakeTestPage() {
         </CardHeader>
 
         <CardContent className="py-6 min-h-[350px] flex flex-col">
-          {isTestFinished ? (
-            <div className="flex-grow flex flex-col items-center justify-center text-center py-10">
-              <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
-              <h2 className="text-2xl font-semibold mb-2">Test Telah Selesai</h2>
-              <p className="text-muted-foreground mb-6">
-                {submission?.status === "Dinilai" ? `Nilai Anda: ${submission.nilai}/100.` : "Jawaban Anda telah dikirim. Mohon tunggu hasilnya."}
-              </p>
-              <Button onClick={() => router.push('/siswa/test')}>Kembali ke Daftar Test</Button>
-            </div>
-          ) : (
             <>
               <div className="mb-4">
                 <Progress value={(currentQuestionIndex + 1) / questions.length * 100} className="w-full" />
@@ -232,11 +232,9 @@ export default function SiswaTakeTestPage() {
                 )}
               </div>
             </>
-          )}
         </CardContent>
 
-        {!isTestFinished && (
-          <CardFooter className="border-t pt-4 flex justify-between items-center">
+        <CardFooter className="border-t pt-4 flex justify-between items-center">
             <Button variant="outline" onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))} disabled={currentQuestionIndex === 0}>
                 <ArrowLeft className="mr-2 h-4 w-4"/> Sebelumnya
             </Button>
@@ -273,8 +271,7 @@ export default function SiswaTakeTestPage() {
                     </AlertDialogContent>
                 </AlertDialog>
             )}
-          </CardFooter>
-        )}
+        </CardFooter>
       </Card>
     </div>
   );

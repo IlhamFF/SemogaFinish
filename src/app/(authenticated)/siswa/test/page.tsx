@@ -1,57 +1,69 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
-import { FileText, PlayCircle, ListChecks, CheckCircle, AlertCircle, Clock, Loader2 } from "lucide-react";
+import { FileText, PlayCircle, ListChecks, CheckCircle, AlertCircle, Clock, Loader2, Award } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { id as localeID } from 'date-fns/locale';
-import type { Test as TestType, TestStatus } from "@/types"; // TestStatus also from types
+import type { Test as TestType, TestStatus, TestSubmission } from "@/types"; 
 import { useToast } from "@/hooks/use-toast";
 
+interface TestDisplay extends TestType {
+  submission?: TestSubmission;
+}
 
 export default function SiswaTestPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"mendatang" | "riwayat">("mendatang");
-  const [testListSiswa, setTestListSiswa] = useState<TestType[]>([]);
-  const [isLoadingSiswaTest, setIsLoadingSiswaTest] = useState(true);
+  const [testList, setTestList] = useState<TestDisplay[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-
-  const fetchSiswaTests = useCallback(async () => {
+  const fetchTestsAndSubmissions = useCallback(async () => {
     if (!user || !user.isVerified || !user.kelas) {
-        setIsLoadingSiswaTest(false);
+        setIsLoading(false);
         return;
     }
-    setIsLoadingSiswaTest(true);
+    setIsLoading(true);
     try {
-        const response = await fetch('/api/test'); // API will filter by class for siswa
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || "Gagal mengambil data test.");
-        }
-        const data: TestType[] = await response.json();
-        setTestListSiswa(data);
+        const [testsRes, subsRes] = await Promise.all([
+            fetch('/api/test'),
+            fetch('/api/test/submissions/me')
+        ]);
+        if (!testsRes.ok) throw new Error("Gagal mengambil daftar test.");
+        if (!subsRes.ok) throw new Error("Gagal mengambil data pengerjaan test.");
+        
+        const testsData: TestType[] = await testsRes.json();
+        const subsData: TestSubmission[] = await subsRes.json();
+        const subsMap = new Map(subsData.map(sub => [sub.testId, sub]));
+
+        const displayList: TestDisplay[] = testsData.map(test => ({
+            ...test,
+            submission: subsMap.get(test.id),
+        }));
+
+        setTestList(displayList);
     } catch (error: any) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
-        setTestListSiswa([]);
+        setTestList([]);
     } finally {
-        setIsLoadingSiswaTest(false);
+        setIsLoading(false);
     }
   }, [user, toast]);
 
   useEffect(() => {
     if (user && user.isVerified) {
-        fetchSiswaTests();
+        fetchTestsAndSubmissions();
     } else if (user && !user.isVerified) {
-        setIsLoadingSiswaTest(false);
+        setIsLoading(false);
     }
-  }, [user, fetchSiswaTests]);
+  }, [user, fetchTestsAndSubmissions]);
 
 
   if (!user || (user.role !== 'siswa' && user.role !== 'superadmin')) {
@@ -65,26 +77,33 @@ export default function SiswaTestPage() {
     toast({title:"Fitur Belum Tersedia", description:`Fungsi "${action}" ${testId ? `untuk test ${testId} ` : ''}belum diimplementasikan.`});
   };
 
-  const testMendatang = testListSiswa.filter(t => t.status === "Terjadwal" || t.status === "Berlangsung");
-  const testRiwayat = testListSiswa.filter(t => t.status === "Selesai" || t.status === "Menunggu Hasil" || t.status === "Dinilai");
+  const testMendatang = useMemo(() => testList.filter(t => (t.status === "Terjadwal" || t.status === "Berlangsung") && t.submission?.status !== "Selesai" && t.submission?.status !== "Dinilai"), [testList]);
+  const testRiwayat = useMemo(() => testList.filter(t => t.status === "Selesai" || t.status === "Dinilai" || t.submission?.status === "Selesai" || t.submission?.status === "Dinilai"), [testList]);
 
-  const getStatusBadgeVariant = (status: TestStatus): "default" | "secondary" | "destructive" | "outline" => {
-    if (status === "Dinilai" || status === "Berlangsung") return "default"; 
-    if (status === "Terjadwal") return "secondary";
-    if (status === "Menunggu Hasil" || status === "Selesai") return "outline";
-    return "outline"; 
+  const getStatusBadgeVariant = (status: TestStatus, submissionStatus?: TestSubmission["status"]): "default" | "secondary" | "destructive" | "outline" => {
+    if (submissionStatus === "Dinilai") return "default";
+    if (submissionStatus === "Selesai") return "secondary";
+    if (status === "Berlangsung") return "secondary";
+    if (status === "Terjadwal") return "outline";
+    return "outline";
   };
 
-  const getStatusIcon = (status: TestStatus) => {
-    if (status === "Dinilai") return <CheckCircle className="h-4 w-4 text-green-500" />;
+  const getStatusText = (status: TestStatus, submissionStatus?: TestSubmission["status"]): string => {
+    if (submissionStatus === "Dinilai") return "Sudah Dinilai";
+    if (submissionStatus === "Selesai") return "Telah Dikerjakan";
+    return status;
+  };
+
+  const getStatusIcon = (status: TestStatus, submissionStatus?: TestSubmission["status"]) => {
+    if (submissionStatus === "Dinilai") return <Award className="h-4 w-4 text-primary" />;
+    if (submissionStatus === "Selesai") return <CheckCircle className="h-4 w-4 text-green-500" />;
     if (status === "Berlangsung") return <PlayCircle className="h-4 w-4 text-blue-500 animate-pulse" />;
     if (status === "Terjadwal") return <Clock className="h-4 w-4 text-gray-500" />;
-    if (status === "Menunggu Hasil") return <AlertCircle className="h-4 w-4 text-yellow-500" />;
     return <ListChecks className="h-4 w-4" />;
   };
 
-  const renderTestList = (listTests: TestType[]) => (
-    isLoadingSiswaTest ? (
+  const renderTestList = (listTests: TestDisplay[]) => (
+    isLoading ? (
         <div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
     ) : listTests.length > 0 ? (
       <ul className="space-y-4">
@@ -92,7 +111,9 @@ export default function SiswaTestPage() {
           const now = new Date();
           const startTime = parseISO(test.tanggal);
           const endTime = new Date(startTime.getTime() + test.durasi * 60 * 1000);
-          const isTakable = (test.status === "Berlangsung" || test.status === "Terjadwal") && now >= startTime && now <= endTime;
+          const isTakable = (test.status === "Berlangsung" || test.status === "Terjadwal") && now >= startTime && now <= endTime && !test.submission;
+
+          const currentStatus = getStatusText(test.status, test.submission?.status);
 
           return (
           <li key={test.id}>
@@ -103,8 +124,8 @@ export default function SiswaTestPage() {
                         <CardTitle className="text-lg text-primary">{test.judul} <span className="text-sm font-normal text-muted-foreground">({test.tipe})</span></CardTitle>
                         <CardDescription>{test.mapel} - oleh {test.uploader?.fullName || test.uploader?.name || "Guru"}</CardDescription>
                     </div>
-                     <Badge variant={getStatusBadgeVariant(test.status)} className="mt-2 sm:mt-0 flex items-center gap-1">
-                        {getStatusIcon(test.status)} {test.status}
+                     <Badge variant={getStatusBadgeVariant(test.status, test.submission?.status)} className="mt-2 sm:mt-0 flex items-center gap-1">
+                        {getStatusIcon(test.status, test.submission?.status)} {currentStatus}
                     </Badge>
                 </div>
               </CardHeader>
@@ -122,6 +143,12 @@ export default function SiswaTestPage() {
                         <p className="font-semibold">Jumlah Soal:</p>
                         <p className="text-muted-foreground">{test.soalCount ?? '-'}</p>
                     </div>
+                     {test.submission?.status === "Dinilai" && (
+                        <div>
+                            <p className="font-semibold">Nilai Anda:</p>
+                            <p className="text-primary font-bold">{test.submission.nilai}/100</p>
+                        </div>
+                    )}
                 </div>
                 
                 {isTakable ? (
@@ -131,15 +158,13 @@ export default function SiswaTestPage() {
                       {test.status === "Berlangsung" ? "Lanjutkan Test" : "Mulai Test"}
                     </Link>
                   </Button>
-                ) : test.status === "Terjadwal" && now < startTime ? (
+                ) : test.status === "Terjadwal" && now < startTime && !test.submission ? (
                   <p className="text-sm text-muted-foreground">Test akan tersedia pada waktunya.</p>
-                ) : test.status === "Dinilai" ? (
-                  <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => handlePlaceholderAction("Lihat Detail Hasil", test.id)}>
-                    Lihat Detail Hasil
-                  </Button>
-                ) : (test.status === "Menunggu Hasil" || test.status === "Selesai") ? (
-                  <p className="text-sm text-yellow-600">Hasil sedang diproses atau menunggu penilaian. Mohon tunggu.</p>
-                ) : test.status !== "Draf" && now > endTime ? (
+                ) : test.submission?.status === "Dinilai" ? (
+                  <p className="text-sm text-green-600 font-semibold">Lihat detail nilai di halaman Nilai & Rapor.</p>
+                ) : test.submission?.status === "Selesai" ? (
+                   <p className="text-sm text-yellow-600">Hasil sedang diproses atau menunggu penilaian.</p>
+                ) : test.status !== "Draf" && now > endTime && !test.submission ? (
                   <p className="text-sm text-destructive">Waktu test telah berakhir.</p>
                 ) : null}
               </CardContent>

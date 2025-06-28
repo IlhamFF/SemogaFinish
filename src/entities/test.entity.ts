@@ -40,6 +40,9 @@ export class TestEntity {
     default: "Draf",
   })
   status!: TestStatus;
+  
+  @Column({ type: "int", nullable: true })
+  soalCount?: number | null;
 
   @Column({ type: "text", nullable: true })
   deskripsi?: string | null;
