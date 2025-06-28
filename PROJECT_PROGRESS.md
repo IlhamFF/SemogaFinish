@@ -56,19 +56,20 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - [x] Melihat jadwal mengajar yang dialokasikan.
 - [x] Upload dan manajemen Materi Ajar.
 - [x] Membuat dan manajemen Tugas.
-- [x] Membuat dan manajemen Test/Ujian.
+- [x] Membuat dan manajemen Bank Soal (Paket Soal, Pilihan Ganda & Esai).
+- [x] Membuat dan manajemen Test/Ujian (terintegrasi dengan Bank Soal).
 - [x] Halaman Absensi Siswa (Pencatatan harian dan rekapitulasi bulanan fungsional).
 - [x] Halaman Penilaian & Rapor Siswa (UI input nilai semester fungsional, backend batch save fungsional).
 - [x] Melihat pengumpulan tugas siswa dan memberikan nilai/feedback.
 - [x] Melihat pengumpulan test/ujian siswa dan memberikan nilai/feedback.
 
-## 9. Fitur Modul Siswa (98%)
+## 9. Fitur Modul Siswa (100%)
 - [x] Melihat jadwal pelajaran personal (harian & mingguan).
 - [x] Melihat daftar tugas yang relevan.
 - [x] Melihat dan mengakses materi pelajaran yang relevan.
 - [x] Melihat daftar test/ujian yang relevan.
 - [x] Pengumpulan tugas online (termasuk unggah file jawaban).
-- [x] Pelaksanaan ujian online (Alur start/finish test fungsional, **soal masih simulasi/mock**).
+- [x] Pelaksanaan ujian online (Alur start/finish test dan bank soal terintegrasi penuh).
 - [x] Halaman Nilai & Rapor (Menampilkan nilai akhir per semester & grafik).
 - [ ] Halaman Rapor (Cetak PDF belum diimplementasikan).
 
@@ -87,7 +88,7 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - [x] Layanan email dasar dengan Nodemailer untuk verifikasi.
 - [x] API untuk unggah file.
 
-## 12. Logika Bisnis Inti Tambahan (98%)
+## 12. Logika Bisnis Inti Tambahan (100%)
 - [x] Pengumpulan Tugas Online.
 - [x] Pelaksanaan Ujian Online.
 - [x] Proses Absensi Siswa yang Detail.
@@ -99,9 +100,8 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - **Impor Pengguna**: Antarmuka dan API sudah ada, namun backend hanya memberikan respons berhasil tanpa mem-parsing file CSV/Excel.
 - **Impor Jadwal**: Sama seperti Impor Pengguna, API hanya memberikan respons berhasil tanpa mem-parsing file.
 - **Deteksi Konflik Jadwal**: Tombol "Deteksi Konflik" dan "Ketersediaan Guru" di halaman jadwal admin adalah placeholder dan belum memiliki fungsi.
-- **Bank Soal**: Halaman pengerjaan ujian siswa sudah fungsional, namun masih menggunakan **soal simulasi (mock questions)** yang ada di dalam kode, bukan dari database. Fitur untuk membuat dan mengelola bank soal belum ada.
 - **Pengiriman Email**: Menggunakan Nodemailer dengan Ethereal untuk simulasi di lingkungan pengembangan. Perlu diubah ke layanan SMTP produksi (seperti SendGrid, Mailgun, dll).
 - **Cetak Laporan**: Tombol untuk mencetak rapor atau laporan lain adalah placeholder dan belum menghasilkan dokumen PDF atau HTML untuk dicetak.
 ---
-**Perkiraan Progres Keseluruhan Proyek (Non-AI): Sekitar 98%**
+**Perkiraan Progres Keseluruhan Proyek (Non-AI): Sekitar 99%**
 ---
