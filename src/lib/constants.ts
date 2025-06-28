@@ -42,8 +42,10 @@ export const ROUTES = {
   SISWA_MATERI: '/siswa/materi',
   SISWA_TEST: '/siswa/test',
   SISWA_NILAI: '/siswa/nilai',
+  SISWA_RAPOR_CETAK: '/siswa/rapor/cetak',
 
   PIMPINAN_DASHBOARD: '/pimpinan/dashboard',
+  PIMPINAN_LAPORAN_CETAK: '/pimpinan/laporan/cetak',
   
   DATA_VISUALIZATION: '/data-visualization',
   NOTIFICATIONS: '/notifications', 
@@ -74,3 +76,5 @@ export const KATEGORI_MAPEL = [
 export const KATEGORI_SKL_CONST = ["Sikap", "Pengetahuan", "Keterampilan"] as const;
 export const FASE_CP_CONST = ["A", "B", "C", "D", "E", "F", "Lainnya"] as const;
 export const JENIS_MATERI_AJAR = ["File", "Link"] as const;
+
+    

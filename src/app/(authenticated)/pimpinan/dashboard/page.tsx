@@ -9,7 +9,7 @@ import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/u
 import React, { useMemo, useEffect, useState, useCallback } from "react";
 import type { User as AppUser, Role } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { ROLES } from "@/lib/constants";
+import { ROLES, ROUTES } from "@/lib/constants";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -138,6 +138,9 @@ export default function PimpinanDashboardPage() {
     return [...akademikData.rataRataKelas].sort((a,b) => b.rataRata - a.rataRata);
   }, [akademikData.rataRataKelas, isLoadingData])
 
+  const handlePrintReport = () => {
+    window.open(ROUTES.PIMPINAN_LAPORAN_CETAK, '_blank');
+  };
 
   if (!currentUserAuth || (currentUserAuth.role !== 'pimpinan' && currentUserAuth.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Pimpinan untuk melihat halaman ini.</p>;
@@ -149,19 +152,14 @@ export default function PimpinanDashboardPage() {
 
   return (
     <div className="space-y-6">
-       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 print:hidden">
+       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
         <div>
           <h1 className="text-3xl font-headline font-semibold">Dasbor Pimpinan SMA Az-Bail</h1>
           <p className="text-muted-foreground">Selamat datang, {currentUserAuth.fullName || currentUserAuth.name || currentUserAuth.email}! Gambaran umum kinerja institusi dan metrik utama.</p>
         </div>
-        <Button onClick={() => window.print()} variant="outline" className="w-full md:w-auto">
+        <Button onClick={handlePrintReport} variant="outline" className="w-full md:w-auto">
           <Printer className="mr-2 h-4 w-4" /> Cetak Laporan
         </Button>
-      </div>
-
-      <div className="hidden print:block text-center mb-4">
-        <h1 className="text-2xl font-bold">Laporan Dasbor Pimpinan</h1>
-        <p className="text-sm text-muted-foreground">SMA Az-Bail - {new Date().toLocaleDateString('id-ID', { dateStyle: 'long' })}</p>
       </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -334,3 +332,5 @@ export default function PimpinanDashboardPage() {
     </div>
   );
 }
+
+    
