@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import type { User, Role } from "@/types";
-import { ROLES } from "@/lib/constants";
+import { ROLES, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, SCHOOL_CLASSES_PER_MAJOR_GRADE } from "@/lib/constants";
 import { Loader2, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, isValid } from 'date-fns';
@@ -73,6 +73,18 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
       isVerified: true, 
     },
   });
+  
+  const mockKelasList = React.useMemo(() => {
+    const kls: string[] = [];
+    SCHOOL_GRADE_LEVELS.forEach(grade => {
+      SCHOOL_MAJORS.forEach(major => {
+        for (let i = 1; i <= SCHOOL_CLASSES_PER_MAJOR_GRADE; i++) {
+          kls.push(`${grade} ${major} ${i}`);
+        }
+      });
+    });
+    return kls.sort();
+  }, []);
 
   const selectedRole = form.watch("role");
 
@@ -100,7 +112,7 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
           address: editingUser.address || "",
           birthDate: parsedBirthDate || undefined,
           bio: editingUser.bio || "",
-          nis: editingUser.nis || "",
+          nis: editingUser.nis ? editingUser.nis.replace(/^S/,'') : "",
           nip: editingUser.nip || "",
           joinDate: parsedJoinDate || undefined,
           avatarUrl: editingUser.avatarUrl || "",
@@ -126,6 +138,10 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
         submitValues.mataPelajaran = values.mataPelajaran.split(',').map(s => s.trim()).filter(Boolean);
     } else {
         submitValues.mataPelajaran = null;
+    }
+    
+    if (values.nis && /^\d+$/.test(values.nis)) {
+        submitValues.nis = `S${values.nis}`;
     }
 
     if (values.birthDate && values.birthDate instanceof Date) {
@@ -347,22 +363,37 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>NIS (Nomor Induk Siswa)</FormLabel>
-                                <FormControl>
-                                <Input placeholder="Nomor Induk Siswa" {...field} value={field.value ?? ""} />
-                                </FormControl>
+                                <div className="flex items-center">
+                                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">S</span>
+                                    <FormControl>
+                                        <Input type="number" placeholder="Nomor Induk Siswa" className="rounded-l-none" {...field} value={field.value ?? ""} />
+                                    </FormControl>
+                                </div>
+                                <FormDescription className="text-xs">Cukup masukkan angka setelah 'S'.</FormDescription>
                                 <FormMessage />
                             </FormItem>
                             )}
                         />
-                        <FormField
+                         <FormField
                             control={form.control}
                             name="kelas"
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Kelas</FormLabel>
-                                <FormControl>
-                                <Input placeholder="Contoh: X IPA 1" {...field} value={field.value ?? ""} />
-                                </FormControl>
+                                 <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Pilih kelas" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <ScrollArea className="h-60">
+                                        {mockKelasList.map(kls => (
+                                            <SelectItem key={kls} value={kls}>{kls}</SelectItem>
+                                        ))}
+                                        </ScrollArea>
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                             )}

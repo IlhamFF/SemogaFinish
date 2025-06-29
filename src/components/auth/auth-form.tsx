@@ -9,11 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
-import { ROUTES, APP_NAME } from "@/lib/constants";
+import { ROUTES, APP_NAME, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, SCHOOL_CLASSES_PER_MAJOR_GRADE } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { ScrollArea } from "../ui/scroll-area";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
@@ -52,12 +54,29 @@ export function AuthForm({ mode }: AuthFormProps) {
     },
   });
 
+  const mockKelasList = React.useMemo(() => {
+    const kls: string[] = [];
+    SCHOOL_GRADE_LEVELS.forEach(grade => {
+      SCHOOL_MAJORS.forEach(major => {
+        for (let i = 1; i <= SCHOOL_CLASSES_PER_MAJOR_GRADE; i++) {
+          kls.push(`${grade} ${major} ${i}`);
+        }
+      });
+    });
+    return kls.sort();
+  }, []);
+
   async function onSubmit(values: z.infer<typeof currentSchema>) {
     setIsSubmitting(true);
+    let finalValues = { ...values };
+    if (mode === 'register' && finalValues.nis && /^\d+$/.test(finalValues.nis)) {
+        finalValues.nis = `S${finalValues.nis}`;
+    }
+
     if (mode === "login") {
-      await login(values.email, values.password);
+      await login(finalValues.email, finalValues.password);
     } else {
-      await register(values as z.infer<typeof registerSchema>);
+      await register(finalValues as z.infer<typeof registerSchema>);
     }
     setIsSubmitting(false);
   }
@@ -116,16 +135,20 @@ export function AuthForm({ mode }: AuthFormProps) {
                 )}
               />
               {mode === 'register' && (
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
+                <>
+                 <FormField
                     control={form.control}
                     name="nis"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>NIS</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nomor Induk Siswa" {...field} />
-                        </FormControl>
+                        <div className="flex items-center">
+                            <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">S</span>
+                            <FormControl>
+                                <Input type="number" placeholder="Nomor Induk Siswa" className="rounded-l-none" {...field} />
+                            </FormControl>
+                        </div>
+                        <FormDescription className="text-xs">Cukup masukkan angka setelah 'S'.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -136,14 +159,25 @@ export function AuthForm({ mode }: AuthFormProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Kelas</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Contoh: X IPA 1" {...field} />
-                        </FormControl>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Pilih kelas Anda" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <ScrollArea className="h-60">
+                                {mockKelasList.map(kls => (
+                                    <SelectItem key={kls} value={kls}>{kls}</SelectItem>
+                                ))}
+                                </ScrollArea>
+                            </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
+                </>
               )}
               <Button type="submit" className="w-full" disabled={isSubmitting || authIsLoading}>
                 {(isSubmitting || authIsLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

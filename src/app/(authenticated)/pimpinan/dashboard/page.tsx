@@ -47,6 +47,9 @@ const initialAkademikData: AkademikData = {
   totalMataPelajaran: 0,
 };
 
+const TAHUN_AJARAN_OPTIONS = ["Semua", "2023/2024", "2022/2023", "2021/2022"];
+const SEMESTER_OPTIONS = ["Semua", "Ganjil", "Genap"];
+
 export default function PimpinanDashboardPage() {
   const { user: currentUserAuth } = useAuth();
   const { toast } = useToast();
@@ -56,6 +59,10 @@ export default function PimpinanDashboardPage() {
   const [selectedKelas, setSelectedKelas] = useState<string | undefined>();
   const [detailedClassData, setDetailedClassData] = useState<DetailedClassData>({ students: [], subjects: [] });
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  
+  const [selectedTahun, setSelectedTahun] = useState<string>("Semua");
+  const [selectedSemester, setSelectedSemester] = useState<string>("Semua");
+
 
   const fetchAllData = useCallback(async () => {
     setIsLoadingData(true);
@@ -157,9 +164,19 @@ export default function PimpinanDashboardPage() {
           <h1 className="text-3xl font-headline font-semibold">Dasbor Pimpinan SMA Az-Bail</h1>
           <p className="text-muted-foreground">Selamat datang, {currentUserAuth.fullName || currentUserAuth.name || currentUserAuth.email}! Gambaran umum kinerja institusi dan metrik utama.</p>
         </div>
-        <Button onClick={handlePrintReport} variant="outline" className="w-full md:w-auto">
-          <Printer className="mr-2 h-4 w-4" /> Cetak Laporan
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <Select value={selectedTahun} onValueChange={setSelectedTahun}>
+                <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Pilih Tahun Ajaran" /></SelectTrigger>
+                <SelectContent>{TAHUN_AJARAN_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+            </Select>
+            <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+                <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Pilih Semester" /></SelectTrigger>
+                <SelectContent>{SEMESTER_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+            </Select>
+            <Button onClick={handlePrintReport} variant="outline" className="w-full sm:w-auto">
+              <Printer className="mr-2 h-4 w-4" /> Cetak
+            </Button>
+        </div>
       </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -332,5 +349,3 @@ export default function PimpinanDashboardPage() {
     </div>
   );
 }
-
-    

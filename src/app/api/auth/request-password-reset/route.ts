@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const resetToken = generateSecureToken();
     const expires = new Date(Date.now() + 3600000); // Token valid for 1 hour
 
-    user.resetPasswordToken = resetToken; // Store the plain token for demo purposes. In production, hash this.
+    user.resetPasswordToken = resetToken;
     user.resetPasswordExpires = expires;
     await userRepo.save(user);
 
@@ -50,11 +50,10 @@ export async function POST(request: NextRequest) {
         // Do not expose email sending failure to the user for security reasons.
     }
     
-    // For demonstration purposes, the unhashed token is sent in the response.
-    // This allows easy testing without checking email/server logs.
+    // The token is NOT sent in the response anymore for security reasons.
+    // The user MUST get it from their email.
     return NextResponse.json({ 
       message: "Jika email terdaftar, instruksi reset akan dikirim.",
-      demoResetToken: resetToken 
     }, { status: 200 });
 
   } catch (error) {

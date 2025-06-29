@@ -5,9 +5,10 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import type { User } from "@/types";
-import { Loader2, BookCopy, Users } from "lucide-react";
+import { Loader2, BookCopy, Users, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from 'date-fns';
 import { id as localeID } from 'date-fns/locale';
@@ -19,6 +20,7 @@ export default function AdminKelasPage() {
   const { toast } = useToast();
   const [groupedStudents, setGroupedStudents] = useState<GroupedStudents>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const fetchGroupedStudents = useCallback(async () => {
     setIsLoading(true);
@@ -47,6 +49,15 @@ export default function AdminKelasPage() {
     return Object.keys(groupedStudents).sort();
   }, [groupedStudents]);
 
+  const filteredClasses = useMemo(() => {
+    if (!searchTerm) {
+      return sortedClasses;
+    }
+    return sortedClasses.filter(kelas => 
+      kelas.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [sortedClasses, searchTerm]);
+
   if (isLoading) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
@@ -62,13 +73,28 @@ export default function AdminKelasPage() {
       
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center"><BookCopy className="mr-2 h-6 w-6 text-primary" />Daftar Kelas</CardTitle>
-          <CardDescription>Buka setiap item untuk melihat daftar siswa. Total: {sortedClasses.length} kelas.</CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle className="flex items-center"><BookCopy className="mr-2 h-6 w-6 text-primary" />Daftar Kelas</CardTitle>
+              <CardDescription>
+                Menampilkan {filteredClasses.length} dari {sortedClasses.length} total kelas.
+              </CardDescription>
+            </div>
+            <div className="relative w-full sm:w-auto sm:max-w-xs">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari kelas..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {sortedClasses.length > 0 ? (
+          {filteredClasses.length > 0 ? (
             <Accordion type="single" collapsible className="w-full">
-              {sortedClasses.map((kelas) => (
+              {filteredClasses.map((kelas) => (
                 <AccordionItem value={kelas} key={kelas}>
                   <AccordionTrigger className="text-lg font-medium hover:no-underline">
                     <div className="flex items-center gap-3">
@@ -96,7 +122,7 @@ export default function AdminKelasPage() {
                             <TableCell>{siswa.nis || '-'}</TableCell>
                             <TableCell>{siswa.email}</TableCell>
                             <TableCell className="text-xs text-muted-foreground">
-                              {siswa.joinDate ? format(parseISO(siswa.joinDate), 'dd MMM yyyy', { locale: localeID }) : '-'}
+                              {siswa.joinDate && isValid(parseISO(siswa.joinDate)) ? format(parseISO(siswa.joinDate), 'dd MMM yyyy', { locale: localeID }) : '-'}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -107,7 +133,9 @@ export default function AdminKelasPage() {
               ))}
             </Accordion>
           ) : (
-            <p className="text-center text-muted-foreground py-8">Tidak ada data siswa atau kelas yang ditemukan.</p>
+            <p className="text-center text-muted-foreground py-8">
+              {searchTerm ? "Tidak ada kelas yang cocok dengan pencarian Anda." : "Tidak ada data siswa atau kelas yang ditemukan."}
+            </p>
           )}
         </CardContent>
       </Card>

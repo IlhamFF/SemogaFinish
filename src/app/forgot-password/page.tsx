@@ -44,9 +44,7 @@ export default function ForgotPasswordPage() {
         toast({ title: "Gagal Meminta Reset", description: data.message || "Terjadi kesalahan.", variant: "destructive" });
       } else {
         toast({ title: "Permintaan Terkirim", description: data.message, duration: 7000 });
-        if (data.demoResetToken) {
-          router.push(`${ROUTES.RESET_PASSWORD}?email=${encodeURIComponent(values.email)}&token=${data.demoResetToken}`);
-        }
+        // Redirect is removed to enforce checking email, which is more secure.
       }
     } catch (error) {
       toast({ title: "Gagal Meminta Reset", description: "Tidak dapat terhubung ke server.", variant: "destructive" });
