@@ -324,117 +324,119 @@ export default function GuruTugasPage() {
 
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-headline font-semibold">Manajemen Tugas</h1>
-        <Button onClick={() => openFormDialog()}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Buat Tugas Baru
-        </Button>
-      </div>
-      
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <FilePlus2 className="mr-2 h-6 w-6 text-primary" />
-            Pengelolaan Tugas Siswa
-          </CardTitle>
-          <CardDescription>
-            Buat, distribusikan, pantau pengumpulan, dan berikan umpan balik untuk tugas-tugas siswa.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="relative w-full sm:w-auto sm:max-w-xs">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Cari judul, mapel..." 
-                className="pl-8" 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+    <>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-headline font-semibold">Manajemen Tugas</h1>
+          <Button onClick={() => openFormDialog()}>
+            <PlusCircle className="mr-2 h-4 w-4" /> Buat Tugas Baru
+          </Button>
+        </div>
+        
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <FilePlus2 className="mr-2 h-6 w-6 text-primary" />
+              Pengelolaan Tugas Siswa
+            </CardTitle>
+            <CardDescription>
+              Buat, distribusikan, pantau pengumpulan, dan berikan umpan balik untuk tugas-tugas siswa.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="relative w-full sm:w-auto sm:max-w-xs">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Cari judul, mapel..." 
+                  className="pl-8" 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <Select value={filterMapel} onValueChange={setFilterMapel}>
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                          <SelectValue placeholder="Filter Mata Pelajaran" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {uniqueMapelOptions.map(mapel => (
+                              <SelectItem key={mapel} value={mapel}>{mapel === "semua" ? "Semua Mapel" : mapel}</SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+                   <Select value={filterKelas} onValueChange={setFilterKelas}>
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                          <SelectValue placeholder="Filter Kelas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {uniqueKelasOptions.map(kls => (
+                              <SelectItem key={kls} value={kls}>{kls === "semua" ? "Semua Kelas" : kls}</SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+              </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Select value={filterMapel} onValueChange={setFilterMapel}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Filter Mata Pelajaran" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {uniqueMapelOptions.map(mapel => (
-                            <SelectItem key={mapel} value={mapel}>{mapel === "semua" ? "Semua Mapel" : mapel}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                 <Select value={filterKelas} onValueChange={setFilterKelas}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Filter Kelas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {uniqueKelasOptions.map(kls => (
-                            <SelectItem key={kls} value={kls}>{kls === "semua" ? "Semua Kelas" : kls}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-          </div>
 
-          {isLoadingTugas ? (
-            <div className="flex justify-center items-center h-60"><Loader2 className="h-10 w-10 animate-spin text-primary"/></div>
-          ) : filteredTugas.length > 0 ? (
-            <ScrollArea className="h-[60vh] border rounded-md">
-              <Table>
-                <TableHeader className="bg-muted/50 sticky top-0">
-                  <TableRow>
-                    <TableHead>Judul Tugas</TableHead>
-                    <TableHead>Mapel & Kelas</TableHead>
-                    <TableHead>Tenggat</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Tindakan</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTugas.map((tugas) => {
-                    const statusTugas = getStatusTugas(tugas);
-                    return (
-                    <TableRow key={tugas.id}>
-                      <TableCell className="max-w-xs">
-                        <div className="font-medium truncate" title={tugas.judul}>{tugas.judul}</div>
-                        {tugas.namaFileLampiran && <div className="text-xs text-muted-foreground truncate" title={tugas.namaFileLampiran}>Lampiran: {tugas.namaFileLampiran}</div>}
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">{tugas.mapel}</div>
-                        <div className="text-xs text-muted-foreground">{tugas.kelas}</div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{format(parseISO(tugas.tenggat), "dd MMM yyyy, HH:mm", { locale: localeID })}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusTugas === "Aktif" ? "bg-green-100 text-green-800" : statusTugas === "Ditutup" ? "bg-gray-100 text-gray-800" : "bg-yellow-100 text-yellow-800"}`}>
-                          {statusTugas}
-                        </span>
-                      </TableCell>
-                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenGradingDialog(tugas)} className="mr-1">
-                          <Search className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openFormDialog(tugas)} className="mr-1">
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(tugas)} className="text-destructive hover:text-destructive/80">
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </td>
+            {isLoadingTugas ? (
+              <div className="flex justify-center items-center h-60"><Loader2 className="h-10 w-10 animate-spin text-primary"/></div>
+            ) : filteredTugas.length > 0 ? (
+              <ScrollArea className="h-[60vh] border rounded-md">
+                <Table>
+                  <TableHeader className="bg-muted/50 sticky top-0">
+                    <TableRow>
+                      <TableHead>Judul Tugas</TableHead>
+                      <TableHead>Mapel & Kelas</TableHead>
+                      <TableHead>Tenggat</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Tindakan</TableHead>
                     </TableRow>
-                  )})}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          ) : (
-            <div className="text-center py-8">
-              <ListTodo className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-2 text-sm font-medium text-foreground">Belum Ada Tugas</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Filter tidak menemukan hasil atau belum ada tugas yang dibuat.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTugas.map((tugas) => {
+                      const statusTugas = getStatusTugas(tugas);
+                      return (
+                      <TableRow key={tugas.id}>
+                        <TableCell className="max-w-xs">
+                          <div className="font-medium truncate" title={tugas.judul}>{tugas.judul}</div>
+                          {tugas.namaFileLampiran && <div className="text-xs text-muted-foreground truncate" title={tugas.namaFileLampiran}>Lampiran: {tugas.namaFileLampiran}</div>}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">{tugas.mapel}</div>
+                          <div className="text-xs text-muted-foreground">{tugas.kelas}</div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{format(parseISO(tugas.tenggat), "dd MMM yyyy, HH:mm", { locale: localeID })}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusTugas === "Aktif" ? "bg-green-100 text-green-800" : statusTugas === "Ditutup" ? "bg-gray-100 text-gray-800" : "bg-yellow-100 text-yellow-800"}`}>
+                            {statusTugas}
+                          </span>
+                        </TableCell>
+                        <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <Button variant="ghost" size="sm" onClick={() => handleOpenGradingDialog(tugas)} className="mr-1">
+                            <Search className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => openFormDialog(tugas)} className="mr-1">
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(tugas)} className="text-destructive hover:text-destructive/80">
+                              <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </TableRow>
+                    )})}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            ) : (
+              <div className="text-center py-8">
+                <ListTodo className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-2 text-sm font-medium text-foreground">Belum Ada Tugas</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Filter tidak menemukan hasil atau belum ada tugas yang dibuat.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingTugas(null); }}>
         <DialogContent className="sm:max-w-lg h-[90vh] flex flex-col">
@@ -567,8 +569,6 @@ export default function GuruTugasPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-    </div>
     </>
   );
 }
