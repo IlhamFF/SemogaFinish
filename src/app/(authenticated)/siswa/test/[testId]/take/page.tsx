@@ -79,9 +79,11 @@ export default function SiswaTakeTestPage() {
       const soalRes = await fetch(`/api/test/${testId}/soal`);
       if(!soalRes.ok) throw new Error("Gagal memuat soal ujian.");
       const soalData: Soal[] = await soalRes.json();
-      setQuestions(soalData);
+      
       if (soalData.length === 0) {
         setError("Test ini belum memiliki soal. Hubungi guru Anda.");
+      } else {
+        setQuestions(soalData);
       }
 
     } catch (err: any) {
@@ -276,3 +278,5 @@ export default function SiswaTakeTestPage() {
     </div>
   );
 }
+
+    

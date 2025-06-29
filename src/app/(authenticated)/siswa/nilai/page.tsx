@@ -108,10 +108,22 @@ export default function SiswaNilaiPage() {
         <CardHeader>
           <CardTitle className="text-xl">Informasi Siswa</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-          <div><UserCircle className="inline-block mr-2 h-4 w-4 text-muted-foreground" /><strong>Nama:</strong> {user.fullName || user.name || "Siswa"}</div>
-          <div><Info className="inline-block mr-2 h-4 w-4 text-muted-foreground" /><strong>NIS:</strong> {user.nis || "-"}</div>
-          <div><BookUser className="inline-block mr-2 h-4 w-4 text-muted-foreground" /><strong>Kelas:</strong> {user.kelasId || "-"}</div>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="flex items-center">
+                <UserCircle className="mr-2 h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="font-medium mr-1">Nama:</span>
+                <span className="text-foreground truncate">{user.fullName || user.name || "Siswa"}</span>
+            </div>
+            <div className="flex items-center">
+                <Info className="mr-2 h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="font-medium mr-1">NIS:</span>
+                <span className="text-foreground truncate">{user.nis || "-"}</span>
+            </div>
+            <div className="flex items-center">
+                <BookUser className="mr-2 h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="font-medium mr-1">Kelas:</span>
+                <span className="text-foreground truncate">{user.kelasId || "-"}</span>
+            </div>
         </CardContent>
       </Card>
 
@@ -265,3 +277,5 @@ export default function SiswaNilaiPage() {
     </>
   );
 }
+
+    

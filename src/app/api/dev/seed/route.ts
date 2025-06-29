@@ -17,7 +17,9 @@ import { TestEntity } from "@/entities/test.entity";
 import { TestSubmissionEntity } from "@/entities/test-submission.entity";
 import { AbsensiSiswaEntity, type StatusKehadiran } from "@/entities/absensi-siswa.entity";
 import { NilaiSemesterSiswaEntity, type SemesterTypeEntity } from "@/entities/nilai-semester-siswa.entity";
-import type { Role } from "@/types";
+import { SoalEntity } from "@/entities/soal.entity";
+import { BankSoalTestEntity } from "@/entities/bank-soal-test.entity";
+import type { Role, TipeSoal } from "@/types";
 import { KATEGORI_MAPEL } from "@/lib/constants";
 
 // --- DUMMY DATA DEFINITIONS ---
@@ -117,7 +119,7 @@ export async function GET(request: NextRequest) {
         console.log("Menghapus data lama...");
         const superAdmin = await queryRunner.manager.findOne(UserEntity, { where: { role: 'superadmin' } });
         const tablesToClear = [
-            "nilai_semester_siswa", "absensi_siswa", "test_submissions", "tugas_submissions", "tugas", "tests", "jadwal_pelajaran", "slot_waktu", "ruangan", "mata_pelajaran"
+            "nilai_semester_siswa", "absensi_siswa", "bank_soal_test", "test_submissions", "tugas_submissions", "soal", "tugas", "tests", "jadwal_pelajaran", "slot_waktu", "ruangan", "mata_pelajaran"
         ];
         for (const table of tablesToClear) {
             await queryRunner.query(`DELETE FROM ${table};`);
@@ -270,36 +272,105 @@ export async function GET(request: NextRequest) {
         }
         console.log(`${createdTugasCount} tugas dan ${createdSubmissionCount} submission berhasil dibuat.`);
         
-        // --- Seed Test & Submissions ---
-        const testRepo = queryRunner.manager.getRepository(TestEntity);
-        const testSubmissionRepo = queryRunner.manager.getRepository(TestSubmissionEntity);
-        let createdTestCount = 0;
-        for (const jadwal of createdJadwal.slice(0,10)) { // Buat test untuk 10 jadwal
-            const newTest = testRepo.create({
-                judul: `Kuis ${jadwal.mapel.nama}`,
-                mapel: jadwal.mapel.nama,
-                kelas: jadwal.kelas,
-                tanggal: new Date(),
-                durasi: 60,
-                tipe: "Kuis",
-                status: "Selesai",
-                uploaderId: jadwal.guruId
-            });
-            const savedTest = await testRepo.save(newTest);
-            createdTestCount++;
-            const siswaDiKelas = createdSiswa.filter(s => s.kelasId === jadwal.kelas);
-            for(const siswa of siswaDiKelas) {
-                const newSubmission = testSubmissionRepo.create({
-                    siswaId: siswa.id,
-                    testId: savedTest.id,
-                    waktuMulai: new Date(),
-                    waktuSelesai: new Date(Date.now() + 30 * 60 * 1000), // 30 menit kemudian
-                    status: "Selesai"
-                });
-                await testSubmissionRepo.save(newSubmission);
+        // --- Seed Bank Soal ---
+        const soalRepo = queryRunner.manager.getRepository(SoalEntity);
+        const createdSoal = [];
+        for (const guru of createdGurus) {
+            const mapel = createdMapels.find(m => m.nama === guru.mataPelajaran![0]);
+            if (mapel) {
+                for(let i=0; i<5; i++) {
+                    const newSoal = soalRepo.create({
+                        paketSoal: `Kumpulan Soal ${mapel.nama}`,
+                        tipeSoal: 'Pilihan Ganda' as TipeSoal,
+                        pertanyaan: `Ini adalah pertanyaan nomor ${i+1} untuk mata pelajaran ${mapel.nama}. Berapakah hasil dari ${i+1} + ${i+1}?`,
+                        pilihanJawaban: [
+                            { id: 'A', text: `Jawaban A (${(i+1)+(i+1)})`},
+                            { id: 'B', text: `Jawaban B (${(i+1)+1})`},
+                            { id: 'C', text: `Jawaban C (${(i+1)+2})`},
+                        ],
+                        kunciJawaban: 'A',
+                        tingkatKesulitan: 'Mudah',
+                        mapelId: mapel.id,
+                        pembuatId: guru.id,
+                    });
+                    createdSoal.push(await soalRepo.save(newSoal));
+                }
             }
         }
-        console.log(`${createdTestCount} test berhasil dibuat.`);
+        console.log(`${createdSoal.length} soal berhasil dibuat.`);
+        
+        // --- Seed Test & Submissions (with takable tests) ---
+        const testRepo = queryRunner.manager.getRepository(TestEntity);
+        const bankSoalTestRepo = queryRunner.manager.getRepository(BankSoalTestEntity);
+        const testSubmissionRepo = queryRunner.manager.getRepository(TestSubmissionEntity);
+        
+        for (const guru of createdGurus.slice(0, 2)) {
+            const mapelNama = guru.mataPelajaran![0];
+            const mapel = createdMapels.find(m => m.nama === mapelNama)!;
+            const soalUntukMapelIni = createdSoal.filter(s => s.mapelId === mapel.id);
+            
+            if (soalUntukMapelIni.length > 0) {
+                // Test yang akan datang
+                const tglMendatang = new Date();
+                tglMendatang.setDate(tglMendatang.getDate() + 3);
+                tglMendatang.setHours(8, 0, 0, 0);
+                const testMendatang = await testRepo.save(testRepo.create({
+                    judul: `Ulangan Harian Mendatang - ${mapel.nama}`,
+                    mapel: mapel.nama,
+                    kelas: KELAS_LIST[0],
+                    tanggal: tglMendatang,
+                    durasi: 45,
+                    tipe: "Ulangan Harian",
+                    status: "Terjadwal",
+                    uploaderId: guru.id,
+                    soalCount: soalUntukMapelIni.length
+                }));
+                await bankSoalTestRepo.save(soalUntukMapelIni.map(s => ({ testId: testMendatang.id, soalId: s.id })));
+                
+                // Test yang sedang berlangsung
+                const tglBerlangsung = new Date();
+                const testBerlangsung = await testRepo.save(testRepo.create({
+                    judul: `Kuis Berlangsung - ${mapel.nama}`,
+                    mapel: mapel.nama,
+                    kelas: KELAS_LIST[1],
+                    tanggal: tglBerlangsung,
+                    durasi: 15,
+                    tipe: "Kuis",
+                    status: "Berlangsung",
+                    uploaderId: guru.id,
+                    soalCount: soalUntukMapelIni.slice(0, 2).length
+                }));
+                await bankSoalTestRepo.save(soalUntukMapelIni.slice(0, 2).map(s => ({ testId: testBerlangsung.id, soalId: s.id })));
+
+                // Test yang sudah selesai dan bisa dinilai
+                const tglSelesai = new Date();
+                tglSelesai.setDate(tglSelesai.getDate() - 1);
+                const testSelesai = await testRepo.save(testRepo.create({
+                    judul: `UTS Selesai - ${mapel.nama}`,
+                    mapel: mapel.nama,
+                    kelas: KELAS_LIST[2],
+                    tanggal: tglSelesai,
+                    durasi: 90,
+                    tipe: "UTS",
+                    status: "Selesai",
+                    uploaderId: guru.id,
+                    soalCount: soalUntukMapelIni.length
+                }));
+                await bankSoalTestRepo.save(soalUntukMapelIni.map(s => ({ testId: testSelesai.id, soalId: s.id })));
+                const siswaDiKelasIni = createdSiswa.find(s => s.kelasId === KELAS_LIST[2]);
+                if(siswaDiKelasIni) {
+                    await testSubmissionRepo.save(testSubmissionRepo.create({
+                        siswaId: siswaDiKelasIni.id,
+                        testId: testSelesai.id,
+                        waktuMulai: tglSelesai,
+                        waktuSelesai: new Date(tglSelesai.getTime() + 45 * 60000),
+                        status: "Selesai",
+                        jawabanSiswa: { [soalUntukMapelIni[0].id]: 'A' }
+                    }));
+                }
+            }
+        }
+        console.log(`Test dengan berbagai status berhasil dibuat.`);
 
         // --- Seed Nilai Semester ---
         const nilaiRepo = queryRunner.manager.getRepository(NilaiSemesterSiswaEntity);
@@ -325,10 +396,10 @@ export async function GET(request: NextRequest) {
 
         for (const { siswaId, mapelId, kelasId, guruId } of uniquePelajaranSiswa.values()) {
             const nilaiKomponen = {
-                nilaiTugas: Math.floor(Math.random() * 35) + 65, // 65-99
-                nilaiUTS: Math.floor(Math.random() * 40) + 60, // 60-99
-                nilaiUAS: Math.floor(Math.random() * 45) + 55, // 55-99
-                nilaiHarian: Math.floor(Math.random() * 30) + 70, // 70-99
+                nilaiTugas: Math.floor(Math.random() * 35) + 65,
+                nilaiUTS: Math.floor(Math.random() * 40) + 60,
+                nilaiUAS: Math.floor(Math.random() * 45) + 55,
+                nilaiHarian: Math.floor(Math.random() * 30) + 70,
             };
             
             const nilaiAkhir = calculateNilaiAkhir(nilaiKomponen);
