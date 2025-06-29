@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { ROUTES, APP_NAME } from "@/lib/constants";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck, Eye, EyeOff } from "lucide-react";
 
 const resetPasswordSchema = z.object({
   password: z.string().min(6, { message: "Kata sandi minimal 6 karakter." }),
@@ -32,6 +32,7 @@ function ResetPasswordContent() {
   const [email, setEmail] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null); 
   const [pageLoading, setPageLoading] = useState(true);
+  const [showPassword, setShowPassword] = React.useState(false);
 
   useEffect(() => {
     const emailFromQuery = searchParams.get('email');
@@ -121,9 +122,14 @@ function ResetPasswordContent() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Kata Sandi Baru</FormLabel>
-                        <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                        </FormControl>
+                        <div className="relative">
+                            <FormControl>
+                            <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                            </FormControl>
+                            <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>
+                                {showPassword ? <EyeOff /> : <Eye />}
+                            </Button>
+                        </div>
                         <FormMessage />
                     </FormItem>
                     )}
@@ -134,9 +140,14 @@ function ResetPasswordContent() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
-                        <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                        </FormControl>
+                        <div className="relative">
+                            <FormControl>
+                            <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                            </FormControl>
+                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>
+                                {showPassword ? <EyeOff /> : <Eye />}
+                            </Button>
+                        </div>
                         <FormMessage />
                     </FormItem>
                     )}

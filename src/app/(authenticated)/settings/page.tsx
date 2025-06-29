@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -49,6 +49,11 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [isProfileSubmitting, setIsProfileSubmitting] = React.useState(false);
   const [isPasswordSubmitting, setIsPasswordSubmitting] = React.useState(false);
+  const [showPasswords, setShowPasswords] = React.useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -343,9 +348,14 @@ export default function SettingsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Kata Sandi Saat Ini</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
+                    <div className="relative">
+                        <FormControl>
+                        <Input type={showPasswords.current ? "text" : "password"} placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}>
+                            {showPasswords.current ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -356,9 +366,14 @@ export default function SettingsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Kata Sandi Baru</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
+                    <div className="relative">
+                        <FormControl>
+                        <Input type={showPasswords.new ? "text" : "password"} placeholder="••••••••" {...field} />
+                        </FormControl>
+                         <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}>
+                            {showPasswords.new ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -369,9 +384,14 @@ export default function SettingsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Konfirmasi Kata Sandi Baru</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
+                     <div className="relative">
+                        <FormControl>
+                        <Input type={showPasswords.confirm ? "text" : "password"} placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}>
+                            {showPasswords.confirm ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}

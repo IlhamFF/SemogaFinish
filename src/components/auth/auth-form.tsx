@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
 import { ROUTES, APP_NAME, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, SCHOOL_CLASSES_PER_MAJOR_GRADE } from "@/lib/constants";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { ScrollArea } from "../ui/scroll-area";
 
@@ -26,8 +26,12 @@ const registerSchema = z.object({
   fullName: z.string().min(3, { message: "Nama lengkap minimal 3 karakter." }),
   email: z.string().email({ message: "Alamat email tidak valid." }),
   password: z.string().min(6, { message: "Kata sandi minimal 6 karakter." }),
+  confirmPassword: z.string().min(6, { message: "Konfirmasi kata sandi minimal 6 karakter." }),
   nis: z.string().min(4, { message: "NIS minimal 4 karakter." }),
   kelas: z.string().min(1, { message: "Kelas wajib diisi." }),
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Kata sandi dan konfirmasi tidak cocok.",
+  path: ["confirmPassword"],
 });
 
 
@@ -38,6 +42,7 @@ type AuthFormProps = {
 export function AuthForm({ mode }: AuthFormProps) {
   const { login, register, isLoading: authIsLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [showPassword, setShowPassword] = React.useState(false);
   
   const currentSchema = mode === 'login' ? loginSchema : registerSchema;
 
@@ -50,6 +55,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         fullName: "",
         nis: "",
         kelas: "",
+        confirmPassword: "",
       }),
     },
   });
@@ -68,8 +74,9 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   async function onSubmit(values: z.infer<typeof currentSchema>) {
     setIsSubmitting(true);
-    let finalValues = { ...values };
-    if (mode === 'register' && finalValues.nis && /^\d+$/.test(finalValues.nis)) {
+    let finalValues: any = { ...values };
+
+    if (mode === 'register' && 'nis' in finalValues && finalValues.nis && /^\d+$/.test(finalValues.nis)) {
         finalValues.nis = `S${finalValues.nis}`;
     }
 
@@ -127,13 +134,38 @@ export function AuthForm({ mode }: AuthFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Kata Sandi</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
+                    <div className="relative">
+                      <FormControl>
+                        <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                      </FormControl>
+                      <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>
+                        {showPassword ? <EyeOff /> : <Eye />}
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+               {mode === 'register' && (
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Konfirmasi Kata Sandi</FormLabel>
+                       <div className="relative">
+                        <FormControl>
+                           <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                        </FormControl>
+                         <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>
+                          {showPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               {mode === 'register' && (
                 <>
                  <FormField
