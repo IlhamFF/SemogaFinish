@@ -52,6 +52,11 @@ export class JadwalPelajaranEntity {
   @Column({ type: "text", nullable: true })
   catatan?: string | null;
 
+  // Add virtual property for easier sorting if needed, though order by relation is better
+  get waktuMulai(): string {
+    return this.slotWaktu?.waktuMulai || '00:00';
+  }
+
   @OneToMany("AbsensiSiswaEntity", (absensi: AbsensiSiswaEntity) => absensi.jadwalPelajaran)
   absensiSiswaEntries?: AbsensiSiswaEntity[];
 

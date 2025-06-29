@@ -13,7 +13,7 @@ import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/hooks/use-auth";
-import { CalendarCheck, PlusCircle, Edit, Search, Loader2, Trash2, Save, Eraser, Building, Settings2, CalendarDays, Clock, Upload, Users } from "lucide-react";
+import { CalendarCheck, PlusCircle, Edit, Search, Loader2, Trash2, Save, Eraser, Building, Settings2, CalendarDays, Clock, Upload, Users, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Ruangan, SlotWaktu, MataPelajaran, User as AppUser, JadwalPelajaran } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -98,21 +98,24 @@ export default function AdminJadwalPage() {
   const [isJadwalEntryFormOpen, setIsJadwalEntryFormOpen] = useState(false);
   const jadwalPelajaranEntryForm = useForm<JadwalPelajaranEntryFormValues>({ resolver: zodResolver(jadwalPelajaranEntrySchema), defaultValues: { slotWaktuId: undefined, mapelId: undefined, guruId: undefined, ruanganId: undefined, catatan: "" },});
   
-  // State for import dialog
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   
-  // Data State
   const [ruanganList, setRuanganList] = useState<Ruangan[]>([]);
   const [slotsWaktu, setSlotsWaktu] = useState<SlotWaktu[]>([]);
   const [hariEfektif, setHariEfektif] = useState<string[]>(["Senin", "Selasa", "Rabu", "Kamis", "Jumat"]);
   const [mapelOptions, setMapelOptions] = useState<MataPelajaran[]>([]);
   const [guruOptions, setGuruOptions] = useState<AppUser[]>([]);
 
-  // Loading State
   const [isLoadingRuangan, setIsLoadingRuangan] = useState(true);
   const [isLoadingSlots, setIsLoadingSlots] = useState(true);
+
+  // State untuk deteksi konflik
+  const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
+  const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
+  const [conflictResults, setConflictResults] = useState<{ guru: string[], ruangan: string[] }>({ guru: [], ruangan: [] });
+
 
   const mockKelasList = React.useMemo(() => {
     const kls: string[] = [];
@@ -176,29 +179,31 @@ export default function AdminJadwalPage() {
   const handleEditJadwalEntry = (entry: JadwalPelajaran) => { setEditingJadwalPelajaranEntry(entry); jadwalPelajaranEntryForm.reset({ id: entry.id, slotWaktuId: entry.slotWaktuId, mapelId: entry.mapelId, guruId: entry.guruId, ruanganId: entry.ruanganId, catatan: entry.catatan || "" }); setIsJadwalEntryFormOpen(true); };
   const handleDeleteJadwalEntry = async (entryId: string) => { if (entryId.startsWith('draft-')) { setJadwalPelajaranList(prev => prev.filter(j => j.id !== entryId)); toast({title: "Entri Dihapus dari Draf", description: "Entri jadwal telah dihapus dari daftar saat ini."}); return; } setIsJadwalPelajaranSubmitting(true); try { const response = await fetch(`/api/jadwal/pelajaran/${entryId}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus entri jadwal.'); } toast({ title: "Entri Dihapus!", description: "Entri jadwal telah dihapus dari database."}); if(selectedKelas && selectedHari) fetchJadwalPelajaran(selectedKelas, selectedHari); } catch (error: any) { toast({ title: "Error Hapus Entri", description: error.message, variant: "destructive" }); } finally { setIsJadwalPelajaranSubmitting(false); } };
   const handleClearJadwalKelasHari = async () => { if (!selectedKelas || !selectedHari) return; setIsJadwalPelajaranSubmitting(true); try { const response = await fetch(`/api/jadwal/pelajaran/by-criteria?kelas=${encodeURIComponent(selectedKelas)}&hari=${encodeURIComponent(selectedHari)}`, { method: 'DELETE', }); if (!response.ok && response.status !== 404) { const errorData = await response.json(); throw new Error(errorData.message || `Gagal membersihkan jadwal untuk ${selectedKelas} - ${selectedHari}.`); } toast({ title: "Jadwal Dikosongkan", description: `Semua jadwal untuk ${selectedKelas} - ${selectedHari} telah dihapus.`}); setJadwalPelajaranList([]); } catch (error: any) { toast({ title: "Error Kosongkan Jadwal", description: error.message, variant: "destructive" }); } finally { setIsJadwalPelajaranSubmitting(false); } };
-
   const handleImportJadwal = async () => {
-    if (!importFile) {
-      toast({ title: "Tidak Ada File", description: "Silakan pilih file CSV untuk diimpor.", variant: "destructive" });
-      return;
-    }
+    if (!importFile) { toast({ title: "Tidak Ada File", description: "Silakan pilih file CSV untuk diimpor.", variant: "destructive" }); return; }
     setIsImporting(true);
     const formData = new FormData();
     formData.append('file', importFile);
-    
     try {
       const response = await fetch('/api/jadwal/import', { method: 'POST', body: formData });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Gagal mengimpor jadwal.');
-      
       toast({ title: "Impor (Simulasi) Berhasil", description: data.message, duration: 7000 });
       setIsImportDialogOpen(false);
       setImportFile(null);
-    } catch (error: any) {
-      toast({ title: "Error Impor Jadwal", description: error.message, variant: "destructive" });
-    } finally {
-      setIsImporting(false);
-    }
+    } catch (error: any) { toast({ title: "Error Impor Jadwal", description: error.message, variant: "destructive" });
+    } finally { setIsImporting(false); }
+  };
+  const handleCheckConflicts = async () => {
+    setIsCheckingConflicts(true);
+    try {
+      const response = await fetch('/api/jadwal/konflik');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Gagal memeriksa konflik.");
+      setConflictResults(data);
+      setIsConflictDialogOpen(true);
+    } catch (error: any) { toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally { setIsCheckingConflicts(false); }
   };
 
   return (
@@ -227,7 +232,10 @@ export default function AdminJadwalPage() {
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Button variant="outline" onClick={() => toast({ title: "Fitur Dalam Pengembangan" })} className="justify-start text-left h-auto py-3"><Users className="mr-3 h-5 w-5" /><div><p className="font-semibold">Ketersediaan Guru</p><p className="text-xs text-muted-foreground">Lihat dan atur jadwal guru.</p></div></Button>
             <Button variant="outline" onClick={() => setIsRuanganDialogOpen(true)} className="justify-start text-left h-auto py-3"><Building className="mr-3 h-5 w-5" /><div><p className="font-semibold">Manajemen Ruangan</p><p className="text-xs text-muted-foreground">Kelola daftar dan kapasitas.</p></div></Button>
-            <Button variant="outline" onClick={() => toast({ title: "Fitur Dalam Pengembangan" })} className="justify-start text-left h-auto py-3"><Search className="mr-3 h-5 w-5" /><div><p className="font-semibold">Deteksi Konflik</p><p className="text-xs text-muted-foreground">Periksa bentrok jadwal.</p></div></Button>
+            <Button variant="outline" onClick={handleCheckConflicts} className="justify-start text-left h-auto py-3" disabled={isCheckingConflicts}>
+                {isCheckingConflicts ? <Loader2 className="mr-3 h-5 w-5 animate-spin"/> : <Search className="mr-3 h-5 w-5" />}
+                <div><p className="font-semibold">Deteksi Konflik</p><p className="text-xs text-muted-foreground">Periksa bentrok jadwal.</p></div>
+            </Button>
         </CardContent>
       </Card>
 
@@ -280,15 +288,15 @@ export default function AdminJadwalPage() {
       <AlertDialog open={!!ruanganToDelete} onOpenChange={(open) => !open && setRuanganToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle><AlertDialogDescription>Yakin hapus ruangan "{ruanganToDelete?.nama}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setRuanganToDelete(null)} disabled={isRuanganSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteRuanganConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isRuanganSubmitting}>{isRuanganSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       
       <Dialog open={isKonfigurasiOpen} onOpenChange={setIsKonfigurasiOpen}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Konfigurasi Jam &amp; Hari</DialogTitle>
             <DialogDescription>Atur slot waktu dan hari efektif.</DialogDescription>
           </DialogHeader>
           <Form {...konfigurasiForm}>
-            <form onSubmit={konfigurasiForm.handleSubmit(handleKonfigurasiSubmit)}>
-                <ScrollArea className="h-[60vh] p-1">
-                    <div className="p-4 space-y-6">
+            <form onSubmit={konfigurasiForm.handleSubmit(handleKonfigurasiSubmit)} className="flex-grow flex flex-col overflow-y-hidden">
+                <ScrollArea className="flex-grow -mx-6 px-6">
+                    <div className="py-4 space-y-6">
                     {isLoadingSlots ? (<div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : (
                     <>
                       <div className="space-y-4">
@@ -314,8 +322,8 @@ export default function AdminJadwalPage() {
         </DialogContent>
       </Dialog>
       <Dialog open={isBuatJadwalManualOpen} onOpenChange={setIsBuatJadwalManualOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Buat/Edit Jadwal Pelajaran Manual</DialogTitle>
             <DialogDescription>Pilih kelas dan hari, lalu susun jadwal pelajarannya.</DialogDescription>
           </DialogHeader>
@@ -335,8 +343,8 @@ export default function AdminJadwalPage() {
               </Select>
             </div>
           </div>
-          <ScrollArea className="h-[50vh]">
-            <div className="py-4 pr-4">
+          <ScrollArea className="flex-grow -mx-6 px-6">
+            <div className="py-4">
               {isLoadingJadwalPelajaran && (<div className="flex justify-center items-center h-full"><Loader2 className="h-10 w-10 animate-spin text-primary" /> <p className="ml-3">Memuat jadwal...</p></div>)}
               {!isLoadingJadwalPelajaran && selectedKelas && selectedHari && (
                 <>
@@ -357,7 +365,7 @@ export default function AdminJadwalPage() {
               {!selectedKelas && !selectedHari && <p className="text-muted-foreground text-center py-6">Pilih kelas dan hari untuk melihat atau membuat jadwal.</p>}
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-6 border-t">
+          <DialogFooter className="flex-shrink-0 pt-6 border-t">
             <Button variant="outline" onClick={() => setIsBuatJadwalManualOpen(false)} disabled={isJadwalPelajaranSubmitting}>Batal</Button>
             <Button onClick={handleClearJadwalKelasHari} variant="destructive" className="mr-auto" disabled={isJadwalPelajaranSubmitting || jadwalPelajaranList.length === 0 || isLoadingJadwalPelajaran}><Eraser className="mr-2 h-4 w-4"/> Kosongkan Jadwal Hari Ini</Button>
             <Button onClick={handleSaveJadwalKelasHari} disabled={isJadwalPelajaranSubmitting || jadwalPelajaranList.length === 0 || isLoadingJadwalPelajaran}><Save className="mr-2 h-4 w-4"/> Simpan Jadwal Kelas Ini</Button>
@@ -398,6 +406,48 @@ export default function AdminJadwalPage() {
                   {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Impor Jadwal
               </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isConflictDialogOpen} onOpenChange={setIsConflictDialogOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center"><ShieldAlert className="mr-2 h-5 w-5 text-primary"/> Hasil Deteksi Konflik Jadwal</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] my-4">
+            {conflictResults.guru.length === 0 && conflictResults.ruangan.length === 0 ? (
+                <div className="text-center py-8">
+                    <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
+                    <p className="mt-2 font-semibold">Tidak ada konflik ditemukan.</p>
+                    <p className="text-sm text-muted-foreground">Semua jadwal guru dan ruangan sudah valid.</p>
+                </div>
+            ) : (
+                <div className="space-y-6 p-1">
+                    {conflictResults.guru.length > 0 && (
+                    <div>
+                        <h3 className="font-semibold mb-2">Konflik Guru ({conflictResults.guru.length})</h3>
+                        <div className="space-y-2">
+                        {conflictResults.guru.map((konflik, index) => (
+                            <p key={`guru-${index}`} className="text-sm p-2 bg-destructive/10 border-l-4 border-destructive rounded-r-md">{konflik}</p>
+                        ))}
+                        </div>
+                    </div>
+                    )}
+                    {conflictResults.ruangan.length > 0 && (
+                    <div>
+                        <h3 className="font-semibold mb-2">Konflik Ruangan ({conflictResults.ruangan.length})</h3>
+                        <div className="space-y-2">
+                        {conflictResults.ruangan.map((konflik, index) => (
+                            <p key={`ruangan-${index}`} className="text-sm p-2 bg-destructive/10 border-l-4 border-destructive rounded-r-md">{konflik}</p>
+                        ))}
+                        </div>
+                    </div>
+                    )}
+                </div>
+            )}
+          </ScrollArea>
+          <DialogFooter>
+            <Button onClick={() => setIsConflictDialogOpen(false)}>Tutup</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

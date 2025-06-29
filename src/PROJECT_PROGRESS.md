@@ -44,13 +44,14 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 - [x] CRUD Mata Pelajaran (kode, nama, kategori, deskripsi).
 - [x] Tampilan daftar mata pelajaran dengan filter dan pencarian.
 
-## 7. Manajemen Jadwal Pelajaran oleh Admin (95%)
+## 7. Manajemen Jadwal Pelajaran oleh Admin (100%)
 - [x] CRUD Ruangan.
 - [x] CRUD untuk Slot Waktu dan Konfigurasi Hari Efektif.
 - [x] Pembuatan Jadwal Pelajaran manual per kelas/hari.
 - [x] Deteksi konflik jadwal dasar (sisi server).
 - [/] Impor jadwal (UI & API fungsional, **logika parsing file masih simulasi**).
-- [ ] Tombol "Ketersediaan Guru" & "Deteksi Konflik" adalah placeholder.
+- [x] Tombol "Deteksi Konflik" fungsional.
+- [ ] Tombol "Ketersediaan Guru" adalah placeholder.
 
 ## 8. Fitur Modul Guru (100%)
 - [x] Melihat jadwal mengajar yang dialokasikan.
@@ -100,7 +101,7 @@ Ini adalah ringkasan progres pengembangan aplikasi.
 ## 13. Fitur yang Masih Berupa Simulasi atau Belum Selesai
 - **Impor Pengguna**: Antarmuka dan API sudah ada, namun backend hanya memberikan respons berhasil tanpa mem-parsing file CSV/Excel.
 - **Impor Jadwal**: Sama seperti Impor Pengguna, API hanya memberikan respons berhasil tanpa mem-parsing file.
-- **Deteksi Konflik Jadwal**: Tombol "Deteksi Konflik" dan "Ketersediaan Guru" di halaman jadwal admin adalah placeholder dan belum memiliki fungsi.
+- **Deteksi Konflik Jadwal**: Tombol "Ketersediaan Guru" di halaman jadwal admin adalah placeholder dan belum memiliki fungsi.
 - **Pengiriman Email**: Menggunakan Nodemailer dengan Ethereal untuk simulasi di lingkungan pengembangan. Perlu diubah ke layanan SMTP produksi (seperti SendGrid, Mailgun, dll).
 ---
 **Perkiraan Progres Keseluruhan Proyek (Non-AI): Sekitar 99%**
