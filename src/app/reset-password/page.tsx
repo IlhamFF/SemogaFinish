@@ -12,6 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { ROUTES, APP_NAME } from "@/lib/constants";
 import { Loader2, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 const resetPasswordSchema = z.object({
   password: z.string().min(6, { message: "Kata sandi minimal 6 karakter." }),
@@ -96,13 +98,17 @@ function ResetPasswordContent() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
-            <ShieldCheck className="h-8 w-8" />
-          </div>
-          <CardTitle className="text-3xl font-headline text-primary">{APP_NAME}</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Reset Kata Sandi Anda
-          </CardDescription>
+           <Link href={ROUTES.HOME} className="mx-auto mb-4">
+             <Image 
+              src="/logo.png"
+              alt={`${APP_NAME} Logo`}
+              width={80}
+              height={80}
+              className="object-contain"
+              data-ai-hint="logo"
+            />
+          </Link>
+          <CardTitle className="text-2xl font-headline">Reset Kata Sandi Anda</CardTitle>
         </CardHeader>
         <CardContent>
           {formError && (!email || !token) ? (

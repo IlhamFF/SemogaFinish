@@ -16,6 +16,7 @@ import { ROUTES, APP_NAME, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, SCHOOL_CLASSES_PE
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { ScrollArea } from "../ui/scroll-area";
+import Image from "next/image";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
@@ -92,9 +93,21 @@ export function AuthForm({ mode }: AuthFormProps) {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-headline text-primary">{APP_NAME}</CardTitle>
+          <Link href={ROUTES.HOME} className="mx-auto mb-4">
+            <Image 
+              src="/logo.png"
+              alt={`${APP_NAME} Logo`}
+              width={80}
+              height={80}
+              className="object-contain"
+              data-ai-hint="logo"
+            />
+          </Link>
+          <CardTitle className="text-2xl font-headline">
+            {mode === "login" ? "Selamat Datang Kembali" : "Buat Akun Baru"}
+          </CardTitle>
           <CardDescription className="text-muted-foreground">
-            {mode === "login" ? "Masuk ke akun Anda" : "Buat akun baru"}
+            {mode === "login" ? "Masuk ke akun Anda" : "Daftar untuk memulai"}
           </CardDescription>
         </CardHeader>
         <CardContent>

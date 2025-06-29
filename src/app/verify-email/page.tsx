@@ -9,6 +9,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { ROUTES, APP_NAME } from "@/lib/constants";
 import { MailCheck, Loader2, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
+import Link from "next/link";
 
 export default function VerifyEmailPage() {
   const { user, isLoading, logout, fetchUser } = useAuth();
@@ -73,13 +75,17 @@ export default function VerifyEmailPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
-            <MailCheck className="h-8 w-8" />
-          </div>
-          <CardTitle className="text-3xl font-headline text-primary">{APP_NAME}</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Verifikasi Akun Email Anda
-          </CardDescription>
+           <Link href={ROUTES.HOME} className="mx-auto mb-4">
+             <Image 
+              src="/logo.png"
+              alt={`${APP_NAME} Logo`}
+              width={80}
+              height={80}
+              className="object-contain"
+              data-ai-hint="logo"
+            />
+          </Link>
+          <CardTitle className="text-2xl font-headline">Verifikasi Akun Email Anda</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 text-center">
           <p>

@@ -13,10 +13,11 @@ import { APP_NAME } from "@/lib/constants"; // APP_NAME from constants
 import { NAV_LINKS_CONFIG } from "@/lib/navigation"; // NAV_LINKS_CONFIG from navigation
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpenText, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 import { sidebarMenuButtonVariants } from "@/components/ui/sidebar"; 
+import Image from "next/image";
 
 
 export function AppSidebarContent() {
@@ -38,11 +39,20 @@ export function AppSidebarContent() {
   return (
     <>
       <SidebarHeader className="border-b">
-        <div className="flex items-center gap-2 p-2">
-          <BookOpenText className="h-8 w-8 text-primary" />
-          <h2 className="text-xl font-bold font-headline text-primary group-data-[collapsible=icon]:hidden">
-            {APP_NAME}
-          </h2>
+        <div className="flex items-center gap-2 p-2 justify-center">
+          <Link href="/" className="flex items-center gap-2">
+            <Image 
+              src="/logo.png" 
+              alt={`${APP_NAME} Logo`}
+              width={40}
+              height={40}
+              className="object-contain"
+              data-ai-hint="logo"
+            />
+            <h2 className="text-xl font-bold font-headline text-primary group-data-[collapsible=icon]:hidden">
+              {APP_NAME}
+            </h2>
+          </Link>
         </div>
       </SidebarHeader>
       <SidebarContent className="p-2">

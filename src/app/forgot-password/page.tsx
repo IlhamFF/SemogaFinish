@@ -11,8 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ROUTES, APP_NAME } from "@/lib/constants";
-import { Loader2, KeyRound } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import React from "react";
+import Image from "next/image";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: "Alamat email tidak valid." }),
@@ -56,13 +57,17 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
-            <KeyRound className="h-8 w-8" />
-          </div>
-          <CardTitle className="text-3xl font-headline text-primary">{APP_NAME}</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Lupa Kata Sandi Anda?
-          </CardDescription>
+           <Link href={ROUTES.HOME} className="mx-auto mb-4">
+            <Image 
+              src="/logo.png"
+              alt={`${APP_NAME} Logo`}
+              width={80}
+              height={80}
+              className="object-contain"
+              data-ai-hint="logo"
+            />
+          </Link>
+          <CardTitle className="text-2xl font-headline">Lupa Kata Sandi?</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="mb-6 text-center text-sm text-muted-foreground">
