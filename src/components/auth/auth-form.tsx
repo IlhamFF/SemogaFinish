@@ -97,8 +97,8 @@ export function AuthForm({ mode }: AuthFormProps) {
             <Image 
               src="/logo.png"
               alt={`${APP_NAME} Logo`}
-              width={80}
-              height={80}
+              width={60}
+              height={60}
               className="object-contain"
               data-ai-hint="logo"
             />
