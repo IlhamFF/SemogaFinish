@@ -28,7 +28,7 @@ const userCreateSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  const authenticatedUser = getAuthenticatedUser();
+  const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authenticatedUser = getAuthenticatedUser();
+  const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }

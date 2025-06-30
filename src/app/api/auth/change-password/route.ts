@@ -12,7 +12,7 @@ const changePasswordSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const authenticatedUser = getAuthenticatedUser();
+  const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Akses ditolak. Tidak terautentikasi." }, { status: 401 });
   }

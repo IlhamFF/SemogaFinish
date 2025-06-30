@@ -21,7 +21,7 @@ const batchAbsensiSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const authenticatedUser = getAuthenticatedUser();
+  const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }

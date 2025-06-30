@@ -6,7 +6,7 @@ import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 export async function GET(request: NextRequest) {
   try {
-    const decodedToken = getAuthenticatedUser();
+    const decodedToken = getAuthenticatedUser(request);
     if (!decodedToken) {
       return NextResponse.json({ message: "Tidak terautentikasi" }, { status: 401 });
     }

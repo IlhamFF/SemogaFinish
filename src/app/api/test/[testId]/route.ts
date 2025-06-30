@@ -21,7 +21,7 @@ const testUpdateSchema = z.object({
 });
 
 export async function GET(request: NextRequest, { params }: { params: { testId: string } }) {
-    const authenticatedUser = getAuthenticatedUser();
+    const authenticatedUser = getAuthenticatedUser(request);
     if (!authenticatedUser) {
         return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
     }
@@ -49,11 +49,13 @@ export async function GET(request: NextRequest, { params }: { params: { testId: 
             if (!siswaKelas) {
                 return NextResponse.json({ message: "Informasi kelas siswa tidak ditemukan." }, { status: 403 });
             }
-            const gradeLevel = siswaKelas.split(' ')[0]; // e.g., "X" from "X IPA 1"
+            const gradeLevel = siswaKelas.split(' ')[0];
             const generalClass = `Semua Kelas ${gradeLevel}`;
-            const isAllowed = test.kelas === siswaKelas || test.kelas.trim() === generalClass.trim();
             
-            if (!isAllowed) {
+            const isTargetedToGeneralClass = test.kelas.trim() === generalClass.trim();
+            const isTargetedToSpecificClass = test.kelas.trim() === siswaKelas.trim();
+
+            if (!isTargetedToGeneralClass && !isTargetedToSpecificClass) {
                 return NextResponse.json({ message: "Akses ditolak. Test ini tidak ditugaskan untuk kelas Anda." }, { status: 403 });
             }
         }
@@ -70,7 +72,7 @@ export async function GET(request: NextRequest, { params }: { params: { testId: 
 }
 
 export async function PUT(request: NextRequest, { params }: { params: { testId: string } }) {
-  const authenticatedUser = getAuthenticatedUser();
+  const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
@@ -131,7 +133,7 @@ export async function PUT(request: NextRequest, { params }: { params: { testId: 
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { testId: string } }) {
-  const authenticatedUser = getAuthenticatedUser();
+  const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }

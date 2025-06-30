@@ -6,7 +6,7 @@ import { generateSecureToken, getAuthenticatedUser } from "@/lib/auth-utils-node
 import { sendVerificationEmail } from "@/lib/email-service"; // Import layanan email
 
 export async function POST(request: NextRequest) {
-  const authenticatedUser = getAuthenticatedUser();
+  const authenticatedUser = getAuthenticatedUser(request);
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi. Tidak dapat mengirim ulang verifikasi." }, { status: 401 });
   }
