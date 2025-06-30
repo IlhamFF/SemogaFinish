@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { User, MataPelajaran, Role } from "@/types"; 
 import { Loader2 } from "lucide-react";
 import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, Legend } from "recharts";
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -176,14 +176,18 @@ export default function AdminDashboardPage() {
             <CardTitle className="flex items-center"><PieChartIcon className="mr-2 h-5 w-5 text-primary" /> Distribusi Peran Pengguna</CardTitle>
             <CardDescription>Visualisasi jumlah pengguna berdasarkan peran.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px] flex items-center justify-center">
+          <CardContent className="h-[350px] flex items-center justify-center">
             {isLoadingUsers ? (
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             ) : adminRoleDistributionData.length > 0 ? (
-                <ChartContainer config={{}} className="w-full h-full max-w-[250px] aspect-square">
+                <ChartContainer 
+                    config={adminRoleDistributionData.reduce((acc, cur) => ({...acc, [cur.name]: {label: cur.name, color: cur.fill}}), {})} 
+                    className="mx-auto aspect-square h-full"
+                >
                     <RechartsPieChart>
-                        <Tooltip content={<ChartTooltipContent hideLabel hideIndicator nameKey="name" />} />
-                        <Pie data={adminRoleDistributionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
+                        <Tooltip content={<ChartTooltipContent hideLabel />} />
+                        <Legend content={<ChartLegendContent nameKey="name" />} />
+                        <Pie data={adminRoleDistributionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
                             {adminRoleDistributionData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.fill} />
                             ))}
