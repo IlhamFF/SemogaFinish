@@ -1,4 +1,3 @@
-
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
@@ -13,7 +12,7 @@ const changePasswordSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const authenticatedUser = getAuthenticatedUser(request);
+  const authenticatedUser = getAuthenticatedUser();
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Akses ditolak. Tidak terautentikasi." }, { status: 401 });
   }

@@ -15,7 +15,7 @@ const rekapQuerySchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  const authenticatedUser = getAuthenticatedUser(request);
+  const authenticatedUser = getAuthenticatedUser();
   if (!authenticatedUser || !['guru', 'admin', 'superadmin'].includes(authenticatedUser.role)) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }

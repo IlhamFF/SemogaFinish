@@ -1,4 +1,3 @@
-
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
@@ -22,7 +21,7 @@ const testUpdateSchema = z.object({
 });
 
 export async function GET(request: NextRequest, { params }: { params: { testId: string } }) {
-    const authenticatedUser = getAuthenticatedUser(request);
+    const authenticatedUser = getAuthenticatedUser();
     if (!authenticatedUser) {
         return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
     }
@@ -52,7 +51,7 @@ export async function GET(request: NextRequest, { params }: { params: { testId: 
             }
             const gradeLevel = siswaKelas.split(' ')[0]; // e.g., "X" from "X IPA 1"
             const generalClass = `Semua Kelas ${gradeLevel}`;
-            const isAllowed = test.kelas === siswaKelas || test.kelas === generalClass;
+            const isAllowed = test.kelas === siswaKelas || test.kelas.trim() === generalClass.trim();
             
             if (!isAllowed) {
                 return NextResponse.json({ message: "Akses ditolak. Test ini tidak ditugaskan untuk kelas Anda." }, { status: 403 });
@@ -71,7 +70,7 @@ export async function GET(request: NextRequest, { params }: { params: { testId: 
 }
 
 export async function PUT(request: NextRequest, { params }: { params: { testId: string } }) {
-  const authenticatedUser = getAuthenticatedUser(request);
+  const authenticatedUser = getAuthenticatedUser();
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
@@ -132,7 +131,7 @@ export async function PUT(request: NextRequest, { params }: { params: { testId: 
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { testId: string } }) {
-  const authenticatedUser = getAuthenticatedUser(request);
+  const authenticatedUser = getAuthenticatedUser();
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }

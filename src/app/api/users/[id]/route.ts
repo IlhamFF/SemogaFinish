@@ -1,4 +1,3 @@
-
 import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
@@ -28,7 +27,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const authenticatedUser = getAuthenticatedUser(request);
+  const authenticatedUser = getAuthenticatedUser();
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
@@ -47,7 +46,7 @@ export async function GET(
         select: [ 
             "id", "name", "email", "emailVerified", "image", "role", "isVerified", 
             "fullName", "phone", "address", "birthDate", "bio", "nis", "nip", 
-            "joinDate", "kelasId", "mataPelajaran", "firebaseUid", "createdAt", "updatedAt"
+            "joinDate", "kelasId", "mataPelajaran", "createdAt", "updatedAt"
         ]
     });
 
@@ -66,7 +65,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const authenticatedUser = getAuthenticatedUser(request);
+  const authenticatedUser = getAuthenticatedUser();
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
@@ -144,7 +143,7 @@ export async function PUT(
         select: [
             "id", "name", "email", "emailVerified", "image", "role", "isVerified", 
             "fullName", "phone", "address", "birthDate", "bio", "nis", "nip", 
-            "joinDate", "kelasId", "mataPelajaran", "firebaseUid", "createdAt", "updatedAt"
+            "joinDate", "kelasId", "mataPelajaran", "createdAt", "updatedAt"
         ]
     });
 
@@ -161,7 +160,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const authenticatedUser = getAuthenticatedUser(request);
+  const authenticatedUser = getAuthenticatedUser();
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }

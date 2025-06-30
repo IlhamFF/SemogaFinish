@@ -1,23 +1,17 @@
-
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
-import { generateSecureToken, getTokenFromRequest, verifyToken } from "@/lib/auth-utils-node";
+import { generateSecureToken, getAuthenticatedUser } from "@/lib/auth-utils-node";
 import { sendVerificationEmail } from "@/lib/email-service"; // Import layanan email
 
 export async function POST(request: NextRequest) {
-  const authToken = getTokenFromRequest(request);
-  if (!authToken) {
+  const authenticatedUser = getAuthenticatedUser();
+  if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi. Tidak dapat mengirim ulang verifikasi." }, { status: 401 });
   }
-
-  const decodedAuthToken = verifyToken(authToken);
-  if (!decodedAuthToken) {
-    return NextResponse.json({ message: "Token autentikasi tidak valid." }, { status: 401 });
-  }
   
-  const userId = decodedAuthToken.id;
+  const userId = authenticatedUser.id;
 
   try {
     const dataSource = await getInitializedDataSource();
@@ -31,12 +25,6 @@ export async function POST(request: NextRequest) {
     if (user.isVerified) {
       return NextResponse.json({ message: "Email sudah terverifikasi." }, { status: 400 });
     }
-
-    // Cek apakah token verifikasi sebelumnya masih valid atau ada penundaan pengiriman ulang
-    // Ini adalah logika opsional untuk mencegah spamming
-    // if (user.emailVerificationTokenExpires && user.emailVerificationTokenExpires > new Date(Date.now() - 5 * 60 * 1000)) { // 5 menit cooldown
-    //   return NextResponse.json({ message: "Harap tunggu beberapa saat sebelum meminta email verifikasi baru." }, { status: 429 });
-    // }
 
     const newVerificationToken = generateSecureToken();
     const newVerificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -52,7 +40,6 @@ export async function POST(request: NextRequest) {
       console.log(`Email verifikasi ulang dikirim (atau disimulasikan) ke ${user.email}`);
     } catch (emailError) {
       console.error("Gagal mengirim email verifikasi ulang:", emailError);
-      // Mungkin mengembalikan error yang lebih spesifik jika email gagal terkirim
       return NextResponse.json({ message: "Gagal mengirim email verifikasi. Coba lagi nanti." }, { status: 500 });
     }
     

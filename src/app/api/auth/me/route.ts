@@ -1,20 +1,14 @@
-
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { UserEntity } from "@/entities/user.entity";
-import { verifyToken, getTokenFromRequest } from "@/lib/auth-utils-node";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 export async function GET(request: NextRequest) {
   try {
-    const token = getTokenFromRequest(request);
-    if (!token) {
-      return NextResponse.json({ message: "Tidak terautentikasi" }, { status: 401 });
-    }
-
-    const decodedToken = verifyToken(token);
+    const decodedToken = getAuthenticatedUser();
     if (!decodedToken) {
-      return NextResponse.json({ message: "Token tidak valid atau kedaluwarsa" }, { status: 401 });
+      return NextResponse.json({ message: "Tidak terautentikasi" }, { status: 401 });
     }
 
     const dataSource = await getInitializedDataSource();

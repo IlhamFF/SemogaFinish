@@ -1,9 +1,9 @@
-
 import jwt from 'jsonwebtoken';
 import cookie from 'cookie';
 import type { NextRequest, NextResponse } from 'next/server';
 import type { User, Role as AppRole } from '@/types';
 import crypto from 'crypto';
+import { cookies } from 'next/headers';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-please-change-this';
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '1d';
@@ -84,27 +84,30 @@ export function clearTokenCookie(res: NextResponse): void {
 }
 
 /**
- * Extracts the JWT from the cookies of a NextRequest.
- * @param req The incoming NextRequest.
+ * Extracts the JWT from the cookies using next/headers.
+ * This should be used inside Route Handlers or Server Components.
  * @returns The token string or null if not found.
  */
-export function getTokenFromRequest(req: NextRequest): string | null {
-  const cookies = req.cookies.get(TOKEN_NAME);
-  return cookies?.value || null;
+function getTokenFromCookie(): string | null {
+  const cookieStore = cookies();
+  const tokenCookie = cookieStore.get(TOKEN_NAME);
+  return tokenCookie?.value || null;
 }
 
 /**
  * Retrieves the authenticated user payload from the request token.
  * A convenient utility combining token extraction and verification.
+ * This should be used inside Route Handlers or Server Components.
  * @returns The UserPayload or null if the user is not authenticated.
  */
-export function getAuthenticatedUser(req: NextRequest): UserPayload | null {
-  const token = getTokenFromRequest(req);
+export function getAuthenticatedUser(): UserPayload | null {
+  const token = getTokenFromCookie();
   if (!token) {
     return null;
   }
   return verifyToken(token);
 }
+
 
 /**
  * Generates a cryptographically secure random token.

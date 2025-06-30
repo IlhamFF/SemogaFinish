@@ -1,4 +1,3 @@
-
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
@@ -11,7 +10,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { testId: string } }
 ) {
-  const authenticatedUser = getAuthenticatedUser(request);
+  const authenticatedUser = getAuthenticatedUser();
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
@@ -38,8 +37,17 @@ export async function POST(
         return NextResponse.json({ message: `Test "${test.judul}" tidak dapat dimulai karena statusnya: ${test.status}.` }, { status: 400 });
     }
     // Validasi apakah test ini untuk kelas siswa (jika user bukan superadmin)
-    if (authenticatedUser.role === 'siswa' && test.kelas !== authenticatedUser.kelasId) {
-        return NextResponse.json({ message: "Anda tidak terdaftar untuk test di kelas ini." }, { status: 403 });
+    if (authenticatedUser.role === 'siswa') {
+        const siswaKelas = authenticatedUser.kelasId;
+        if (!siswaKelas) {
+            return NextResponse.json({ message: "Informasi kelas siswa tidak ditemukan." }, { status: 403 });
+        }
+        const gradeLevel = siswaKelas.split(' ')[0];
+        const generalClass = `Semua Kelas ${gradeLevel}`;
+        const isAllowed = test.kelas === siswaKelas || test.kelas.trim() === generalClass.trim();
+        if (!isAllowed) {
+            return NextResponse.json({ message: "Anda tidak terdaftar untuk test di kelas ini." }, { status: 403 });
+        }
     }
 
 

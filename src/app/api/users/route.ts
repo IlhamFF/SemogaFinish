@@ -1,4 +1,3 @@
-
 import "reflect-metadata"; 
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
@@ -25,12 +24,11 @@ const userCreateSchema = z.object({
   avatarUrl: z.string().optional().nullable().or(z.literal('')),
   kelas: z.string().optional().nullable(), 
   mataPelajaran: z.array(z.string()).optional().nullable(),
-  isVerified: z.boolean().optional().default(false),
-  firebaseUid: z.string().optional().nullable(), 
+  isVerified: z.boolean().optional().default(false)
 });
 
 export async function GET(request: NextRequest) {
-  const authenticatedUser = getAuthenticatedUser(request);
+  const authenticatedUser = getAuthenticatedUser();
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
@@ -55,7 +53,7 @@ export async function GET(request: NextRequest) {
       select: [ 
         "id", "name", "email", "emailVerified", "image", "role", "isVerified", 
         "fullName", "phone", "address", "birthDate", "bio", "nis", "nip", 
-        "joinDate", "kelasId", "mataPelajaran", "firebaseUid", "createdAt", "updatedAt"
+        "joinDate", "kelasId", "mataPelajaran", "createdAt", "updatedAt"
       ],
       order: { createdAt: "DESC" }
     });
@@ -73,7 +71,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authenticatedUser = getAuthenticatedUser(request);
+  const authenticatedUser = getAuthenticatedUser();
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
@@ -89,7 +87,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Input tidak valid.", errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const { email, password, role, fullName, name, firebaseUid, ...profileData } = validation.data;
+    const { email, password, role, fullName, name, ...profileData } = validation.data;
 
     const dataSource = await getInitializedDataSource();
     const userRepo = dataSource.getRepository(UserEntity);
@@ -98,16 +96,9 @@ export async function POST(request: NextRequest) {
     if (existingUserByEmail) {
       return NextResponse.json({ message: "Email sudah terdaftar di database lokal." }, { status: 409 });
     }
-    if (firebaseUid) {
-      const existingUserByFirebaseUid = await userRepo.findOne({ where: { firebaseUid }});
-      if (existingUserByFirebaseUid) {
-        return NextResponse.json({ message: "Firebase UID sudah terdaftar di database lokal." }, { status: 409 });
-      }
-    }
 
     const newUserEntity = userRepo.create({
       email,
-      firebaseUid: firebaseUid, 
       role: role as Role,
       fullName: fullName,
       name: name || email.split('@')[0],
@@ -137,9 +128,8 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("Error creating user profile:", error);
      if (error.code === '23505') { 
-        let field = "Email atau Firebase UID";
+        let field = "Email";
         if (error.detail?.includes("email")) field = "Email";
-        else if (error.detail?.includes("firebaseUid")) field = "Firebase UID";
         return NextResponse.json({ message: `${field} sudah ada.` }, { status: 409 });
     }
     return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });

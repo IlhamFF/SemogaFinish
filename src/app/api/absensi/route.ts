@@ -14,7 +14,7 @@ const getAbsensiQuerySchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  const authenticatedUser = getAuthenticatedUser(request);
+  const authenticatedUser = getAuthenticatedUser();
   if (!authenticatedUser) {
     return NextResponse.json({ message: "Tidak terautentikasi." }, { status: 401 });
   }
