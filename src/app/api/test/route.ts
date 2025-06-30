@@ -49,7 +49,10 @@ export async function GET(request: NextRequest) {
         if (!siswaKelas) {
              return NextResponse.json({ message: "Informasi kelas siswa tidak ditemukan untuk filter test." }, { status: 400 });
         }
-        qb = qb.where("test.kelas = :kelas", { kelas: siswaKelas });
+        const gradeLevel = siswaKelas.split(' ')[0]; // e.g., "X" from "X IPA 1"
+        const generalClass = `Semua Kelas ${gradeLevel}`;
+        qb = qb.where("test.kelas IN (:...kelasArray)", { kelasArray: [siswaKelas, generalClass] });
+        
         // Siswa hanya boleh melihat test yang statusnya bukan Draf
         const statusFilter = z.enum(["Terjadwal", "Berlangsung", "Selesai", "Dinilai"]).optional().parse(searchParams.get("status"));
         if(statusFilter){

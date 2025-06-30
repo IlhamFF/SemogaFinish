@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { TugasEntity } from "@/entities/tugas.entity";
 import * as z from "zod";
 import { formatISO } from 'date-fns';
-import type { FindManyOptions } from "typeorm";
+import { FindManyOptions, In } from "typeorm";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 
 const tugasCreateSchema = z.object({
@@ -47,7 +47,9 @@ export async function GET(request: NextRequest) {
         if (!siswaKelas) {
              return NextResponse.json({ message: "Informasi kelas siswa tidak ditemukan untuk filter tugas." }, { status: 400 });
         }
-        queryOptions.where.kelas = siswaKelas;
+        const gradeLevel = siswaKelas.split(' ')[0]; // e.g., "X" from "X IPA 1"
+        const generalClass = `Semua Kelas ${gradeLevel}`;
+        queryOptions.where.kelas = In([siswaKelas, generalClass]);
     } else if (['admin', 'superadmin'].includes(authenticatedUser.role) && filterKelas) {
         queryOptions.where.kelas = filterKelas;
     }
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
         ...responseTugas,
         tenggat: responseTugas ? formatISO(new Date(responseTugas.tenggat)) : null,
-        uploader: responseTugas?.uploader ? { id: responseTugas.uploader.id, name: responseTugas.uploader.name, fullName: responseTugas.uploader.fullName } : undefined
+        uploader: responseTugas?.uploader ? { id: responseTugas.uploader.id, name: responseTugas.uploader.name, fullName: responseTugas.uploader.fullName, email: responseTugas.uploader.email } : undefined
     }, { status: 201 });
 
   } catch (error: any) {

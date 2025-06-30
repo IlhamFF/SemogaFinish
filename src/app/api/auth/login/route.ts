@@ -36,12 +36,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Email atau kata sandi salah." }, { status: 401 });
     }
 
-    // If user is siswa and not verified, prevent login (or handle as per your flow)
-    // For this simple auth, we'll allow login but frontend should handle redirection based on isVerified.
-    // if (user.role === 'siswa' && !user.isVerified) {
-    //   return NextResponse.json({ message: "Akun belum diverifikasi." }, { status: 403 });
-    // }
-
     const token = generateToken(user);
     
     const response = NextResponse.json({
@@ -52,7 +46,7 @@ export async function POST(request: NextRequest) {
       isVerified: user.isVerified,
       fullName: user.fullName,
       avatarUrl: user.image,
-      // Add other fields as needed for the client session, but avoid sensitive ones
+      kelasId: user.kelasId, // Added this crucial field
     });
     
     setTokenCookie(response, token);
