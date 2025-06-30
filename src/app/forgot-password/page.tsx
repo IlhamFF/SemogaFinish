@@ -61,8 +61,8 @@ export default function ForgotPasswordPage() {
             <Image 
               src="/logo.png"
               alt={`${APP_NAME} Logo`}
-              width={60}
-              height={60}
+              width={80}
+              height={80}
               className="object-contain"
               data-ai-hint="logo"
             />

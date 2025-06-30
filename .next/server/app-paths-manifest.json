@@ -1,8 +1,6 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
   "/api/auth/me/route": "app/api/auth/me/route.js",
-  "/api/auth/request-password-reset/route": "app/api/auth/request-password-reset/route.js",
-  "/forgot-password/page": "app/forgot-password/page.js",
   "/login/page": "app/login/page.js",
   "/page": "app/page.js"
 }
