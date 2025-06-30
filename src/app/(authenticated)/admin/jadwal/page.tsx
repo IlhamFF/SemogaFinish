@@ -13,7 +13,7 @@ import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/hooks/use-auth";
-import { CalendarCheck, PlusCircle, Edit, Search, Loader2, Trash2, Save, Eraser, Building, Settings2, CalendarDays, Clock, Upload, Users, ShieldAlert } from "lucide-react";
+import { CalendarCheck, PlusCircle, Edit, Search, Loader2, Trash2, Save, Eraser, Building, Settings2, CalendarDays, Clock, Upload, Users, ShieldAlert, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Ruangan, SlotWaktu, MataPelajaran, User as AppUser, JadwalPelajaran } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";

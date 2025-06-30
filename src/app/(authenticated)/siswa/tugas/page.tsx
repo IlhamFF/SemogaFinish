@@ -41,7 +41,7 @@ export default function SiswaTugasPage() {
 
 
   const fetchTugasDanSubmissions = useCallback(async () => {
-    if (!user || !user.kelas) {
+    if (!user || !user.kelasId) {
       setIsLoading(false);
       return;
     }
@@ -266,7 +266,7 @@ export default function SiswaTugasPage() {
         <ClipboardCheck className="mr-3 h-8 w-8 text-primary" />
         Tugas Saya
       </h1>
-      <p className="text-muted-foreground">Lihat, kelola, dan kumpulkan tugas sekolah Anda. Kelas: {user?.kelas || "Tidak ada"}</p>
+      <p className="text-muted-foreground">Lihat, kelola, dan kumpulkan tugas sekolah Anda. Kelas: {user?.kelasId || "Tidak ada"}</p>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "mendatang" | "selesai")}>
         <TabsList className="grid w-full grid-cols-2 md:w-[400px]">

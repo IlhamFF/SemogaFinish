@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import type { User } from "@/types";
 import { Loader2, BookCopy, Users, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { id as localeID } from 'date-fns/locale';
 
 type GroupedStudents = Record<string, User[]>;

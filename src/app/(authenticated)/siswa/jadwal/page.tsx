@@ -29,13 +29,13 @@ export default function SiswaJadwalPage() {
   const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(true);
 
   const fetchSchedule = useCallback(async () => {
-    if (!user || !user.kelas) {
+    if (!user || !user.kelasId) {
       setIsLoadingSchedule(false);
       return;
     }
     setIsLoadingSchedule(true);
     try {
-      const response = await fetch(`/api/jadwal/pelajaran?kelas=${encodeURIComponent(user.kelas)}`);
+      const response = await fetch(`/api/jadwal/pelajaran?kelas=${encodeURIComponent(user.kelasId)}`);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Gagal mengambil data jadwal.");
@@ -132,7 +132,7 @@ export default function SiswaJadwalPage() {
             <CalendarDays className="mr-3 h-8 w-8 text-primary" />
             Jadwal Pelajaran Saya
             </h1>
-            <p className="text-muted-foreground">Lihat jadwal pelajaran harian dan mingguan Anda. Kelas: {user.kelas || "Tidak terdaftar"}</p>
+            <p className="text-muted-foreground">Lihat jadwal pelajaran harian dan mingguan Anda. Kelas: {user.kelasId || "Tidak terdaftar"}</p>
         </div>
         <Popover>
           <PopoverTrigger asChild>
@@ -194,7 +194,7 @@ export default function SiswaJadwalPage() {
                     <CardTitle>Jadwal Mingguan</CardTitle>
                     <CardDescription>
                         {format(currentWeekStart, "dd MMM", { locale: localeID })} - {format(currentWeekEnd, "dd MMM yyyy", { locale: localeID })}
-                         {user.kelas && <span className="ml-2 text-xs">({user.kelas})</span>}
+                         {user.kelasId && <span className="ml-2 text-xs">({user.kelasId})</span>}
                     </CardDescription>
                 </div>
                 <div className="flex gap-2">
@@ -261,4 +261,3 @@ export default function SiswaJadwalPage() {
     </div>
   );
 }
-

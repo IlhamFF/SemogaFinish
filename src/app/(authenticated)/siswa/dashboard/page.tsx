@@ -23,14 +23,14 @@ export default function SiswaDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
-    if (!user || !user.isVerified || !user.kelas) {
+    if (!user || !user.isVerified || !user.kelasId) {
       setIsLoading(false);
       return;
     }
     setIsLoading(true);
     try {
       const [jadwalRes, tugasRes, testRes] = await Promise.all([
-        fetch(`/api/jadwal/pelajaran?kelas=${encodeURIComponent(user.kelas)}`),
+        fetch(`/api/jadwal/pelajaran?kelas=${encodeURIComponent(user.kelasId)}`),
         fetch(`/api/tugas`), // API already filters by class for siswa
         fetch(`/api/test`),  // API already filters by class for siswa
       ]);

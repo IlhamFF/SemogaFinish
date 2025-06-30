@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -26,13 +27,13 @@ export default function SiswaMateriPage() {
   const [filterMapel, setFilterMapel] = useState<string>("semua");
 
   const fetchStudentSchedule = useCallback(async () => {
-    if (!user || !user.kelas) {
+    if (!user || !user.kelasId) {
       setIsLoadingSchedule(false);
       return;
     }
     setIsLoadingSchedule(true);
     try {
-      const response = await fetch(`/api/jadwal/pelajaran?kelas=${encodeURIComponent(user.kelas)}`);
+      const response = await fetch(`/api/jadwal/pelajaran?kelas=${encodeURIComponent(user.kelasId)}`);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Gagal mengambil jadwal siswa.");
@@ -133,7 +134,7 @@ export default function SiswaMateriPage() {
         <BookOpen className="mr-3 h-8 w-8 text-primary" />
         Materi Pelajaran Saya
       </h1>
-      <p className="text-muted-foreground">Akses dan unduh materi pembelajaran yang relevan dengan mata pelajaran Anda. Kelas: {user.kelas || "Tidak terdaftar"}</p>
+      <p className="text-muted-foreground">Akses dan unduh materi pembelajaran yang relevan dengan mata pelajaran Anda. Kelas: {user.kelasId || "Tidak terdaftar"}</p>
 
       <Card className="shadow-lg">
         <CardHeader>

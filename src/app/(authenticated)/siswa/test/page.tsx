@@ -26,7 +26,7 @@ export default function SiswaTestPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchTestsAndSubmissions = useCallback(async () => {
-    if (!user || !user.isVerified || !user.kelas) {
+    if (!user || !user.isVerified || !user.kelasId) {
         setIsLoading(false);
         return;
     }
@@ -186,7 +186,7 @@ export default function SiswaTestPage() {
         <FileText className="mr-3 h-8 w-8 text-primary" />
         Test & Ujian Saya
       </h1>
-      <p className="text-muted-foreground">Lihat jadwal test/ujian, kerjakan, dan lihat hasilnya. Kelas: {user?.kelas || "Tidak ada"}</p>
+      <p className="text-muted-foreground">Lihat jadwal test/ujian, kerjakan, dan lihat hasilnya. Kelas: {user?.kelasId || "Tidak ada"}</p>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "mendatang" | "riwayat")}>
         <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
