@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,7 +13,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/hooks/use-auth";
-import { BookOpenCheck, Target, BookCopy, BookUp, Layers, FileText, FolderKanban, PlusCircle, Edit, Loader2, UploadCloud, Link2, Trash2, Book, Library, List, GitMerge, Search } from "lucide-react";
+import { BookOpenCheck, Target, BookCopy, BookUp, Layers, FileText, FolderKanban, PlusCircle, Edit, Loader2, UploadCloud, Link2, Trash2, Book, Library, List, GitMerge, Search, Link as LinkIconLucide } from "lucide-react";
 import Link from "next/link";
 import { ROUTES, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR as JENIS_MATERI_AJAR_CONST } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
@@ -160,6 +160,9 @@ export default function AdminKurikulumPage() {
   const [isLoadingRpp, setIsLoadingRpp] = useState(true);
   const [isRPPSubmitting, setIsRPPSubmitting] = useState(false);
   const rppForm = useForm<RPPFormValues>({ resolver: zodResolver(rppSchema), defaultValues: { judul: "", mapelId: undefined, kelas: "", pertemuanKe: 1, materiPokok: "", kegiatanPembelajaran: "", penilaian: "", file: undefined }});
+  
+  const [isSearchMateriOpen, setIsSearchMateriOpen] = useState(false);
+  const [materiSearchTerm, setMateriSearchTerm] = useState("");
 
   const fetchSklData = useCallback(async () => {
     setIsLoadingSkl(true);
@@ -681,6 +684,18 @@ export default function AdminKurikulumPage() {
       setRppToDelete(null);
     }
   };
+  
+  const filteredMateriForSearch = useMemo(() => {
+    if (!materiSearchTerm) return materiList;
+    const lowercasedTerm = materiSearchTerm.toLowerCase();
+    return materiList.filter(m => 
+        m.judul.toLowerCase().includes(lowercasedTerm) ||
+        (m.deskripsi && m.deskripsi.toLowerCase().includes(lowercasedTerm)) ||
+        m.mapelNama.toLowerCase().includes(lowercasedTerm) ||
+        (m.uploader?.fullName && m.uploader.fullName.toLowerCase().includes(lowercasedTerm))
+    );
+  }, [materiList, materiSearchTerm]);
+
 
   const openSKLForm = (skl?: SKL) => { setEditingSKL(skl || null); setIsSKLFormOpen(true); };
   const openDeleteSKLDialog = (skl: SKL) => setSklToDelete(skl);
@@ -734,7 +749,7 @@ export default function AdminKurikulumPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Button variant="default" onClick={() => openMateriForm()} className="justify-start text-left h-auto py-3"><PlusCircle className="mr-3 h-5 w-5" /><div><p className="font-semibold">Tambah Materi Baru</p><p className="text-xs text-muted-foreground">Unggah file atau tautan.</p></div></Button>
                 <Button variant="outline" onClick={() => setIsKategoriMateriDialogOpen(true)} className="justify-start text-left h-auto py-3"><List className="mr-3 h-5 w-5" /><div><p className="font-semibold">Kategorisasi Materi</p><p className="text-xs text-muted-foreground">Kelola kategori sumber belajar.</p></div></Button>
-                <Button variant="outline" disabled className="justify-start text-left h-auto py-3"><Search className="mr-3 h-5 w-5" /><div><p className="font-semibold">Pencarian Materi</p><p className="text-xs text-muted-foreground">Temukan sumber belajar.</p></div></Button>
+                <Button variant="outline" onClick={() => setIsSearchMateriOpen(true)} className="justify-start text-left h-auto py-3"><Search className="mr-3 h-5 w-5" /><div><p className="font-semibold">Pencarian Materi</p><p className="text-xs text-muted-foreground">Temukan sumber belajar.</p></div></Button>
               </div>
               {isLoadingMateriList ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : materiList.length > 0 ? (<div className="pt-4"><h4 className="text-md font-semibold mb-2">Daftar Materi Tersedia:</h4><Table><TableHeader className="bg-muted/50 sticky top-0"><TableRow><TableHead>Judul</TableHead><TableHead>Mapel</TableHead><TableHead>Jenis</TableHead><TableHead>Tgl Upload</TableHead><TableHead>Uploader</TableHead><TableHead className="text-right">Tindakan</TableHead></TableRow></TableHeader><TableBody>{materiList.map(m => (<TableRow key={m.id}><TableCell className="font-medium max-w-xs truncate" title={m.judul}>{m.judul}</TableCell><TableCell>{m.mapelNama}</TableCell><TableCell>{m.jenisMateri}</TableCell><TableCell>{m.tanggalUpload ? format(parseISO(m.tanggalUpload), "dd/MM/yyyy") : "-"}</TableCell><TableCell className="text-xs truncate" title={m.uploader?.email}>{m.uploader?.fullName || m.uploader?.name || m.uploader?.email || "-"}</TableCell><TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => openMateriForm(m)} className="mr-1"><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={() => openDeleteMateriDialog(m)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody></Table></div>) : (<p className="text-muted-foreground text-center pt-4">Belum ada materi ajar.</p>)}
             </CardContent>
@@ -833,6 +848,67 @@ export default function AdminKurikulumPage() {
         </DialogContent>
       </Dialog>
       <AlertDialog open={!!rppToDelete} onOpenChange={(open) => !open && setRppToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Hapus RPP</AlertDialogTitle><AlertDialogDescription>Yakin hapus RPP "{rppToDelete?.judul}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setRppToDelete(null)} disabled={isRPPSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteRPPConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isRPPSubmitting}>{isRPPSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      
+      <Dialog open={isSearchMateriOpen} onOpenChange={setIsSearchMateriOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle>Pencarian Materi</DialogTitle>
+            <DialogDescription>Temukan sumber belajar dengan cepat dari seluruh bank materi.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4 flex-grow flex flex-col overflow-y-hidden">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Ketik judul, mapel, deskripsi, atau nama uploader..."
+                value={materiSearchTerm}
+                onChange={(e) => setMateriSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <ScrollArea className="flex-grow -mx-6 px-6">
+              {filteredMateriForSearch.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Judul</TableHead>
+                      <TableHead>Mapel</TableHead>
+                      <TableHead>Jenis</TableHead>
+                      <TableHead>Uploader</TableHead>
+                      <TableHead className="text-center">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMateriForSearch.map(m => (
+                      <TableRow key={m.id}>
+                        <TableCell className="font-medium max-w-xs truncate" title={m.judul}>{m.judul}</TableCell>
+                        <TableCell>{m.mapelNama}</TableCell>
+                        <TableCell>{m.jenisMateri}</TableCell>
+                        <TableCell>{m.uploader?.fullName || m.uploader?.name}</TableCell>
+                        <TableCell className="text-center">
+                          {m.fileUrl ? (
+                            <Button asChild variant="ghost" size="icon">
+                              <a href={m.fileUrl} target="_blank" rel="noopener noreferrer" title="Buka File/Tautan">
+                                <LinkIconLucide className="h-4 w-4 text-primary" />
+                              </a>
+                            </Button>
+                          ) : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-center text-muted-foreground pt-10">
+                  {materiSearchTerm ? "Tidak ada materi yang cocok dengan pencarian Anda." : "Ketik untuk mulai mencari materi."}
+                </p>
+              )}
+            </ScrollArea>
+          </div>
+          <DialogFooter className="flex-shrink-0 border-t pt-4">
+            <Button variant="outline" onClick={() => setIsSearchMateriOpen(false)}>Tutup</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
