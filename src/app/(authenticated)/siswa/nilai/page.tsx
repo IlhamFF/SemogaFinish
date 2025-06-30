@@ -69,10 +69,10 @@ export default function SiswaNilaiPage() {
   }
 
   const { averageGrade, totalGradedItems, chartData } = useMemo(() => {
-    const validGrades = semesterGrades.filter(item => typeof item.nilaiAkhir === 'number');
-    const total = validGrades.reduce((acc, curr) => acc + (curr.nilaiAkhir ?? 0), 0);
+    const validGrades = semesterGrades.filter(item => typeof item.nilaiAkhir === 'number' || typeof item.nilaiAkhir === 'string');
+    const total = validGrades.reduce((acc, curr) => acc + Number(curr.nilaiAkhir ?? 0), 0);
     const avg = validGrades.length > 0 ? (total / validGrades.length).toFixed(2) : "N/A";
-    const chart = validGrades.map(item => ({ name: `${item.mapel?.nama} (${item.semester.substring(0,1)}${item.tahunAjaran.substring(2,4)})`, nilaiAkhir: item.nilaiAkhir }));
+    const chart = validGrades.map(item => ({ name: `${item.mapel?.nama} (${item.semester.substring(0,1)}${item.tahunAjaran.substring(2,4)})`, nilaiAkhir: Number(item.nilaiAkhir) }));
     return { averageGrade: avg, totalGradedItems: validGrades.length, chartData: chart };
   }, [semesterGrades]);
   
@@ -277,5 +277,3 @@ export default function SiswaNilaiPage() {
     </>
   );
 }
-
-    

@@ -54,9 +54,11 @@ export async function GET(request: NextRequest) {
         qb = qb.where("test.kelas IN (:...kelasArray)", { kelasArray: [siswaKelas, generalClass] });
         
         // Siswa hanya boleh melihat test yang statusnya bukan Draf
-        const statusFilter = z.enum(["Terjadwal", "Berlangsung", "Selesai", "Dinilai"]).optional().parse(searchParams.get("status"));
-        if(statusFilter){
-           qb = qb.andWhere("test.status = :status", { status: statusFilter });
+        const statusParam = searchParams.get("status");
+        const statusValidation = z.enum(["Terjadwal", "Berlangsung", "Selesai", "Dinilai"]).optional().safeParse(statusParam);
+        
+        if (statusParam && statusValidation.success && statusValidation.data) {
+           qb = qb.andWhere("test.status = :status", { status: statusValidation.data });
         } else {
            qb = qb.andWhere("test.status != 'Draf'");
         }

@@ -7,7 +7,7 @@ import { Book, CalendarDays, ClipboardCheck, BookOpen as BookOpenIcon, Loader2, 
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
-import type { JadwalPelajaran, Tugas as TugasType, Test as TestType } from "@/types";
+import type { JadwalPelajaran, Tugas as TugasType, Test as TestType, TugasSubmission } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { isPast, parseISO, format, isFuture } from "date-fns";
 import { id as localeID } from 'date-fns/locale';
@@ -20,6 +20,7 @@ export default function SiswaDashboardPage() {
   const [jadwalList, setJadwalList] = useState<JadwalPelajaran[]>([]);
   const [tugasList, setTugasList] = useState<TugasType[]>([]);
   const [testList, setTestList] = useState<TestType[]>([]);
+  const [submissions, setSubmissions] = useState<TugasSubmission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -29,10 +30,11 @@ export default function SiswaDashboardPage() {
     }
     setIsLoading(true);
     try {
-      const [jadwalRes, tugasRes, testRes] = await Promise.all([
+      const [jadwalRes, tugasRes, testRes, subsRes] = await Promise.all([
         fetch(`/api/jadwal/pelajaran?kelas=${encodeURIComponent(user.kelasId)}`),
         fetch(`/api/tugas`), // API already filters by class for siswa
         fetch(`/api/test`),  // API already filters by class for siswa
+        fetch(`/api/tugas/submissions/me`) // Fetch submissions
       ]);
 
       if (jadwalRes.ok) setJadwalList(await jadwalRes.json());
@@ -43,6 +45,9 @@ export default function SiswaDashboardPage() {
       
       if (testRes.ok) setTestList(await testRes.json());
       else { console.error("Gagal mengambil test siswa"); setTestList([]); }
+
+      if (subsRes.ok) setSubmissions(await subsRes.json());
+      else { console.error("Gagal mengambil submissions siswa"); setSubmissions([]); }
 
     } catch (error) {
       console.error("Error fetching dashboard data siswa:", error);
@@ -58,16 +63,17 @@ export default function SiswaDashboardPage() {
 
   const siswaStats = useMemo(() => {
     const uniqueSubjects = new Set(jadwalList.map(j => j.mapel?.nama).filter(Boolean));
-    const tugasHarusDikumpulkan = tugasList.filter(t => !isPast(parseISO(t.tenggat))).length;
+    const submittedTugasIds = new Set(submissions.map(s => s.tugasId));
+    const tugasHarusDikumpulkan = tugasList.filter(t => !isPast(parseISO(t.tenggat)) && !submittedTugasIds.has(t.id)).length;
     const testMendatang = testList.filter(t => t.status === "Terjadwal" || t.status === "Berlangsung").length;
 
     return [
       { title: "Mata Pelajaran", value: isLoading ? <Loader2 className="h-5 w-5 animate-spin"/> : uniqueSubjects.size.toString(), icon: Book, color: "text-primary", href: ROUTES.SISWA_JADWAL, description: "Total mata pelajaran" },
-      { title: "Tugas Aktif", value: isLoading ? <Loader2 className="h-5 w-5 animate-spin"/> : tugasHarusDikumpulkan.toString(), icon: ClipboardCheck, color: "text-red-500", href: ROUTES.SISWA_TUGAS, description: "Tugas yang belum tenggat" },
+      { title: "Tugas Aktif", value: isLoading ? <Loader2 className="h-5 w-5 animate-spin"/> : tugasHarusDikumpulkan.toString(), icon: ClipboardCheck, color: "text-red-500", href: ROUTES.SISWA_TUGAS, description: "Tugas yang belum dikumpulkan" },
       { title: "Test Mendatang", value: isLoading ? <Loader2 className="h-5 w-5 animate-spin"/> : testMendatang.toString(), icon: AlertTriangle, color: "text-yellow-500", href: ROUTES.SISWA_TEST, description: "Test/Ujian yang akan datang"},
       { title: "Materi & Nilai", value: isLoading ? <Loader2 className="h-5 w-5 animate-spin"/> : "Akses", icon: BookOpenIcon, color: "text-green-500", href: ROUTES.SISWA_MATERI, description: "Lihat materi & nilai"},
     ];
-  }, [jadwalList, tugasList, testList, isLoading]);
+  }, [jadwalList, tugasList, testList, submissions, isLoading]);
   
   const jadwalHariIni = useMemo(() => {
     if (isLoading) return [];
@@ -79,12 +85,13 @@ export default function SiswaDashboardPage() {
 
   const tugasDanTestMendatang = useMemo(() => {
     if (isLoading) return [];
+    const submittedTugasIds = new Set(submissions.map(s => s.tugasId));
     const combined = [
-        ...tugasList.filter(t => isFuture(parseISO(t.tenggat))).map(t => ({ type: 'Tugas', data: t, date: t.tenggat })),
+        ...tugasList.filter(t => isFuture(parseISO(t.tenggat)) && !submittedTugasIds.has(t.id)).map(t => ({ type: 'Tugas', data: t, date: t.tenggat })),
         ...testList.filter(t => t.status === 'Terjadwal' && isFuture(parseISO(t.tanggal))).map(t => ({ type: 'Test', data: t, date: t.tanggal }))
     ];
     return combined.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(0, 5);
-  }, [tugasList, testList, isLoading]);
+  }, [tugasList, testList, submissions, isLoading]);
 
 
   if (!user || (user.role !== 'siswa' && user.role !== 'superadmin')) {
