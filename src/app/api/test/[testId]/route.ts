@@ -44,8 +44,19 @@ export async function GET(request: NextRequest, { params }: { params: { testId: 
         if (authenticatedUser.role === 'guru' && test.uploaderId !== authenticatedUser.id && !['admin', 'superadmin'].includes(authenticatedUser.role)) {
             return NextResponse.json({ message: "Akses ditolak untuk test ini." }, { status: 403 });
         }
-        if (authenticatedUser.role === 'siswa' && test.kelas !== (authenticatedUser as any).kelasId) {
-            return NextResponse.json({ message: "Akses ditolak untuk test kelas ini." }, { status: 403 });
+        
+        if (authenticatedUser.role === 'siswa') {
+            const siswaKelas = authenticatedUser.kelasId;
+            if (!siswaKelas) {
+                return NextResponse.json({ message: "Informasi kelas siswa tidak ditemukan." }, { status: 403 });
+            }
+            const gradeLevel = siswaKelas.split(' ')[0]; // e.g., "X" from "X IPA 1"
+            const generalClass = `Semua Kelas ${gradeLevel}`;
+            const isAllowed = test.kelas === siswaKelas || test.kelas === generalClass;
+            
+            if (!isAllowed) {
+                return NextResponse.json({ message: "Akses ditolak. Test ini tidak ditugaskan untuk kelas Anda." }, { status: 403 });
+            }
         }
         
         return NextResponse.json({
