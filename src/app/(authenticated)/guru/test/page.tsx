@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
-import { ScrollText, PlusCircle, Search, Edit3, Trash2, PlayCircle, Loader2, CalendarClock, Users as UsersIcon, ListPlus } from "lucide-react";
+import { ScrollText, PlusCircle, Search, Edit3, Trash2, PlayCircle, Loader2, CalendarClock, Users as UsersIcon, ListPlus, ArrowLeft, Check, X as XIcon } from "lucide-react";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
@@ -62,8 +62,6 @@ export default function GuruTestPage() {
   const [selectedTestForSubmissions, setSelectedTestForSubmissions] = useState<TestType | null>(null);
   const [submissionsForTest, setSubmissionsForTest] = useState<TestSubmission[]>([]);
   const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
-  const [gradingValues, setGradingValues] = useState<Record<string, { nilai: string; catatanGuru: string }>>({});
-  const [isGradingSubmitting, setIsGradingSubmitting] = useState<Record<string, boolean>>({});
   
   const [teachingSubjects, setTeachingSubjects] = useState<string[]>([]);
   const [isLoadingTeachingSubjects, setIsLoadingTeachingSubjects] = useState(true);
@@ -76,6 +74,13 @@ export default function GuruTestPage() {
   const [selectedSoalIds, setSelectedSoalIds] = useState<Set<string>>(new Set());
   const [isSoalSubmitting, setIsSoalSubmitting] = useState(false);
 
+  // Grading Modal State
+  const [submissionDialogView, setSubmissionDialogView] = useState<'list' | 'grading'>('list');
+  const [currentSubmissionToGrade, setCurrentSubmissionToGrade] = useState<TestSubmission | null>(null);
+  const [gradingModalSoal, setGradingModalSoal] = useState<Soal[]>([]);
+  const [isLoadingGradingSoal, setIsLoadingGradingSoal] = useState(false);
+  const [gradingValues, setGradingValues] = useState<{ nilai: string; catatanGuru: string }>({ nilai: "", catatanGuru: "" });
+  const [isGradingSubmitting, setIsGradingSubmitting] = useState(false);
 
   const mockKelasList = React.useMemo(() => {
     const kls: string[] = ["Semua Kelas X", "Semua Kelas XI", "Semua Kelas XII"];
@@ -223,10 +228,10 @@ export default function GuruTestPage() {
   };
 
   const handleOpenSubmissionDialog = async (test: TestType) => {
+    setSubmissionDialogView('list');
     setSelectedTestForSubmissions(test);
     setIsLoadingSubmissions(true);
     setIsSubmissionDialogOpen(true);
-    setGradingValues({});
     try {
       const response = await fetch(`/api/test/${test.id}/submissions`);
       if (!response.ok) {
@@ -235,9 +240,6 @@ export default function GuruTestPage() {
       }
       const submissions: TestSubmission[] = await response.json();
       setSubmissionsForTest(submissions);
-      const initialGradingValues: Record<string, { nilai: string; catatanGuru: string }> = {};
-      submissions.forEach(sub => { initialGradingValues[sub.id] = { nilai: sub.nilai?.toString() || "", catatanGuru: sub.catatanGuru || "" }; });
-      setGradingValues(initialGradingValues);
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       setSubmissionsForTest([]);
@@ -246,34 +248,58 @@ export default function GuruTestPage() {
     }
   };
 
-  const handleGradingInputChange = (submissionId: string, field: 'nilai' | 'catatanGuru', value: string) => {
-    setGradingValues(prev => ({ ...prev, [submissionId]: { ...prev[submissionId], [field]: value, } }));
-  };
+  const handleOpenGradingView = async (submission: TestSubmission) => {
+    setCurrentSubmissionToGrade(submission);
+    setSubmissionDialogView('grading');
+    setIsLoadingGradingSoal(true);
+    try {
+      const soalRes = await fetch(`/api/test/${submission.testId}/soal`);
+      if (!soalRes.ok) throw new Error("Gagal memuat soal untuk diperiksa.");
+      const soalData: Soal[] = await soalRes.json();
+      setGradingModalSoal(soalData);
+      
+      const totalMcq = soalData.filter(s => s.tipeSoal === 'Pilihan Ganda').length;
+      let correctMcq = 0;
+      if (totalMcq > 0) {
+          correctMcq = soalData.filter(s => s.tipeSoal === 'Pilihan Ganda' && s.kunciJawaban === submission.jawabanSiswa?.[s.id]).length;
+      }
+      const suggestedScore = totalMcq > 0 ? ((correctMcq / totalMcq) * 100).toFixed(0) : "0";
 
-  const handleGradeTestSubmission = async (submission: TestSubmission) => {
-    const gradeData = gradingValues[submission.id];
-    if (!gradeData) {
-      toast({ title: "Data Tidak Lengkap", description: "Nilai atau catatan belum diisi.", variant: "destructive" });
-      return;
+      setGradingValues({
+          nilai: submission.nilai?.toString() || suggestedScore,
+          catatanGuru: submission.catatanGuru || ""
+      });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsLoadingGradingSoal(false);
     }
+  };
+  
+  const handleGradeSubmission = async () => {
+    if (!currentSubmissionToGrade) return;
+    const gradeData = gradingValues;
     const parsedNilai = parseFloat(gradeData.nilai);
     if (gradeData.nilai && (isNaN(parsedNilai) || parsedNilai < 0 || parsedNilai > 100)) {
-      toast({ title: "Nilai Tidak Valid", description: "Nilai harus antara 0 dan 100.", variant: "destructive" });
-      return;
+        toast({ title: "Nilai Tidak Valid", description: "Nilai harus antara 0 dan 100.", variant: "destructive" });
+        return;
     }
-    setIsGradingSubmitting(prev => ({...prev, [submission.id]: true}));
+    setIsGradingSubmitting(true);
     try {
-      const response = await fetch(`/api/test/submissions/${submission.id}/grade`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nilai: gradeData.nilai ? parsedNilai : null, catatanGuru: gradeData.catatanGuru }), });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Gagal menyimpan penilaian.");
-      }
-      toast({ title: "Penilaian Test Disimpan", description: `Nilai untuk ${submission.siswa?.fullName || submission.siswa?.name} telah disimpan.` });
-      setSubmissionsForTest(prevSubmissions => prevSubmissions.map(sub => sub.id === submission.id ? { ...sub, nilai: gradeData.nilai ? parsedNilai : null, catatanGuru: gradeData.catatanGuru, status: "Dinilai" as TestType['status'] } : sub));
+        const response = await fetch(`/api/test/submissions/${currentSubmissionToGrade.id}/grade`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nilai: gradeData.nilai ? parsedNilai : null, catatanGuru: gradeData.catatanGuru }), });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Gagal menyimpan penilaian.");
+        }
+        toast({ title: "Penilaian Test Disimpan", description: `Nilai untuk ${currentSubmissionToGrade.siswa?.fullName || currentSubmissionToGrade.siswa?.name} telah disimpan.` });
+        if(selectedTestForSubmissions){
+          await handleOpenSubmissionDialog(selectedTestForSubmissions); // Refresh list
+        }
+        setSubmissionDialogView('list');
     } catch (error: any) {
-      toast({ title: "Error Penilaian", description: error.message, variant: "destructive" });
+        toast({ title: "Error Penilaian", description: error.message, variant: "destructive" });
     } finally {
-      setIsGradingSubmitting(prev => ({...prev, [submission.id]: false}));
+        setIsGradingSubmitting(false);
     }
   };
 
@@ -326,7 +352,7 @@ export default function GuruTestPage() {
       if (!response.ok) throw new Error((await response.json()).message || "Gagal menyimpan perubahan soal.");
       toast({ title: "Berhasil!", description: `Daftar soal untuk test "${currentTestForSoal.judul}" telah diperbarui.` });
       setIsSoalManagerOpen(false);
-      fetchTests(); // Refresh the main test list to update soalCount
+      fetchTests(); 
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -402,7 +428,103 @@ export default function GuruTestPage() {
         </DialogContent>
       </Dialog>
       <AlertDialog open={!!testToDelete} onOpenChange={(open) => !open && setTestToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Hapus Test</AlertDialogTitle><AlertDialogDescription>Yakin ingin hapus test "{testToDelete?.judul}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setTestToDelete(null)} disabled={isSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-      <Dialog open={isSubmissionDialogOpen} onOpenChange={setIsSubmissionDialogOpen}><DialogContent className="max-w-4xl max-h-[90vh] flex flex-col"><DialogHeader className="flex-shrink-0"><DialogTitle>Submission Test: {selectedTestForSubmissions?.judul}</DialogTitle><DialogDescription>Daftar siswa yang telah mengerjakan test ini. Mapel: {selectedTestForSubmissions?.mapel}, Kelas: {selectedTestForSubmissions?.kelas}</DialogDescription></DialogHeader><div className="flex-grow overflow-y-auto py-4">{isLoadingSubmissions ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : submissionsForTest.length > 0 ? (<Table><TableHeader><TableRow><TableHead className="w-[200px]">Nama Siswa</TableHead><TableHead>Waktu Mulai</TableHead><TableHead>Waktu Selesai</TableHead><TableHead>Status</TableHead><TableHead className="w-[100px]">Nilai</TableHead><TableHead>Catatan Guru</TableHead><TableHead className="text-right w-[120px]">Aksi</TableHead></TableRow></TableHeader><TableBody>{submissionsForTest.map((sub) => (<TableRow key={sub.id}><TableCell className="font-medium">{sub.siswa?.fullName || sub.siswa?.name || sub.siswaId}</TableCell><TableCell>{format(parseISO(sub.waktuMulai), "dd MMM, HH:mm:ss", { locale: localeID })}</TableCell><TableCell>{sub.waktuSelesai ? format(parseISO(sub.waktuSelesai), "dd MMM, HH:mm:ss", { locale: localeID }) : "-"}</TableCell><TableCell><Badge variant={sub.status === "Dinilai" ? "default" : sub.status === "Selesai" ? "secondary" : "outline"}>{sub.status}</Badge></TableCell><TableCell><Input type="number" min="0" max="100" value={gradingValues[sub.id]?.nilai || ""} onChange={(e) => handleGradingInputChange(sub.id, "nilai", e.target.value)} className="h-8 text-sm" disabled={isGradingSubmitting[sub.id]} /></TableCell><TableCell><Textarea value={gradingValues[sub.id]?.catatanGuru || ""} onChange={(e) => handleGradingInputChange(sub.id, "catatanGuru", e.target.value)} className="text-xs min-h-[40px]" rows={1} placeholder="Catatan..." disabled={isGradingSubmitting[sub.id]} /></TableCell><TableCell className="text-right"><Button size="sm" onClick={() => handleGradeTestSubmission(sub)} disabled={isGradingSubmitting[sub.id]}>{isGradingSubmitting[sub.id] && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}Simpan Nilai</Button></TableCell></TableRow>))}</TableBody></Table>) : (<p className="text-center text-muted-foreground py-6">Belum ada siswa yang mengerjakan test ini.</p>)}</div><DialogFooter className="flex-shrink-0 border-t pt-4"><DialogClose asChild><Button variant="outline">Tutup</Button></DialogClose></DialogFooter></DialogContent></Dialog>
+      
+      <Dialog open={isSubmissionDialogOpen} onOpenChange={setIsSubmissionDialogOpen}><DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          {submissionDialogView === 'list' ? (
+            <>
+              <DialogHeader className="flex-shrink-0">
+                <DialogTitle>Submission Test: {selectedTestForSubmissions?.judul}</DialogTitle>
+                <DialogDescription>Daftar siswa yang telah mengerjakan test ini. Mapel: {selectedTestForSubmissions?.mapel}, Kelas: {selectedTestForSubmissions?.kelas}</DialogDescription>
+              </DialogHeader>
+              <div className="flex-grow overflow-y-auto py-4">
+                {isLoadingSubmissions ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : submissionsForTest.length > 0 ? (
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Nama Siswa</TableHead><TableHead>Waktu Selesai</TableHead><TableHead>Status</TableHead><TableHead>Nilai</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
+                    <TableBody>{submissionsForTest.map((sub) => (
+                      <TableRow key={sub.id}>
+                        <TableCell className="font-medium">{sub.siswa?.fullName || sub.siswa?.name || sub.siswaId}</TableCell>
+                        <TableCell>{sub.waktuSelesai ? format(parseISO(sub.waktuSelesai), "dd MMM, HH:mm:ss", { locale: localeID }) : "-"}</TableCell>
+                        <TableCell><Badge variant={sub.status === "Dinilai" ? "default" : "secondary"}>{sub.status}</Badge></TableCell>
+                        <TableCell className="font-semibold">{sub.nilai ?? '-'}</TableCell>
+                        <TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => handleOpenGradingView(sub)}>Periksa & Nilai</Button></TableCell>
+                      </TableRow>
+                    ))}</TableBody>
+                  </Table>
+                ) : (<p className="text-center text-muted-foreground py-6">Belum ada siswa yang mengerjakan test ini.</p>)}
+              </div>
+              <DialogFooter className="flex-shrink-0 border-t pt-4"><DialogClose asChild><Button variant="outline">Tutup</Button></DialogClose></DialogFooter>
+            </>
+          ) : ( // Grading View
+            <>
+              <DialogHeader className="flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon" onClick={() => setSubmissionDialogView('list')} className="h-8 w-8"><ArrowLeft/></Button>
+                  <div>
+                    <DialogTitle>Periksa Jawaban: {currentSubmissionToGrade?.siswa?.fullName}</DialogTitle>
+                    <DialogDescription>Test: {selectedTestForSubmissions?.judul}</DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+              <div className="flex-grow overflow-y-auto py-4 -mx-6 px-6 border-t border-b">
+                {isLoadingGradingSoal ? (<div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>) : (
+                  <div className="space-y-6">
+                    {gradingModalSoal.map((soal, index) => {
+                       const siswaJawaban = currentSubmissionToGrade?.jawabanSiswa?.[soal.id] ?? null;
+                       const isMcq = soal.tipeSoal === 'Pilihan Ganda';
+                       const isCorrect = isMcq && siswaJawaban === soal.kunciJawaban;
+
+                      return (
+                        <Card key={soal.id} className="p-4">
+                          <p className="font-medium mb-2">{index + 1}. {soal.pertanyaan}</p>
+                          {isMcq ? (
+                            <div className="space-y-2">
+                              {(soal.pilihanJawaban || []).map(option => {
+                                const isStudentAnswer = option.id === siswaJawaban;
+                                const isCorrectAnswer = option.id === soal.kunciJawaban;
+                                let optionClassName = "border p-2 rounded-md flex items-center gap-2 text-sm";
+                                if (isStudentAnswer && isCorrectAnswer) optionClassName += " bg-green-100 dark:bg-green-900/30 border-green-500";
+                                else if (isStudentAnswer && !isCorrectAnswer) optionClassName += " bg-red-100 dark:bg-red-900/30 border-red-500";
+                                else if (isCorrectAnswer) optionClassName += " border-green-500";
+
+                                return (
+                                  <div key={option.id} className={optionClassName}>
+                                    {isStudentAnswer ? <CheckCircle className="h-4 w-4 text-blue-600" /> : <div className="h-4 w-4" />}
+                                    <span>{option.id}. {option.text}</span>
+                                    {isCorrectAnswer && <Badge variant="secondary" className="ml-auto bg-green-200 text-green-800">Jawaban Benar</Badge>}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                             <div>
+                                <Label className="text-xs text-muted-foreground">Jawaban Siswa:</Label>
+                                <Textarea readOnly value={siswaJawaban || "(Tidak Dijawab)"} className="mt-1 bg-muted/50"/>
+                             </div>
+                          )}
+                        </Card>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+              <DialogFooter className="flex-shrink-0 pt-4 flex-col sm:flex-row gap-4">
+                <div className="flex-grow grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <Label htmlFor="final-grade">Nilai Akhir (0-100)</Label>
+                        <Input id="final-grade" type="number" min="0" max="100" placeholder="Contoh: 85" value={gradingValues.nilai} onChange={(e) => setGradingValues(prev => ({ ...prev, nilai: e.target.value }))} disabled={isGradingSubmitting}/>
+                    </div>
+                     <div className="space-y-1">
+                        <Label htmlFor="teacher-feedback">Feedback/Catatan Guru</Label>
+                        <Textarea id="teacher-feedback" placeholder="Feedback untuk siswa..." value={gradingValues.catatanGuru} onChange={(e) => setGradingValues(prev => ({...prev, catatanGuru: e.target.value}))} disabled={isGradingSubmitting}/>
+                    </div>
+                </div>
+                <div className="flex-shrink-0 self-end">
+                  <Button onClick={handleGradeSubmission} disabled={isGradingSubmitting} className="bg-green-600 hover:bg-green-700">{isGradingSubmitting ? <Loader2 className="animate-spin"/> : "Simpan Penilaian"}</Button>
+                </div>
+              </DialogFooter>
+            </>
+          )}
+      </DialogContent></Dialog>
       
       <Dialog open={isSoalManagerOpen} onOpenChange={setIsSoalManagerOpen}>
         <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
