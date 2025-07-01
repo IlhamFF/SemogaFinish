@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
-import { ScrollText, PlusCircle, Search, Edit3, Trash2, PlayCircle, Loader2, CalendarClock, Users as UsersIcon, ListPlus, ArrowLeft, Check, X as XIcon } from "lucide-react";
+import { ScrollText, PlusCircle, Search, Edit3, Trash2, PlayCircle, Loader2, CalendarClock, Users as UsersIcon, ListPlus, ArrowLeft, Check, X as XIcon, CheckCircle } from "lucide-react";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
@@ -28,6 +28,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 
 const testSchema = z.object({
@@ -429,7 +430,8 @@ export default function GuruTestPage() {
       </Dialog>
       <AlertDialog open={!!testToDelete} onOpenChange={(open) => !open && setTestToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Hapus Test</AlertDialogTitle><AlertDialogDescription>Yakin ingin hapus test "{testToDelete?.judul}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setTestToDelete(null)} disabled={isSubmitting}>Batal</AlertDialogCancel><AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Hapus</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       
-      <Dialog open={isSubmissionDialogOpen} onOpenChange={setIsSubmissionDialogOpen}><DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <Dialog open={isSubmissionDialogOpen} onOpenChange={setIsSubmissionDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           {submissionDialogView === 'list' ? (
             <>
               <DialogHeader className="flex-shrink-0">
@@ -524,7 +526,8 @@ export default function GuruTestPage() {
               </DialogFooter>
             </>
           )}
-      </DialogContent></Dialog>
+        </DialogContent>
+      </Dialog>
       
       <Dialog open={isSoalManagerOpen} onOpenChange={setIsSoalManagerOpen}>
         <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
