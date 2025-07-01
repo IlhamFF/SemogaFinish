@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -38,7 +37,7 @@ export function AppHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 shadow-sm">
+    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 shadow-sm">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="text-foreground" />
         {!isMobile && <h1 className="text-lg font-semibold font-headline text-primary">{APP_NAME}</h1>}
