@@ -4,13 +4,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Printer, Users, CheckCircle, BookOpenCheck, BookCopy } from "lucide-react";
+import { Loader2, Printer, Users, BookOpenCheck, BookCopy } from "lucide-react";
 import { APP_NAME } from '@/lib/constants';
 import { format } from 'date-fns';
 import { id as localeID } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Image from 'next/image';
 
@@ -63,16 +61,16 @@ export default function CetakLaporanPimpinanPage() {
 
   useEffect(() => {
     if (!isLoadingData && akademikData.totalSiswa > 0) {
-      setTimeout(() => window.print(), 1000);
+      setTimeout(() => window.print(), 1500);
     }
   }, [isLoadingData, akademikData]);
 
   const pimpinanStats = useMemo(() => {
     return [
-      { title: "Total Siswa", value: akademikData.totalSiswa.toString(), icon: Users },
-      { title: "Total Guru", value: akademikData.totalGuru.toString(), icon: Users },
-      { title: "Jumlah Kelas", value: akademikData.totalKelas.toString(), icon: BookOpenCheck },
-      { title: "Total Mata Pelajaran", value: akademikData.totalMataPelajaran.toString(), icon: BookCopy },
+      { title: "Total Siswa", value: akademikData.totalSiswa.toString() },
+      { title: "Total Guru", value: akademikData.totalGuru.toString() },
+      { title: "Jumlah Kelas", value: akademikData.totalKelas.toString() },
+      { title: "Total Mata Pelajaran", value: akademikData.totalMataPelajaran.toString() },
     ];
   }, [akademikData]);
 
@@ -152,11 +150,11 @@ export default function CetakLaporanPimpinanPage() {
                 </TableHeader>
                 <TableBody>
                     {akademikData.peringkatSiswa.map((siswa, index) => (
-                    <TableRow key={siswa.nama}>
+                    <TableRow key={`${siswa.nama}-${index}`}>
                         <TableCell className="font-bold text-center">{index + 1}</TableCell>
                         <TableCell>{siswa.nama}</TableCell>
                         <TableCell>{siswa.kelas}</TableCell>
-                        <TableCell className="text-right font-medium text-primary">{(+siswa.rataRata).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-medium text-blue-600">{(+siswa.rataRata).toFixed(2)}</TableCell>
                     </TableRow>
                     ))}
                 </TableBody>
@@ -176,7 +174,7 @@ export default function CetakLaporanPimpinanPage() {
                 {akademikData.rataRataKelas.sort((a,b) => b.rataRata - a.rataRata).map((item) => (
                     <TableRow key={item.name}>
                     <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="text-right font-semibold text-primary">{item.rataRata.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-semibold text-blue-600">{item.rataRata.toFixed(2)}</TableCell>
                     </TableRow>
                 ))}
                 </TableBody>
@@ -195,3 +193,4 @@ export default function CetakLaporanPimpinanPage() {
     </div>
   );
 }
+
