@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart3, Search, Loader2, Printer } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ReportStudent {
   id: string;
