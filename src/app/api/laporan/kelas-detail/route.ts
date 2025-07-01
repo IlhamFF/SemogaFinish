@@ -5,6 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { NilaiSemesterSiswaEntity } from "@/entities/nilai-semester-siswa.entity";
 import { UserEntity } from "@/entities/user.entity";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
+import { Like } from "typeorm";
 
 export async function GET(request: NextRequest) {
   const authenticatedUser = getAuthenticatedUser(request);
@@ -13,40 +14,38 @@ export async function GET(request: NextRequest) {
   }
   
   const { searchParams } = new URL(request.url);
-  const kelasId = searchParams.get("kelasId");
+  const tingkat = searchParams.get("tingkat");
 
-  if (!kelasId) {
-    return NextResponse.json({ message: "Parameter 'kelasId' wajib diisi." }, { status: 400 });
+  if (!tingkat) {
+    return NextResponse.json({ message: "Parameter 'tingkat' wajib diisi." }, { status: 400 });
   }
 
   try {
     const dataSource = await getInitializedDataSource();
     const nilaiRepo = dataSource.getRepository(NilaiSemesterSiswaEntity);
+    const userRepo = dataSource.getRepository(UserEntity);
 
-    // Get all grades for the specific class, including relations to student and subject
-    const allGradesInClass = await nilaiRepo.find({
-        where: { kelasId: kelasId },
-        relations: ["siswa", "mapel"],
-        order: { siswa: { fullName: "ASC" }, mapel: { nama: "ASC" } },
+    // Get all students in the specified grade level
+    const studentsInGrade = await userRepo.find({
+        where: { kelasId: Like(`${tingkat}%`), role: 'siswa' },
+        select: ['id', 'fullName', 'name', 'nis', 'kelasId']
     });
 
-    if (allGradesInClass.length === 0) {
-        // To handle cases where a class exists but has no grades yet, fetch students separately
-        const userRepo = dataSource.getRepository(UserEntity);
-        const studentsInClass = await userRepo.find({ where: { kelasId, role: 'siswa' }, select: ['id', 'fullName', 'name', 'nis']});
-        const students = studentsInClass.map(s => ({
-            id: s.id,
-            name: s.fullName || s.name || "Nama Tidak Ada",
-            nis: s.nis || null,
-            grades: {},
-            average: 0
-        }));
-        return NextResponse.json({ students, subjects: [] });
+    if (studentsInGrade.length === 0) {
+        return NextResponse.json({ students: [], subjects: [] });
     }
 
-    // Get all unique subjects in this class from the grades data
+    const studentIds = studentsInGrade.map(s => s.id);
+
+    // Get all grades for these students
+    const allGradesForStudents = await nilaiRepo.find({
+        where: { siswaId: In(studentIds) },
+        relations: ["mapel"],
+    });
+
+    // Get all unique subjects from the grades data
     const subjectsSet = new Set<string>();
-    allGradesInClass.forEach(grade => {
+    allGradesForStudents.forEach(grade => {
         if (grade.mapel?.nama) {
             subjectsSet.add(grade.mapel.nama);
         }
@@ -54,22 +53,24 @@ export async function GET(request: NextRequest) {
     const subjects = Array.from(subjectsSet).sort();
 
     // Group grades by student
-    const studentsDataMap = new Map<string, { id: string; name: string; nis: string | null; grades: Record<string, number | null> }>();
+    const studentsDataMap = new Map<string, { id: string; name: string; nis: string | null; kelas: string | null; grades: Record<string, number | null> }>();
+    
+    // Initialize map with all students from the grade
+    studentsInGrade.forEach(student => {
+        studentsDataMap.set(student.id, {
+            id: student.id,
+            name: student.fullName || student.name || "Nama Tidak Ada",
+            nis: student.nis || null,
+            kelas: student.kelasId || null,
+            grades: {},
+        });
+    });
 
-    allGradesInClass.forEach(grade => {
-        if (grade.siswa) {
-            if (!studentsDataMap.has(grade.siswa.id)) {
-                studentsDataMap.set(grade.siswa.id, {
-                    id: grade.siswa.id,
-                    name: grade.siswa.fullName || grade.siswa.name || "Nama Tidak Ada",
-                    nis: grade.siswa.nis || null,
-                    grades: {},
-                });
-            }
-            if (grade.mapel?.nama) {
-                const nilai = grade.nilaiAkhir !== null && grade.nilaiAkhir !== undefined ? parseFloat(String(grade.nilaiAkhir)) : null;
-                studentsDataMap.get(grade.siswa.id)!.grades[grade.mapel.nama] = isNaN(nilai as number) ? null : nilai;
-            }
+    allGradesForStudents.forEach(grade => {
+        const studentEntry = studentsDataMap.get(grade.siswaId);
+        if (studentEntry && grade.mapel?.nama) {
+            const nilai = grade.nilaiAkhir !== null && grade.nilaiAkhir !== undefined ? parseFloat(String(grade.nilaiAkhir)) : null;
+            studentEntry.grades[grade.mapel.nama] = isNaN(nilai as number) ? null : nilai;
         }
     });
 

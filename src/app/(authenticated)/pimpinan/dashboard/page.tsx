@@ -24,9 +24,9 @@ interface AkademikData {
   totalMataPelajaran: number;
   rasioGuruSiswa: string;
   kehadiranSiswaBulanan: { name: string; Kehadiran: number }[];
-  rataRataKehadiranGuru: number;
   distribusiGuruMapel: { name: string; value: number }[];
   sebaranSiswaJurusan: { name: string; value: number }[];
+  absensiBermasalah: { nama: string, kelas: string, alphaCount: string }[];
 }
 
 const initialAkademikData: AkademikData = {
@@ -38,9 +38,9 @@ const initialAkademikData: AkademikData = {
   totalMataPelajaran: 0,
   rasioGuruSiswa: "N/A",
   kehadiranSiswaBulanan: [],
-  rataRataKehadiranGuru: 0,
   distribusiGuruMapel: [],
   sebaranSiswaJurusan: [],
+  absensiBermasalah: [],
 };
 
 const TAHUN_AJARAN_OPTIONS = ["2023/2024", "2022/2023", "2021/2022", "Semua"];
@@ -95,7 +95,7 @@ export default function PimpinanDashboardPage() {
       { title: "Total Siswa Aktif", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalSiswa.toString(), icon: Users, color: "text-purple-400" },
       { title: "Rasio Guru:Siswa", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.rasioGuruSiswa.toString(), icon: User, color: "text-green-400" },
       { title: "Kehadiran Siswa", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : `${akademikData.kehadiranSiswaBulanan.slice(-1)[0]?.Kehadiran || 0}%`, icon: Percent, color: "text-pink-400" },
-      { title: "Kehadiran Guru", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : `${akademikData.rataRataKehadiranGuru}%`, icon: CheckCircle, color: "text-sky-400" },
+      { title: "Total Mapel", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : `${akademikData.totalMataPelajaran}`, icon: BookCopy, color: "text-sky-400" },
     ];
   }, [isLoadingData, akademikData]);
   
@@ -136,7 +136,7 @@ export default function PimpinanDashboardPage() {
 
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
          <Card className="shadow-lg lg:col-span-2">
-            <CardHeader><CardTitle className="flex items-center"><TrendingUp className="mr-2 h-5 w-5 text-primary" /> Tren Kehadiran Siswa</CardTitle><CardDescription>Persentase kehadiran siswa selama 6 bulan terakhir.</CardDescription></CardHeader>
+            <CardHeader><CardTitle className="flex items-center"><TrendingUp className="mr-2 h-5 w-5 text-primary" /> Tren Kehadiran Siswa</CardTitle><CardDescription>Persentase kehadiran siswa selama 6 bulan terakhir (data simulasi).</CardDescription></CardHeader>
             <CardContent className="h-[250px] -ml-4"><ChartContainer config={chartConfigVertical} className="w-full h-full"><RechartsBarChart data={akademikData.kehadiranSiswaBulanan}><CartesianGrid vertical={false} /><XAxis dataKey="name" tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12} /><YAxis tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[80, 100]} tickFormatter={(value) => `${value}%`} /><Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<ChartTooltipContent />} /><Bar dataKey="Kehadiran" fill="var(--color-Kehadiran)" radius={[4, 4, 0, 0]} barSize={30} /></RechartsBarChart></ChartContainer></CardContent>
         </Card>
         <Card className="shadow-lg">
@@ -152,7 +152,7 @@ export default function PimpinanDashboardPage() {
         </Card>
         <Card className="shadow-lg">
           <CardHeader><CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-yellow-400" /> Peringkat Siswa Terbaik</CardTitle><CardDescription>10 siswa dengan rata-rata nilai tertinggi di sekolah.</CardDescription></CardHeader>
-          <CardContent><ScrollArea className="max-h-[300px]"><Table><TableHeader><TableRow><TableHead className="w-[50px]">#</TableHead><TableHead>Nama Siswa</TableHead><TableHead>Kelas</TableHead><TableHead className="text-right">Rata-rata</TableHead></TableRow></TableHeader><TableBody>{akademikData.peringkatSiswa.map((siswa, index) => (<TableRow key={siswa.nama}><TableCell className="font-bold text-lg">{index + 1}</TableCell><TableCell>{siswa.nama}</TableCell><TableCell>{siswa.kelas}</TableCell><TableCell className="text-right font-medium text-primary">{(+siswa.rataRata).toFixed(2)}</TableCell></TableRow>))}</TableBody></Table></ScrollArea></CardContent>
+          <CardContent><ScrollArea className="h-[300px]"><Table><TableHeader><TableRow><TableHead className="w-[50px]">#</TableHead><TableHead>Nama Siswa</TableHead><TableHead>Kelas</TableHead><TableHead className="text-right">Rata-rata</TableHead></TableRow></TableHeader><TableBody>{akademikData.peringkatSiswa.map((siswa, index) => (<TableRow key={siswa.nama}><TableCell className="font-bold text-lg">{index + 1}</TableCell><TableCell>{siswa.nama}</TableCell><TableCell>{siswa.kelas}</TableCell><TableCell className="text-right font-medium text-primary">{(+siswa.rataRata).toFixed(2)}</TableCell></TableRow>))}</TableBody></Table></ScrollArea></CardContent>
         </Card>
       </div>
 
@@ -162,8 +162,8 @@ export default function PimpinanDashboardPage() {
             <CardContent><ScrollArea className="max-h-[250px]"><Table><TableHeader><TableRow><TableHead>Mata Pelajaran</TableHead><TableHead className="text-right">Jumlah Guru</TableHead></TableRow></TableHeader><TableBody>{akademikData.distribusiGuruMapel.sort((a,b) => b.value - a.value).map((item, index) => (<TableRow key={index}><TableCell className="font-medium">{item.name}</TableCell><TableCell className="text-right">{item.value}</TableCell></TableRow>))}</TableBody></Table></ScrollArea></CardContent>
         </Card>
         <Card className="shadow-lg">
-            <CardHeader><CardTitle className="flex items-center"><UserMinus className="mr-2 h-5 w-5 text-primary" /> Absensi Bermasalah</CardTitle><CardDescription>Siswa dengan kehadiran di bawah 90% (Simulasi).</CardDescription></CardHeader>
-            <CardContent><ScrollArea className="max-h-[250px]"><Table><TableHeader><TableRow><TableHead>Nama Siswa</TableHead><TableHead className="text-right">Kehadiran</TableHead></TableRow></TableHeader><TableBody>{[...akademikData.peringkatSiswa].reverse().slice(0,5).map((item, index) => (<TableRow key={index}><TableCell className="font-medium">{item.nama}</TableCell><TableCell className="text-right text-destructive">{(Math.random() * (89.9 - 85) + 85).toFixed(1)}%</TableCell></TableRow>))}</TableBody></Table></ScrollArea></CardContent>
+            <CardHeader><CardTitle className="flex items-center"><UserMinus className="mr-2 h-5 w-5 text-primary" /> Absensi Bermasalah</CardTitle><CardDescription>Siswa dengan alpha terbanyak (30 hari terakhir).</CardDescription></CardHeader>
+            <CardContent><ScrollArea className="max-h-[250px]"><Table><TableHeader><TableRow><TableHead>Nama Siswa</TableHead><TableHead className="text-right">Jumlah Alpha</TableHead></TableRow></TableHeader><TableBody>{akademikData.absensiBermasalah.map((item, index) => (<TableRow key={index}><TableCell className="font-medium">{item.nama}<span className="text-xs text-muted-foreground block">{item.kelas}</span></TableCell><TableCell className="text-right text-destructive font-bold">{item.alphaCount}</TableCell></TableRow>))}</TableBody></Table></ScrollArea></CardContent>
         </Card>
        </div>
     </div>

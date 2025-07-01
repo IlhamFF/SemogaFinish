@@ -6,6 +6,8 @@ import { NilaiSemesterSiswaEntity } from "@/entities/nilai-semester-siswa.entity
 import { UserEntity } from "@/entities/user.entity";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
+import { AbsensiSiswaEntity } from "@/entities/absensi-siswa.entity";
+import { format, subDays } from 'date-fns';
 
 export async function GET(request: NextRequest) {
   const authenticatedUser = await getAuthenticatedUser(request);
@@ -28,7 +30,8 @@ export async function GET(request: NextRequest) {
       kelasData,
       totalMataPelajaran,
       allGurus,
-      allSiswa
+      allSiswa,
+      absensiBermasalahData,
     ] = await Promise.all([
       // Rata-rata per kelas
       nilaiRepo.createQueryBuilder("nilai")
@@ -59,7 +62,24 @@ export async function GET(request: NextRequest) {
         .getRawMany(),
       mapelRepo.count(),
       userRepo.find({ where: { role: 'guru' } }),
-      userRepo.find({ where: { role: 'siswa' } })
+      userRepo.find({ where: { role: 'siswa' } }),
+      // Absensi Bermasalah (Alpha terbanyak 30 hari terakhir)
+      dataSource.getRepository(AbsensiSiswaEntity)
+        .createQueryBuilder("absensi")
+        .select("absensi.siswaId", "siswaId")
+        .addSelect("user.fullName", "nama")
+        .addSelect("user.kelasId", "kelas")
+        .addSelect("COUNT(*)", "alphaCount")
+        .leftJoin("absensi.siswa", "user")
+        .where("absensi.statusKehadiran = :status", { status: 'Alpha' })
+        .andWhere("absensi.tanggalAbsensi BETWEEN :startDate AND :endDate", { 
+          startDate: format(subDays(new Date(), 30), 'yyyy-MM-dd'), 
+          endDate: format(new Date(), 'yyyy-MM-dd') 
+        })
+        .groupBy("absensi.siswaId, user.fullName, user.kelasId")
+        .orderBy("\"alphaCount\"", "DESC")
+        .limit(5)
+        .getRawMany(),
     ]);
     
     // --- Additional Calculations ---
@@ -101,8 +121,7 @@ export async function GET(request: NextRequest) {
         { name: 'Mei', Kehadiran: 93.5 },
         { name: 'Jun', Kehadiran: 98.0 },
     ];
-    const rataRataKehadiranGuru = 98.5; // Mock data
-
+    
     // Pastikan tipe data numerik benar
     const rataRataKelas = rataRataKelasData.map(item => ({
         ...item,
@@ -125,9 +144,9 @@ export async function GET(request: NextRequest) {
       totalMataPelajaran,
       rasioGuruSiswa,
       kehadiranSiswaBulanan,
-      rataRataKehadiranGuru,
       distribusiGuruMapel,
-      sebaranSiswaJurusan
+      sebaranSiswaJurusan,
+      absensiBermasalah: absensiBermasalahData,
     });
 
   } catch (error: any) {
