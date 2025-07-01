@@ -9,12 +9,13 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { BarChart3, Search, Loader2, Printer, ChevronRight, Users, Star } from "lucide-react";
+import { BarChart3, Search, Loader2, Printer, ChevronRight, Users, Star, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, SCHOOL_CLASSES_PER_MAJOR_GRADE } from "@/lib/constants";
 import { Label } from '@/components/ui/label';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import type { ClassReport, ReportData } from '@/app/api/laporan/kelas-detail/route';
+import Papa from "papaparse";
 
 export default function LaporanAkademikPage() {
   const { user } = useAuth();
@@ -91,6 +92,57 @@ export default function LaporanAkademikPage() {
     return title;
   }, [selectedTingkat, selectedKelas]);
 
+  const handleExportCsv = () => {
+    if (!reportData || reportData.classReports.length === 0) {
+      toast({
+        title: "Tidak Ada Data",
+        description: "Tidak ada data untuk diekspor. Silakan tampilkan laporan terlebih dahulu.",
+        variant: "default",
+      });
+      return;
+    }
+
+    const dataToExport: any[] = [];
+    const subjects = reportData.subjects;
+
+    reportData.classReports.forEach(classReport => {
+      classReport.students.forEach(student => {
+        const row: Record<string, any> = {
+          "Kelas": student.kelas,
+          "NIS": student.nis || "N/A",
+          "Nama Siswa": student.name,
+        };
+        subjects.forEach(subject => {
+          row[subject] = student.grades[subject] !== null ? student.grades[subject]?.toFixed(2) : "";
+        });
+        row["Rata-Rata"] = student.average.toFixed(2);
+        dataToExport.push(row);
+      });
+    });
+
+    const csv = Papa.unparse(dataToExport, {
+      columns: ["Kelas", "NIS", "Nama Siswa", ...subjects, "Rata-Rata"],
+      header: true
+    });
+
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    
+    let fileName = `laporan_nilai_angkatan_${selectedTingkat}`;
+    if(selectedKelas && selectedKelas !== 'semua') {
+        fileName += `_kelas_${selectedKelas.replace(/ /g, '_')}`;
+    }
+    fileName += '.csv';
+
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
@@ -100,9 +152,14 @@ export default function LaporanAkademikPage() {
           </h1>
           <p className="text-muted-foreground">Analisis pencapaian akademik siswa per angkatan atau per kelas.</p>
         </div>
-        <Button variant="outline" onClick={() => window.print()} className="print:hidden">
-          <Printer className="mr-2 h-4 w-4" /> Cetak Laporan
-        </Button>
+        <div className="flex items-center gap-2 print:hidden">
+          <Button variant="outline" onClick={handleExportCsv} disabled={!reportData || isLoadingReport}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="mr-2 h-4 w-4" /> Cetak Laporan
+          </Button>
+        </div>
       </div>
 
       <Card className="shadow-lg print:hidden">
