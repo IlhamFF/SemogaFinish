@@ -67,15 +67,17 @@ export default function AdminKelasPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-headline font-semibold">Manajemen Kelas</h1>
-      <p className="text-muted-foreground">Lihat daftar kelas dan siswa yang terdaftar di dalamnya.</p>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="animate-fade-in-up">
+        <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">Manajemen Kelas</h1>
+        <p className="text-muted-foreground">Lihat daftar kelas dan siswa yang terdaftar di dalamnya.</p>
+      </div>
       
-      <Card className="shadow-lg">
+      <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className="flex items-center"><BookCopy className="mr-2 h-6 w-6 text-primary" />Daftar Kelas</CardTitle>
+              <CardTitle className="flex items-center text-xl"><BookCopy className="mr-3 h-6 w-6 text-primary" />Daftar Kelas</CardTitle>
               <CardDescription>
                 Menampilkan {filteredClasses.length} dari {sortedClasses.length} total kelas.
               </CardDescription>
@@ -96,7 +98,7 @@ export default function AdminKelasPage() {
             <Accordion type="single" collapsible className="w-full">
               {filteredClasses.map((kelas) => (
                 <AccordionItem value={kelas} key={kelas}>
-                  <AccordionTrigger className="text-lg font-medium hover:no-underline">
+                  <AccordionTrigger className="text-lg font-medium hover:no-underline rounded-lg px-4 hover:bg-muted/50">
                     <div className="flex items-center gap-3">
                         <span className="text-primary">{kelas}</span>
                         <span className="flex items-center text-sm font-normal text-muted-foreground">
@@ -133,9 +135,13 @@ export default function AdminKelasPage() {
               ))}
             </Accordion>
           ) : (
-            <p className="text-center text-muted-foreground py-8">
-              {searchTerm ? "Tidak ada kelas yang cocok dengan pencarian Anda." : "Tidak ada data siswa atau kelas yang ditemukan."}
-            </p>
+            <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-xl">
+                <Search className="mx-auto h-12 w-12" />
+                <p className="mt-2 font-medium">Tidak Ada Hasil</p>
+                <p className="text-sm mt-1">
+                 {searchTerm ? "Tidak ada kelas yang cocok dengan pencarian Anda." : "Tidak ada data siswa atau kelas yang ditemukan."}
+                </p>
+            </div>
           )}
         </CardContent>
       </Card>

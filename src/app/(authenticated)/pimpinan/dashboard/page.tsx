@@ -2,14 +2,14 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, TrendingUp, BookOpenCheck, BarChartHorizontalBig, Loader2, Trophy, Star, CheckCircle, BookCopy, Printer } from "lucide-react";
+import { Users, BookOpenCheck, Loader2, Star, CheckCircle, BookCopy, Printer } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, PieChart, Pie, Cell } from "recharts";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import React, { useMemo, useEffect, useState, useCallback } from "react";
 import type { User as AppUser, Role } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { ROLES, ROUTES } from "@/lib/constants";
+import { ROUTES } from "@/lib/constants";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -125,10 +125,10 @@ export default function PimpinanDashboardPage() {
 
   const pimpinanStats = useMemo(() => {
     return [
-      { title: "Total Siswa", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalSiswa.toString(), icon: Users, color: "text-primary", description: "SMA Az-Bail" },
-      { title: "Total Guru", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalGuru.toString(), icon: Users, color: "text-green-500", description: "Tenaga Pengajar" },
-      { title: "Jumlah Kelas", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalKelas.toString(), icon: BookOpenCheck, color: "text-yellow-500", description: "IPA & IPS" },
-      { title: "Tingkat Kelulusan (Simulasi)", value: "95%", icon: CheckCircle, color: "text-indigo-500", description: "Target: 90%" },
+      { title: "Total Siswa", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalSiswa.toString(), icon: Users, color: "text-purple-400", description: "SMA Az-Bail" },
+      { title: "Total Guru", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalGuru.toString(), icon: Users, color: "text-green-400", description: "Tenaga Pengajar" },
+      { title: "Jumlah Kelas", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalKelas.toString(), icon: BookOpenCheck, color: "text-pink-400", description: "IPA & IPS" },
+      { title: "Kelulusan (Simulasi)", value: "95%", icon: CheckCircle, color: "text-amber-400", description: "Target: 90%" },
     ];
   }, [isLoadingData, akademikData]);
   
@@ -158,11 +158,11 @@ export default function PimpinanDashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 animate-fade-in-up">
         <div>
-          <h1 className="text-3xl font-headline font-semibold">Dasbor Pimpinan SMA Az-Bail</h1>
-          <p className="text-muted-foreground">Selamat datang, {currentUserAuth.fullName || currentUserAuth.name || currentUserAuth.email}! Gambaran umum kinerja institusi dan metrik utama.</p>
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">Dasbor Pimpinan</h1>
+          <p className="text-muted-foreground">Selamat datang, {currentUserAuth.fullName || currentUserAuth.name || currentUserAuth.email}! Gambaran umum kinerja institusi.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
             <Select value={selectedTahun} onValueChange={setSelectedTahun}>
@@ -179,64 +179,47 @@ export default function PimpinanDashboardPage() {
         </div>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {pimpinanStats.map((card) => (
-          <Card key={card.title} className="shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-              <card.icon className={`h-5 w-5 ${card.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
-              <p className="text-xs text-muted-foreground">{card.description}</p>
-            </CardContent>
-          </Card>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+        {pimpinanStats.map((card, index) => (
+             <div key={card.title} className="group relative overflow-hidden rounded-2xl bg-card p-6 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                <div className={`absolute -top-8 -right-8 w-24 h-24 bg-gradient-to-bl from-primary/10 to-accent/10 opacity-50 rounded-full blur-2xl group-hover:opacity-60 transition-all duration-300`} />
+                <div className="relative z-10">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <h3 className="text-sm font-medium text-muted-foreground">{card.title}</h3>
+                            <p className="text-4xl font-bold mt-1">{card.value}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{card.description}</p>
+                        </div>
+                        <div className={`w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                            <card.icon className={`w-5 h-5 ${card.color}`} />
+                        </div>
+                    </div>
+                </div>
+            </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <BarChartHorizontalBig className="mr-2 h-5 w-5 text-primary" />
               Rata-rata Nilai per Kelas
             </CardTitle>
-            <CardDescription>Visualisasi dan tabel rata-rata nilai akhir siswa per kelas.</CardDescription>
+            <CardDescription>Visualisasi perbandingan rata-rata nilai akhir siswa per kelas.</CardDescription>
           </CardHeader>
           <CardContent>
             {sortedClassAverages.length > 0 ? (
-              <>
-                <div className="h-[300px] mb-6">
+                <div className="h-[300px] -ml-4">
                   <ChartContainer config={chartConfigClassDist} className="w-full h-full">
                     <BarChart data={akademikData.rataRataKelas} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis type="number" stroke="hsl(var(--foreground))" fontSize={12} domain={[0, 100]} />
-                      <YAxis dataKey="name" type="category" stroke="hsl(var(--foreground))" fontSize={10} width={80} interval={0} />
-                      <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }}/>
-                       <Legend />
-                      <Bar dataKey="rataRata" fill="var(--color-rataRata)" radius={[0, 4, 4, 0]} barSize={15} />
+                      <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[0, 100]} />
+                      <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={10} width={80} interval={0} tickLine={false} axisLine={false} />
+                      <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--accent))' }}/>
+                      <Bar dataKey="rataRata" fill="var(--color-rataRata)" radius={[0, 4, 4, 0]} barSize={20} />
                     </BarChart>
                   </ChartContainer>
                 </div>
-                 <div className="max-h-[200px] overflow-y-auto">
-                    <Table>
-                        <TableHeader>
-                        <TableRow>
-                            <TableHead>Kelas</TableHead>
-                            <TableHead className="text-right">Rata-rata Nilai</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {sortedClassAverages.map((item) => (
-                            <TableRow key={item.name}>
-                            <TableCell className="font-medium">{item.name}</TableCell>
-                            <TableCell className="text-right font-semibold">{item.rataRata.toFixed(2)}</TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                </div>
-              </>
             ) : (
               <p className="text-muted-foreground text-center py-4">Data nilai rata-rata kelas belum tersedia.</p>
             )}
@@ -246,18 +229,18 @@ export default function PimpinanDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Star className="mr-2 h-5 w-5 text-yellow-500" />
-              Peringkat Siswa Terbaik (Keseluruhan)
+              <Star className="mr-2 h-5 w-5 text-yellow-400" />
+              Peringkat Siswa Terbaik
             </CardTitle>
-            <CardDescription>10 siswa dengan rata-rata nilai tertinggi di seluruh sekolah.</CardDescription>
+            <CardDescription>10 siswa dengan rata-rata nilai tertinggi di sekolah.</CardDescription>
           </CardHeader>
           <CardContent className="h-auto">
              {akademikData.peringkatSiswa.length > 0 ? (
-              <ScrollArea className="max-h-[500px]">
+              <ScrollArea className="max-h-[300px]">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[50px]">Peringkat</TableHead>
+                      <TableHead className="w-[50px]">#</TableHead>
                       <TableHead>Nama Siswa</TableHead>
                       <TableHead>Kelas</TableHead>
                       <TableHead className="text-right">Rata-rata</TableHead>
@@ -282,7 +265,7 @@ export default function PimpinanDashboardPage() {
         </Card>
       </div>
 
-       <div className="mt-6">
+       <div className="mt-6 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
         <Card className="shadow-lg col-span-1 lg:col-span-2">
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -345,7 +328,6 @@ export default function PimpinanDashboardPage() {
           </CardContent>
         </Card>
       </div>
-
     </div>
   );
 }
