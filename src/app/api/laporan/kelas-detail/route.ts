@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { NilaiSemesterSiswaEntity } from "@/entities/nilai-semester-siswa.entity";
 import { UserEntity } from "@/entities/user.entity";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
-import { Like } from "typeorm";
+import { Like, In } from "typeorm";
 
 export async function GET(request: NextRequest) {
   const authenticatedUser = getAuthenticatedUser(request);
