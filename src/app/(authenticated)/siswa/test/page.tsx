@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { FileText, PlayCircle, ListChecks, CheckCircle, AlertCircle, Clock, Loader2, Award } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isPast } from "date-fns";
 import { id as localeID } from 'date-fns/locale';
 import type { Test as TestType, TestStatus, TestSubmission } from "@/types"; 
 import { useToast } from "@/hooks/use-toast";
@@ -73,10 +73,6 @@ export default function SiswaTestPage() {
     return <p>Silakan verifikasi email Anda untuk mengakses fitur ini.</p>;
   }
 
-  const handlePlaceholderAction = (action: string, testId?: string) => {
-    toast({title:"Fitur Belum Tersedia", description:`Fungsi "${action}" ${testId ? `untuk test ${testId} ` : ''}belum diimplementasikan.`});
-  };
-
   const testMendatang = useMemo(() => testList.filter(t => (t.status === "Terjadwal" || t.status === "Berlangsung") && t.submission?.status !== "Selesai" && t.submission?.status !== "Dinilai"), [testList]);
   const testRiwayat = useMemo(() => testList.filter(t => t.status === "Selesai" || t.status === "Dinilai" || t.submission?.status === "Selesai" || t.submission?.status === "Dinilai"), [testList]);
 
@@ -111,7 +107,7 @@ export default function SiswaTestPage() {
           const now = new Date();
           const startTime = parseISO(test.tanggal);
           const endTime = new Date(startTime.getTime() + test.durasi * 60 * 1000);
-          const isTakable = (test.status === "Berlangsung" || test.status === "Terjadwal") && now >= startTime && now <= endTime && !test.submission;
+          const isTakable = (test.status === "Berlangsung" || (test.status === "Terjadwal" && now >= startTime)) && now <= endTime && !test.submission;
 
           const currentStatus = getStatusText(test.status, test.submission?.status);
 
@@ -152,7 +148,7 @@ export default function SiswaTestPage() {
                 </div>
                 
                 {isTakable ? (
-                  <Button asChild className="w-full sm:w-auto">
+                  <Button asChild className="w-full sm:w-auto hover:scale-105 active:scale-95 transition-transform duration-200">
                     <Link href={`/siswa/test/${test.id}/take`}>
                       <PlayCircle className="mr-2 h-4 w-4" />
                       {test.status === "Berlangsung" ? "Lanjutkan Test" : "Mulai Test"}
@@ -164,7 +160,7 @@ export default function SiswaTestPage() {
                   <p className="text-sm text-green-600 font-semibold">Lihat detail nilai di halaman Nilai & Rapor.</p>
                 ) : test.submission?.status === "Selesai" ? (
                    <p className="text-sm text-yellow-600">Hasil sedang diproses atau menunggu penilaian.</p>
-                ) : test.status !== "Draf" && now > endTime && !test.submission ? (
+                ) : (test.status === "Selesai" || test.status === "Dinilai" || (test.status === "Berlangsung" && isPast(endTime))) && !test.submission ? (
                   <p className="text-sm text-destructive">Waktu test telah berakhir.</p>
                 ) : null}
               </CardContent>
@@ -181,39 +177,25 @@ export default function SiswaTestPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-headline font-semibold flex items-center">
-        <FileText className="mr-3 h-8 w-8 text-primary" />
-        Test & Ujian Saya
-      </h1>
-      <p className="text-muted-foreground">Lihat jadwal test/ujian, kerjakan, dan lihat hasilnya. Kelas: {user?.kelasId || "Tidak ada"}</p>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="animate-fade-in-up">
+        <h1 className="text-3xl font-headline font-semibold flex items-center">
+            <FileText className="mr-3 h-8 w-8 text-primary" />
+            Test & Ujian Saya
+        </h1>
+        <p className="text-muted-foreground">Lihat jadwal test/ujian, kerjakan, dan lihat hasilnya. Kelas: {user?.kelasId || "Tidak ada"}</p>
+      </div>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "mendatang" | "riwayat")}>
         <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
           <TabsTrigger value="mendatang">Test Mendatang ({testMendatang.length})</TabsTrigger>
           <TabsTrigger value="riwayat">Riwayat Test ({testRiwayat.length})</TabsTrigger>
         </TabsList>
-        <TabsContent value="mendatang">
-          <Card className="shadow-lg mt-4">
-            <CardHeader>
-              <CardTitle>Jadwal Test & Ujian</CardTitle>
-              <CardDescription>Daftar test/ujian yang akan datang atau sedang berlangsung.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {renderTestList(testMendatang)}
-            </CardContent>
-          </Card>
+        <TabsContent value="mendatang" className="mt-4">
+            {renderTestList(testMendatang)}
         </TabsContent>
-        <TabsContent value="riwayat">
-          <Card className="shadow-lg mt-4">
-            <CardHeader>
-              <CardTitle>Riwayat Test & Ujian</CardTitle>
-              <CardDescription>Daftar test/ujian yang telah selesai atau dinilai.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {renderTestList(testRiwayat)}
-            </CardContent>
-          </Card>
+        <TabsContent value="riwayat" className="mt-4">
+            {renderTestList(testRiwayat)}
         </TabsContent>
       </Tabs>
     </div>

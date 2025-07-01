@@ -7,9 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
 import { CalendarIcon, Eye, EyeOff, Loader2 } from "lucide-react";
@@ -163,50 +162,49 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-headline font-semibold">Pengaturan</h1>
-      
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Informasi Akun</CardTitle>
-          <CardDescription>Detail akun Anda saat ini.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
-            <Image 
-              src={user.avatarUrl || `https://placehold.co/100x100.png?text=${getInitials(user.fullName || user.name, user.email)}`} 
-              alt={user.fullName || user.name || "Avatar Pengguna"}
-              width={100}
-              height={100}
-              className="rounded-full object-cover border-2 border-primary"
-              data-ai-hint="user avatar"
-            />
-            <div className="text-center sm:text-left">
-              <h2 className="text-2xl font-semibold">{user.fullName || user.name || "Nama Tidak Ada"}</h2>
-              <p className="text-muted-foreground">{user.email}</p>
-              <p className="text-sm text-primary font-medium">{ROLES[user.role]}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 pt-4 text-sm">
-            {user.nis && user.role === 'siswa' && <p><span className="font-semibold">NIS:</span> {user.nis}</p>}
-            {user.nip && user.role !== 'siswa' && <p><span className="font-semibold">NIP:</span> {user.nip}</p>}
-            {user.joinDate && isValid(parseISO(user.joinDate)) && <p><span className="font-semibold">Tanggal Bergabung:</span> {format(parseISO(user.joinDate), 'dd MMMM yyyy', { locale: localeID })}</p>}
-            {user.phone && <p><span className="font-semibold">Telepon:</span> {user.phone}</p>}
-            {user.address && <p className="md:col-span-2"><span className="font-semibold">Alamat:</span> {user.address}</p>}
-            {user.birthDate && isValid(parseISO(user.birthDate)) && <p><span className="font-semibold">Tanggal Lahir:</span> {format(parseISO(user.birthDate), 'dd MMMM yyyy', { locale: localeID })}</p>}
-            {user.bio && <p className="md:col-span-2"><span className="font-semibold">Bio:</span> {user.bio}</p>}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="animate-fade-in-up">
+        <h1 className="text-3xl font-headline font-semibold">Pengaturan Akun</h1>
+        <p className="text-muted-foreground mt-1">Kelola informasi profil dan keamanan akun Anda.</p>
+      </div>
 
-      <Card className="shadow-lg">
+      <Card className="shadow-lg animate-fade-in-up" style={{animationDelay: '200ms'}}>
         <CardHeader>
-          <CardTitle>Edit Profil</CardTitle>
-          <CardDescription>Perbarui detail pribadi Anda di bawah ini.</CardDescription>
+          <CardTitle>Informasi Profil</CardTitle>
+          <CardDescription>Detail pribadi Anda. Email tidak dapat diubah.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...profileForm}>
             <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-8">
+               <div className="flex items-center gap-6">
+                <div className="relative">
+                    <Image 
+                      src={user.avatarUrl || `https://placehold.co/120x120.png?text=${getInitials(user.fullName || user.name, user.email)}`} 
+                      alt={user.fullName || user.name || "Avatar Pengguna"}
+                      width={120}
+                      height={120}
+                      className="rounded-full object-cover border-4 border-primary/20 shadow-md"
+                      data-ai-hint="user avatar"
+                    />
+                 </div>
+                 <div className="flex-grow">
+                    <FormField
+                      control={profileForm.control}
+                      name="avatarFile"
+                      render={({ field: { onChange, value, ...restField }}) => (
+                        <FormItem>
+                          <FormLabel>Ganti Foto Profil</FormLabel>
+                          <FormControl>
+                            <Input type="file" accept="image/*" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} />
+                          </FormControl>
+                          <FormDescription>Kosongkan jika tidak ingin mengubah foto profil.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                 </div>
+               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={profileForm.control}
@@ -309,23 +307,8 @@ export default function SettingsPage() {
                   </FormItem>
                 )}
               />
-              
-               <FormField
-                control={profileForm.control}
-                name="avatarFile"
-                render={({ field: { onChange, value, ...restField }}) => (
-                  <FormItem>
-                    <FormLabel>Ganti Avatar</FormLabel>
-                    <FormControl>
-                      <Input type="file" accept="image/*" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} />
-                    </FormControl>
-                    <FormDescription>Kosongkan jika tidak ingin mengubah avatar.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
-              <Button type="submit" disabled={isProfileSubmitting || authLoading} className="w-full md:w-auto">
+              <Button type="submit" disabled={isProfileSubmitting || authLoading} className="w-full md:w-auto hover:scale-105 active:scale-95 transition-transform duration-200">
                 {(isProfileSubmitting || authLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Simpan Perubahan Profil
               </Button>
@@ -334,10 +317,10 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-lg">
+      <Card className="shadow-lg animate-fade-in-up" style={{animationDelay: '400ms'}}>
         <CardHeader>
-          <CardTitle>Ubah Kata Sandi</CardTitle>
-          <CardDescription>Perbarui kata sandi akun Anda.</CardDescription>
+          <CardTitle>Keamanan Akun</CardTitle>
+          <CardDescription>Perbarui kata sandi akun Anda secara berkala.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...passwordForm}>
@@ -353,7 +336,7 @@ export default function SettingsPage() {
                         <Input type={showPasswords.current ? "text" : "password"} placeholder="••••••••" {...field} />
                         </FormControl>
                         <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}>
-                            {showPasswords.current ? <EyeOff /> : <Eye />}
+                            {showPasswords.current ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
                         </Button>
                     </div>
                     <FormMessage />
@@ -371,7 +354,7 @@ export default function SettingsPage() {
                         <Input type={showPasswords.new ? "text" : "password"} placeholder="••••••••" {...field} />
                         </FormControl>
                          <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}>
-                            {showPasswords.new ? <EyeOff /> : <Eye />}
+                            {showPasswords.new ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
                         </Button>
                     </div>
                     <FormMessage />
@@ -389,14 +372,14 @@ export default function SettingsPage() {
                         <Input type={showPasswords.confirm ? "text" : "password"} placeholder="••••••••" {...field} />
                         </FormControl>
                         <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}>
-                            {showPasswords.confirm ? <EyeOff /> : <Eye />}
+                            {showPasswords.confirm ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
                         </Button>
                     </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={isPasswordSubmitting || authLoading} className="w-full md:w-auto">
+              <Button type="submit" disabled={isPasswordSubmitting || authLoading} className="w-full md:w-auto hover:scale-105 active:scale-95 transition-transform duration-200">
                 {(isPasswordSubmitting || authLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Ubah Kata Sandi
               </Button>

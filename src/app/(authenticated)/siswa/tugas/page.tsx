@@ -2,12 +2,12 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
-import { ClipboardCheck, FilePenLine, UploadCloud, Eye, Clock, CheckCircle2, Loader2, Send, Download } from "lucide-react";
+import { ClipboardCheck, FilePenLine, UploadCloud, Clock, CheckCircle2, Loader2, Send, Download } from "lucide-react";
 import { format, formatDistanceToNow, parseISO, isPast } from 'date-fns';
 import { id as localeID } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +32,6 @@ export default function SiswaTugasPage() {
   const [tugasList, setTugasList] = useState<TugasDisplay[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // State untuk dialog submission
   const [isSubmissionDialogOpen, setIsSubmissionDialogOpen] = useState(false);
   const [selectedTugas, setSelectedTugas] = useState<TugasDisplay | null>(null);
   const [submissionFile, setSubmissionFile] = useState<File | null>(null);
@@ -214,7 +213,7 @@ export default function SiswaTugasPage() {
                   </p>
                   {tugas.namaFileLampiran && (
                     <Button variant="link" size="sm" asChild className="p-0 h-auto text-xs">
-                        <a href={tugas.fileUrlLampiran || "#"} target="_blank" rel="noopener noreferrer">
+                        <a href={tugas.fileUrlLampiran || '#'} target="_blank" rel="noopener noreferrer">
                             <Download className="mr-1 h-3 w-3" /> Unduh Lampiran
                         </a>
                     </Button>
@@ -223,7 +222,7 @@ export default function SiswaTugasPage() {
                 {(tugas.statusFrontend === "Belum Dikerjakan" || tugas.statusFrontend === "Terlambat") && (
                   <Button 
                     size="sm" 
-                    className="mt-3 w-full sm:w-auto" 
+                    className="mt-3 w-full sm:w-auto hover:scale-105 active:scale-95 transition-transform duration-200"
                     onClick={() => handleOpenSubmissionDialog(tugas)}
                   >
                     <UploadCloud className="mr-2 h-4 w-4" /> Kumpulkan Jawaban
@@ -261,39 +260,25 @@ export default function SiswaTugasPage() {
 
   return (
     <>
-    <div className="space-y-6">
-      <h1 className="text-3xl font-headline font-semibold flex items-center">
-        <ClipboardCheck className="mr-3 h-8 w-8 text-primary" />
-        Tugas Saya
-      </h1>
-      <p className="text-muted-foreground">Lihat, kelola, dan kumpulkan tugas sekolah Anda. Kelas: {user?.kelasId || "Tidak ada"}</p>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="animate-fade-in-up">
+        <h1 className="text-3xl font-headline font-semibold flex items-center">
+            <ClipboardCheck className="mr-3 h-8 w-8 text-primary" />
+            Tugas Saya
+        </h1>
+        <p className="text-muted-foreground">Lihat, kelola, dan kumpulkan tugas sekolah Anda. Kelas: {user?.kelasId || "Tidak ada"}</p>
+      </div>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "mendatang" | "selesai")}>
         <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
           <TabsTrigger value="mendatang">Tugas Mendatang ({tugasMendatang.length})</TabsTrigger>
           <TabsTrigger value="selesai">Riwayat Tugas ({tugasSelesai.length})</TabsTrigger>
         </TabsList>
-        <TabsContent value="mendatang">
-          <Card className="shadow-lg mt-4">
-            <CardHeader>
-              <CardTitle>Tugas Harus Dikerjakan</CardTitle>
-              <CardDescription>Daftar tugas yang belum dikumpulkan atau terlambat.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {renderTugasList(tugasMendatang)}
-            </CardContent>
-          </Card>
+        <TabsContent value="mendatang" className="mt-4">
+            {renderTugasList(tugasMendatang)}
         </TabsContent>
-        <TabsContent value="selesai">
-          <Card className="shadow-lg mt-4">
-            <CardHeader>
-              <CardTitle>Riwayat Tugas</CardTitle>
-              <CardDescription>Daftar tugas yang sudah dikumpulkan atau dinilai.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {renderTugasList(tugasSelesai)}
-            </CardContent>
-          </Card>
+        <TabsContent value="selesai" className="mt-4">
+            {renderTugasList(tugasSelesai)}
         </TabsContent>
       </Tabs>
     </div>

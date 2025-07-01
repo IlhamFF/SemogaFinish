@@ -9,8 +9,8 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth"; 
-import { APP_NAME } from "@/lib/constants"; // APP_NAME from constants
-import { NAV_LINKS_CONFIG } from "@/lib/navigation"; // NAV_LINKS_CONFIG from navigation
+import { APP_NAME } from "@/lib/constants";
+import { NAV_LINKS_CONFIG } from "@/lib/navigation";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
@@ -18,7 +18,6 @@ import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 import { sidebarMenuButtonVariants } from "@/components/ui/sidebar"; 
 import Image from "next/image";
-
 
 export function AppSidebarContent() {
   const { user, logout } = useAuth(); 
