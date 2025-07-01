@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
-import { GraduationCap, Search, Loader2, Save } from "lucide-react";
+import { GraduationCap, Search, Loader2, Save, Download } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { JadwalPelajaran, NilaiSemesterSiswa, SemesterType, User as AppUser, MataPelajaran } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
+import Papa from "papaparse";
+
 
 type StudentGradeRow = {
   siswa: Pick<AppUser, 'id' | 'fullName' | 'name' | 'nis' | 'email'>;
@@ -216,6 +218,47 @@ export default function GuruPenilaianPage() {
       setIsSubmittingGrades(false);
     }
   };
+  
+  const handleExportNilai = () => {
+    if (studentGradesData.length === 0 || !selectedClass || !selectedSubjectId || !selectedSemester || !selectedTahunAjaran) {
+      toast({ title: "Tidak Ada Data", description: "Tidak ada data nilai untuk diekspor.", variant: "default" });
+      return;
+    }
+
+    const mapelName = uniqueTeachingSubjects.find(s => s.id === selectedSubjectId)?.nama.replace(/ /g, '_') || "mapel";
+    const kelasName = selectedClass?.replace(/ /g, '_') || "kelas";
+    const tahunAjaranFormatted = selectedTahunAjaran.replace('/', '-');
+    const fileName = `nilai_${mapelName}_${kelasName}_${selectedSemester}_${tahunAjaranFormatted}.csv`;
+    
+    const dataToExport = studentGradesData.map(row => {
+        const grades = editableGrades[row.siswa.id] || {};
+        return {
+            "NIS": row.siswa.nis || "N/A",
+            "Nama Siswa": row.siswa.fullName || row.siswa.name,
+            "Tugas": grades.nilaiTugas ?? "",
+            "UTS": grades.nilaiUTS ?? "",
+            "UAS": grades.nilaiUAS ?? "",
+            "Harian": grades.nilaiHarian ?? "",
+            "Nilai Akhir": grades.nilaiAkhir?.toFixed(2) ?? "",
+            "Predikat": grades.predikat ?? "",
+            "Catatan Guru": grades.catatanGuru ?? "",
+        };
+    });
+
+    const csv = Papa.unparse(dataToExport, { header: true });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
 
 
   if (!user || (user.role !== 'guru' && user.role !== 'superadmin')) {
@@ -309,7 +352,10 @@ export default function GuruPenilaianPage() {
                 </TableBody>
               </Table>
             </ScrollArea>
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex justify-end gap-2">
+                <Button variant="outline" onClick={handleExportNilai} disabled={studentGradesData.length === 0}>
+                    <Download className="mr-2 h-4 w-4"/> Export CSV
+                </Button>
                 <Button onClick={handleSaveAllGrades} disabled={isSubmittingGrades || isLoadingStudentGrades}>
                   {isSubmittingGrades && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <Save className="mr-2 h-4 w-4"/> Simpan Semua Nilai
@@ -328,3 +374,5 @@ export default function GuruPenilaianPage() {
     </div>
   );
 }
+
+    

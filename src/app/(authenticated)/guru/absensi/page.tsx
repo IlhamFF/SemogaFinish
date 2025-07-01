@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { UserCheck, CalendarDays, ListChecks, Printer, Loader2, BookOpen, Search, BarChart } from "lucide-react";
+import { UserCheck, CalendarDays, ListChecks, Printer, Loader2, BookOpen, Search, BarChart, Download } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
+import Papa from "papaparse";
 
 interface SiswaWithAbsensi {
   siswaId: string;
@@ -226,6 +227,38 @@ export default function GuruAbsensiPage() {
     }
   };
 
+  const handleExportRekap = () => {
+    if (rekapData.length === 0 || !selectedRekapKelas || !selectedRekapBulan || !selectedRekapTahun) {
+      toast({ title: "Tidak Ada Data", description: "Tidak ada data rekap untuk diekspor.", variant: "default" });
+      return;
+    }
+
+    const monthName = MONTHS.find(m => m.value.toString() === selectedRekapBulan)?.label || "Bulan";
+    const fileName = `rekap_absensi_${selectedRekapKelas.replace(/ /g, '_')}_${monthName}_${selectedRekapTahun}.csv`;
+
+    const dataToExport = rekapData.map(item => ({
+      "Nama Siswa": item.nama,
+      "NIS": item.nis || "N/A",
+      "Hadir": item.hadir,
+      "Sakit": item.sakit,
+      "Izin": item.izin,
+      "Alpha": item.alpha
+    }));
+
+    const csvData = Papa.unparse(dataToExport, { header: true });
+    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
 
   if (!user || (user.role !== 'guru' && user.role !== 'superadmin')) {
     return <p>Akses Ditolak. Anda harus menjadi Guru untuk melihat halaman ini.</p>;
@@ -356,7 +389,7 @@ export default function GuruAbsensiPage() {
         <CardHeader><CardTitle className="flex items-center text-xl"><CalendarDays className="mr-3 h-5 w-5 text-primary" />Fitur Tambahan Absensi</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
            <Button variant="outline" onClick={() => setIsRekapDialogOpen(true)} className="justify-start text-left h-auto py-3"><ListChecks className="mr-3 h-5 w-5" /><div><p className="font-semibold">Rekap Bulanan</p><p className="text-xs text-muted-foreground">Lihat rekapitulasi per bulan.</p></div></Button>
-           <Button variant="outline" onClick={() => toast({title: "Fitur Dalam Pengembangan"})} className="justify-start text-left h-auto py-3"><BarChart className="mr-3 h-5 w-5" /><div><p className="font-semibold">Statistik Kehadiran</p><p className="text-xs text-muted-foreground">Grafik dan analisis.</p></div></Button>
+           <Button variant="outline" onClick={()={() => toast({title: "Fitur Dalam Pengembangan"})} className="justify-start text-left h-auto py-3"><BarChart className="mr-3 h-5 w-5" /><div><p className="font-semibold">Statistik Kehadiran</p><p className="text-xs text-muted-foreground">Grafik dan analisis.</p></div></Button>
            <Button variant="outline" onClick={() => toast({title: "Fitur Dalam Pengembangan"})} className="justify-start text-left h-auto py-3"><Printer className="mr-3 h-5 w-5" /><div><p className="font-semibold">Cetak Laporan</p><p className="text-xs text-muted-foreground">Ekspor data absensi.</p></div></Button>
         </CardContent>
       </Card>
@@ -436,8 +469,9 @@ export default function GuruAbsensiPage() {
             )}
           </div>
           
-          <DialogFooter className="mt-4 print:hidden">
-            <Button variant="outline" onClick={() => window.print()} disabled={rekapData.length === 0}><Printer className="mr-2 h-4 w-4"/>Cetak Rekap</Button>
+          <DialogFooter className="mt-4 print:hidden gap-2">
+            <Button variant="outline" onClick={() => window.print()} disabled={rekapData.length === 0}><Printer className="mr-2 h-4 w-4"/>Cetak</Button>
+            <Button variant="outline" onClick={handleExportRekap} disabled={rekapData.length === 0}><Download className="mr-2 h-4 w-4"/>Export CSV</Button>
             <DialogClose asChild><Button variant="outline">Tutup</Button></DialogClose>
           </DialogFooter>
         </DialogContent>
@@ -445,3 +479,5 @@ export default function GuruAbsensiPage() {
     </div>
   );
 }
+
+    
