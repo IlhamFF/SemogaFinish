@@ -11,7 +11,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart3, Search, Loader2, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SCHOOL_GRADE_LEVELS } from "@/lib/constants";
+import { SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, SCHOOL_CLASSES_PER_MAJOR_GRADE } from "@/lib/constants";
+import { Label } from '@/components/ui/label';
 
 interface ReportStudent {
   id: string;
@@ -32,19 +33,43 @@ export default function LaporanAkademikPage() {
   const { toast } = useToast();
   
   const [selectedTingkat, setSelectedTingkat] = useState<string | undefined>();
+  const [selectedKelas, setSelectedKelas] = useState<string>("semua");
   const [reportData, setReportData] = useState<ReportData | null>(null);
   
   const [isLoadingReport, setIsLoadingReport] = useState(false);
 
+  const availableKelas = useMemo(() => {
+    if (!selectedTingkat) return [];
+    const kls: string[] = [];
+    SCHOOL_MAJORS.forEach(major => {
+        for (let i = 1; i <= SCHOOL_CLASSES_PER_MAJOR_GRADE; i++) {
+          kls.push(`${selectedTingkat} ${major} ${i}`);
+        }
+      });
+    return kls.sort();
+  }, [selectedTingkat]);
+
+  useEffect(() => {
+    // Reset filter kelas jika angkatan berubah
+    setSelectedKelas("semua");
+    setReportData(null);
+  }, [selectedTingkat]);
+
+
   const handleFetchReport = async () => {
     if (!selectedTingkat) {
-      toast({ title: "Info", description: "Silakan pilih tingkat terlebih dahulu." });
+      toast({ title: "Info", description: "Silakan pilih angkatan terlebih dahulu." });
       return;
     }
     setIsLoadingReport(true);
     setReportData(null);
     try {
-      const response = await fetch(`/api/laporan/kelas-detail?tingkat=${encodeURIComponent(selectedTingkat)}`);
+      let apiUrl = `/api/laporan/kelas-detail?tingkat=${encodeURIComponent(selectedTingkat)}`;
+      if (selectedKelas && selectedKelas !== "semua") {
+        apiUrl += `&kelas=${encodeURIComponent(selectedKelas)}`;
+      }
+
+      const response = await fetch(apiUrl);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Gagal mengambil data laporan.");
@@ -69,6 +94,15 @@ export default function LaporanAkademikPage() {
   if (!user || (user.role !== 'pimpinan' && user.role !== 'superadmin')) {
       return <p>Akses Ditolak.</p>;
   }
+  
+  const reportTitle = useMemo(() => {
+    if (!selectedTingkat) return "Analisis Nilai Siswa";
+    let title = `Laporan Rincian Nilai: Angkatan Tingkat ${selectedTingkat}`;
+    if (selectedKelas !== "semua") {
+        title += ` - Kelas ${selectedKelas}`;
+    }
+    return title;
+  }, [selectedTingkat, selectedKelas]);
 
   return (
     <div className="space-y-6">
@@ -77,7 +111,7 @@ export default function LaporanAkademikPage() {
           <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent flex items-center">
             <BarChart3 className="mr-3 h-7 w-7" /> Analisis Nilai Siswa
           </h1>
-          <p className="text-muted-foreground">Analisis pencapaian akademik siswa secara mendetail untuk setiap angkatan.</p>
+          <p className="text-muted-foreground">Analisis pencapaian akademik siswa per angkatan atau per kelas.</p>
         </div>
         <Button variant="outline" onClick={() => window.print()} className="print:hidden">
           <Printer className="mr-2 h-4 w-4" /> Cetak Laporan
@@ -87,17 +121,29 @@ export default function LaporanAkademikPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Filter Laporan</CardTitle>
-          <CardDescription>Pilih angkatan (tingkat) untuk melihat laporan rincian nilai.</CardDescription>
+          <CardDescription>Pilih angkatan dan kelas untuk melihat laporan rincian nilai.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row items-end gap-4">
-          <div className="w-full sm:w-auto sm:min-w-[250px]">
-            <label htmlFor="tingkat-select" className="text-sm font-medium text-muted-foreground">Pilih Angkatan</label>
+          <div className="w-full sm:w-auto sm:min-w-[200px]">
+            <Label htmlFor="tingkat-select">Pilih Angkatan</Label>
             <Select onValueChange={setSelectedTingkat} value={selectedTingkat}>
               <SelectTrigger id="tingkat-select">
                 <SelectValue placeholder="Pilih tingkat" />
               </SelectTrigger>
               <SelectContent>
                 {SCHOOL_GRADE_LEVELS.map(tingkat => <SelectItem key={tingkat} value={tingkat}>Tingkat {tingkat}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-full sm:w-auto sm:min-w-[200px]">
+            <Label htmlFor="kelas-select">Pilih Kelas</Label>
+             <Select onValueChange={setSelectedKelas} value={selectedKelas} disabled={!selectedTingkat}>
+              <SelectTrigger id="kelas-select">
+                <SelectValue placeholder="Pilih kelas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="semua">Semua Kelas Angkatan Ini</SelectItem>
+                {availableKelas.map(kls => <SelectItem key={kls} value={kls}>{kls}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -111,7 +157,7 @@ export default function LaporanAkademikPage() {
       {isLoadingReport && (
         <div className="flex justify-center items-center h-40">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="ml-3 text-muted-foreground">Mengambil data laporan untuk Tingkat {selectedTingkat}...</p>
+            <p className="ml-3 text-muted-foreground">Mengambil data laporan...</p>
         </div>
       )}
 
@@ -119,8 +165,8 @@ export default function LaporanAkademikPage() {
         <Card className="shadow-xl printable-area">
           <CardHeader>
             <div className="print:text-center">
-              <CardTitle>Laporan Rincian Nilai: Angkatan Tingkat {selectedTingkat}</CardTitle>
-              <CardDescription>Menampilkan rekap nilai akhir untuk setiap siswa di mata pelajaran yang relevan. Diurutkan berdasarkan rata-rata tertinggi.</CardDescription>
+              <CardTitle>{reportTitle}</CardTitle>
+              <CardDescription>Menampilkan rekap nilai akhir untuk setiap siswa. Diurutkan berdasarkan rata-rata tertinggi.</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -152,7 +198,7 @@ export default function LaporanAkademikPage() {
                 </Table>
               </ScrollArea>
             ) : (
-                <p className="text-center text-muted-foreground py-8">Tidak ada data nilai yang ditemukan untuk tingkat ini.</p>
+                <p className="text-center text-muted-foreground py-8">Tidak ada data nilai yang ditemukan untuk filter yang dipilih.</p>
             )}
           </CardContent>
         </Card>

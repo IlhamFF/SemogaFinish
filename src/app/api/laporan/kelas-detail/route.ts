@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { NilaiSemesterSiswaEntity } from "@/entities/nilai-semester-siswa.entity";
 import { UserEntity } from "@/entities/user.entity";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
-import { Like, In } from "typeorm";
+import { Like, In, FindOptionsWhere } from "typeorm";
 
 export async function GET(request: NextRequest) {
   const authenticatedUser = getAuthenticatedUser(request);
@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
   
   const { searchParams } = new URL(request.url);
   const tingkat = searchParams.get("tingkat");
+  const kelas = searchParams.get("kelas");
 
   if (!tingkat) {
     return NextResponse.json({ message: "Parameter 'tingkat' wajib diisi." }, { status: 400 });
@@ -25,9 +26,17 @@ export async function GET(request: NextRequest) {
     const nilaiRepo = dataSource.getRepository(NilaiSemesterSiswaEntity);
     const userRepo = dataSource.getRepository(UserEntity);
 
-    // Get all students in the specified grade level
+    // Build the where clause for students
+    const studentWhereClause: FindOptionsWhere<UserEntity> = { role: 'siswa' };
+    if (kelas && kelas !== "semua") {
+      studentWhereClause.kelasId = kelas;
+    } else {
+      studentWhereClause.kelasId = Like(`${tingkat}%`);
+    }
+
+    // Get all students in the specified grade level or class
     const studentsInGrade = await userRepo.find({
-        where: { kelasId: Like(`${tingkat}%`), role: 'siswa' },
+        where: studentWhereClause,
         select: ['id', 'fullName', 'name', 'nis', 'kelasId']
     });
 
@@ -55,7 +64,7 @@ export async function GET(request: NextRequest) {
     // Group grades by student
     const studentsDataMap = new Map<string, { id: string; name: string; nis: string | null; kelas: string | null; grades: Record<string, number | null> }>();
     
-    // Initialize map with all students from the grade
+    // Initialize map with all students from the grade/class
     studentsInGrade.forEach(student => {
         studentsDataMap.set(student.id, {
             id: student.id,
