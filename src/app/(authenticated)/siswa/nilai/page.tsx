@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ROUTES } from '@/lib/constants';
 
 const chartConfig = {
-  nilaiAkhir: { label: "Nilai Akhir", color: "hsl(var(--primary))" },
+  nilaiAkhir: { label: "Nilai Akhir", color: "hsl(var(--chart-1))" },
 } satisfies ChartConfig;
 
 export default function SiswaNilaiPage() {
@@ -65,7 +65,7 @@ export default function SiswaNilaiPage() {
   };
   
   const handleDownloadRapor = () => {
-    window.open(`/siswa/rapor/cetak`, '_blank');
+    window.open(ROUTES.SISWA_RAPOR_CETAK, '_blank');
   }
 
   const { averageGrade, totalGradedItems, chartData } = useMemo(() => {
@@ -90,11 +90,11 @@ export default function SiswaNilaiPage() {
 
   return (
     <>
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-headline font-semibold flex items-center">
-            <Award className="mr-3 h-8 w-8 text-primary" />
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent flex items-center">
+            <Award className="mr-3 h-7 w-7" />
             Nilai & Rapor Saya
           </h1>
           <p className="text-muted-foreground">Lihat rekapitulasi nilai, kemajuan akademik, dan unduh rapor Anda.</p>
@@ -127,7 +127,7 @@ export default function SiswaNilaiPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="shadow-md">
           <CardHeader className="pb-2">
             <CardDescription>Rata-rata Nilai Keseluruhan</CardDescription>
@@ -169,8 +169,8 @@ export default function SiswaNilaiPage() {
               <ChartContainer config={chartConfig} className="w-full h-full">
                 <RechartsBarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: -20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="hsl(var(--foreground))" fontSize={10} interval={0} angle={-30} textAnchor="end" height={70} />
-                    <YAxis tickLine={false} axisLine={false} stroke="hsl(var(--foreground))" fontSize={12} domain={[0, 100]} />
+                    <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={10} interval={0} angle={-30} textAnchor="end" height={70} />
+                    <YAxis tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[0, 100]} />
                     <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }}/>
                     <Bar dataKey="nilaiAkhir" fill="var(--color-nilaiAkhir)" radius={[4, 4, 0, 0]} />
                 </RechartsBarChart>

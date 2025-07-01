@@ -43,7 +43,6 @@ export default function CetakRaporPage() {
 
   useEffect(() => {
     if (!isLoadingData && grades.length > 0) {
-      // Automatically trigger print dialog
       setTimeout(() => window.print(), 1000);
     }
   }, [isLoadingData, grades]);
@@ -61,10 +60,15 @@ export default function CetakRaporPage() {
   
   const sortedGroupKeys = useMemo(() => {
     return Object.keys(groupedGrades).sort((a, b) => {
-        const [,,,,,yearA, semA] = a.replace(/[^\w\s]/g, '').split(' ');
-        const [,,,,,yearB, semB] = b.replace(/[^\w\s]/g, '').split(' ');
+        const yearA = a.split('T.A. ')[1];
+        const semA = a.split(' ')[1];
+        const yearB = b.split('T.A. ')[1];
+        const semB = b.split(' ')[1];
+
         if (yearA !== yearB) return yearB.localeCompare(yearA);
-        return semB.localeCompare(semA);
+        if (semA === 'Genap' && semB === 'Ganjil') return -1;
+        if (semA === 'Ganjil' && semB === 'Genap') return 1;
+        return 0;
     });
   }, [groupedGrades]);
 
@@ -97,8 +101,8 @@ export default function CetakRaporPage() {
   }
 
   return (
-    <div className="bg-gray-100 text-black p-4 md:p-8 print:p-0 print:bg-white">
-      <div className="max-w-4xl mx-auto A4-container bg-white p-6 print:p-2 print:shadow-none shadow-lg">
+    <div className="bg-gray-100 text-black p-4 md:p-8 print:bg-white print:p-0">
+      <div className="max-w-4xl mx-auto A4-container bg-white p-6 print:p-8 print:shadow-none shadow-lg">
         <header className="flex justify-between items-center border-b-4 border-gray-900 pb-4">
            <div className="flex items-center gap-4">
              <Image 
@@ -123,9 +127,9 @@ export default function CetakRaporPage() {
           <h2 className="text-lg font-semibold mb-2 text-gray-800">Identitas Siswa</h2>
           <table className="w-full text-sm">
             <tbody>
-              <tr className="border-b border-gray-200"><td className="py-1 pr-4 font-medium text-gray-600">Nama Lengkap</td><td className="font-semibold text-gray-800">: {user.fullName || "-"}</td></tr>
-              <tr className="border-b border-gray-200"><td className="py-1 pr-4 font-medium text-gray-600">Nomor Induk Siswa (NIS)</td><td className="font-semibold text-gray-800">: {user.nis || "-"}</td></tr>
-              <tr><td className="py-1 pr-4 font-medium text-gray-600">Kelas</td><td className="font-semibold text-gray-800">: {user.kelasId || "-"}</td></tr>
+              <tr className="border-b border-gray-200"><td className="py-1 pr-4 font-medium text-gray-600 w-1/3">Nama Lengkap</td><td className="font-semibold text-gray-800">: {user.fullName || "-"}</td></tr>
+              <tr className="border-b border-gray-200"><td className="py-1 pr-4 font-medium text-gray-600 w-1/3">Nomor Induk Siswa (NIS)</td><td className="font-semibold text-gray-800">: {user.nis || "-"}</td></tr>
+              <tr><td className="py-1 pr-4 font-medium text-gray-600 w-1/3">Kelas</td><td className="font-semibold text-gray-800">: {user.kelasId || "-"}</td></tr>
             </tbody>
           </table>
         </section>
