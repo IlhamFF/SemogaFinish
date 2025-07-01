@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -42,40 +43,59 @@
   }
 
   .dark {
-    --background: 210 10% 15%; /* Dark blue-gray for dark mode */
-    --foreground: 210 20% 90%;
-    --card: 210 10% 20%;
-    --card-foreground: 210 20% 90%;
-    --popover: 210 10% 20%;
-    --popover-foreground: 210 20% 90%;
-    --primary: 210 50% 60%; /* Moderate blue */
-    --primary-foreground: 210 10% 10%;
-    --secondary: 210 20% 30%;
-    --secondary-foreground: 210 20% 90%;
-    --muted: 210 10% 25%;
-    --muted-foreground: 210 20% 70%;
-    --accent: 270 50% 60%; /* Soft violet */
-    --accent-foreground: 210 10% 10%;
-    --destructive: 0 60% 45%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 210 10% 30%;
-    --input: 210 10% 28%;
-    --ring: 210 50% 70%; /* Lighter blue for rings in dark mode */
+    /* Main Dark Theme */
+    --background: 224 71% 4%; /* Near black */
+    --foreground: 210 40% 98%; /* Almost white */
+    
+    /* Cards and Popovers */
+    --card: 222 84% 4.9%; /* Slightly lighter than background */
+    --card-foreground: 210 40% 98%;
+    --popover: 222 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    
+    /* Primary (Purple/Pink Gradient) */
+    --primary: 262 84% 59%; /* Purple */
+    --primary-foreground: 210 40% 98%;
+    
+    /* Secondary */
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    
+    /* Muted */
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%; /* Lighter gray for muted text */
+    
+    /* Accent (Pink part of gradient) */
+    --accent: 330 84% 59%; /* Pink */
+    --accent-foreground: 210 40% 98%;
+    
+    /* Destructive */
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    
+    /* Borders and Inputs */
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 224 71% 4%; /* Ring color matching background */
+    
+    /* Chart Colors */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    
+    --radius: 0.75rem; /* Slightly larger radius */
 
-    /* Dark Sidebar specific colors */
-    --sidebar-background: 210 10% 12%;
-    --sidebar-foreground: 210 20% 85%;
-    --sidebar-primary: 210 50% 60%;
-    --sidebar-primary-foreground: 210 10% 5%;
-    --sidebar-accent: 270 50% 60%;
-    --sidebar-accent-foreground: 210 10% 5%;
-    --sidebar-border: 210 10% 25%;
-    --sidebar-ring: 210 50% 70%;
+    /* Sidebar specific colors (can be same as main dark if desired) */
+    --sidebar-background: 222 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 262 84% 59%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 224 71% 4%;
   }
 }
 
@@ -85,5 +105,20 @@
   }
   body {
     @apply bg-background text-foreground font-body;
+  }
+  
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.5s ease-out forwards;
   }
 }
