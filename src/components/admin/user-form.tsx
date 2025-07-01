@@ -116,7 +116,7 @@ export function UserForm({ isOpen, onClose, onSubmit, editingUser, isLoading }: 
           nip: editingUser.nip || "",
           joinDate: parsedJoinDate || undefined,
           avatarUrl: editingUser.avatarUrl || "",
-          kelas: editingUser.kelas || "",
+          kelas: editingUser.kelasId || "",
           mataPelajaran: Array.isArray(editingUser.mataPelajaran) ? editingUser.mataPelajaran.join(', ') : editingUser.mataPelajaran || "",
           isVerified: editingUser.isVerified,
         });

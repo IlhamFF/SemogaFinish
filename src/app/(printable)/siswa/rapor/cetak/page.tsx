@@ -7,10 +7,10 @@ import { useToast } from "@/hooks/use-toast";
 import type { NilaiSemesterSiswa } from '@/types';
 import { Loader2, Printer, BookOpenText } from "lucide-react";
 import { APP_NAME } from '@/lib/constants';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { id as localeID } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import Image from 'next/image';
 
 type GroupedGrades = Record<string, NilaiSemesterSiswa[]>;
 
@@ -71,7 +71,7 @@ export default function CetakRaporPage() {
 
   if (isAuthLoading || isLoadingData) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-gray-900">
+      <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="text-center">
           <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
           <p className="mt-4 text-lg">Mempersiapkan Rapor...</p>
@@ -86,10 +86,10 @@ export default function CetakRaporPage() {
 
   if (grades.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-gray-900">
+      <div className="flex min-h-screen items-center justify-center bg-white">
           <div className="text-center p-8">
             <h1 className="text-xl font-bold">Data Rapor Kosong</h1>
-            <p className="text-muted-foreground mt-2">Belum ada data nilai semester yang tercatat untuk Anda.</p>
+            <p className="text-gray-600 mt-2">Belum ada data nilai semester yang tercatat untuk Anda.</p>
             <Button onClick={() => window.close()} className="mt-4 print:hidden">Tutup Halaman</Button>
           </div>
       </div>
@@ -97,14 +97,21 @@ export default function CetakRaporPage() {
   }
 
   return (
-    <div className="bg-white text-black p-4 md:p-8 print:p-0">
+    <div className="bg-gray-100 text-black p-4 md:p-8 print:p-0 print:bg-white">
       <div className="max-w-4xl mx-auto A4-container bg-white p-6 print:p-2 print:shadow-none shadow-lg">
-        <header className="flex justify-between items-center border-b-4 border-black pb-4">
-          <div className="flex items-center gap-4">
-            <BookOpenText className="h-16 w-16 text-primary" />
+        <header className="flex justify-between items-center border-b-4 border-gray-900 pb-4">
+           <div className="flex items-center gap-4">
+             <Image 
+                src="/logo.png" 
+                alt="Logo Sekolah"
+                width={60}
+                height={60}
+                className="object-contain"
+                data-ai-hint="logo"
+             />
             <div>
-              <h1 className="text-2xl font-bold font-headline">{APP_NAME}</h1>
-              <p className="text-sm">Laporan Hasil Belajar Siswa (Rapor)</p>
+              <h1 className="text-2xl font-bold font-headline text-gray-900">{APP_NAME}</h1>
+              <p className="text-sm text-gray-600">Laporan Hasil Belajar Siswa (Rapor)</p>
             </div>
           </div>
           <Button onClick={() => window.print()} className="print:hidden" variant="outline">
@@ -113,23 +120,22 @@ export default function CetakRaporPage() {
         </header>
         
         <section className="my-6">
-          <h2 className="text-lg font-semibold mb-2">Identitas Siswa</h2>
+          <h2 className="text-lg font-semibold mb-2 text-gray-800">Identitas Siswa</h2>
           <table className="w-full text-sm">
             <tbody>
-              <tr className="border-b"><td className="py-1 pr-4 font-medium">Nama Lengkap</td><td>: {user.fullName || "-"}</td></tr>
-              <tr className="border-b"><td className="py-1 pr-4 font-medium">Nomor Induk Siswa (NIS)</td><td>: {user.nis || "-"}</td></tr>
-              <tr><td className="py-1 pr-4 font-medium">Kelas</td><td>: {user.kelasId || "-"}</td></tr>
+              <tr className="border-b border-gray-200"><td className="py-1 pr-4 font-medium text-gray-600">Nama Lengkap</td><td className="font-semibold text-gray-800">: {user.fullName || "-"}</td></tr>
+              <tr className="border-b border-gray-200"><td className="py-1 pr-4 font-medium text-gray-600">Nomor Induk Siswa (NIS)</td><td className="font-semibold text-gray-800">: {user.nis || "-"}</td></tr>
+              <tr><td className="py-1 pr-4 font-medium text-gray-600">Kelas</td><td className="font-semibold text-gray-800">: {user.kelasId || "-"}</td></tr>
             </tbody>
           </table>
         </section>
 
         {sortedGroupKeys.map(groupKey => (
-            <section key={groupKey} className="mb-8">
-                 <Separator className="my-4"/>
-                <h2 className="text-lg font-bold mb-3 bg-gray-100 p-2 rounded-md">{groupKey}</h2>
+            <section key={groupKey} className="mb-8 break-inside-avoid">
+                <h2 className="text-lg font-bold mb-3 bg-gray-100 p-2 rounded-md text-gray-800">{groupKey}</h2>
                 <table className="w-full border-collapse text-sm">
                     <thead>
-                        <tr className="border-b-2 border-black bg-gray-50">
+                        <tr className="border-b-2 border-black bg-gray-100">
                             <th className="p-2 text-left w-10">No</th>
                             <th className="p-2 text-left">Mata Pelajaran</th>
                             <th className="p-2 text-center w-24">Nilai Akhir</th>
@@ -139,12 +145,12 @@ export default function CetakRaporPage() {
                     </thead>
                     <tbody>
                         {groupedGrades[groupKey].map((grade, index) => (
-                            <tr key={grade.id} className="border-b">
+                            <tr key={grade.id} className="border-b border-gray-200">
                                 <td className="p-2 text-center">{index + 1}</td>
                                 <td className="p-2">{grade.mapel?.nama || "N/A"}</td>
-                                <td className="p-2 text-center font-semibold">{grade.nilaiAkhir ?? "-"}</td>
-                                <td className="p-2 text-center">{grade.predikat || "-"}</td>
-                                <td className="p-2 text-muted-foreground italic text-xs">{grade.catatanGuru || "-"}</td>
+                                <td className="p-2 text-center font-semibold text-gray-800">{grade.nilaiAkhir ?? "-"}</td>
+                                <td className="p-2 text-center font-semibold text-primary">{grade.predikat || "-"}</td>
+                                <td className="p-2 text-gray-600 italic text-xs">{grade.catatanGuru || "-"}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -152,7 +158,7 @@ export default function CetakRaporPage() {
             </section>
         ))}
 
-        <footer className="mt-12 pt-8 text-xs text-center border-t text-gray-500">
+        <footer className="mt-12 pt-8 text-xs text-center text-gray-500 border-t">
           <p>Dokumen ini dihasilkan secara otomatis oleh sistem {APP_NAME} pada {format(new Date(), "dd MMMM yyyy, HH:mm", { locale: localeID })}.</p>
         </footer>
       </div>
