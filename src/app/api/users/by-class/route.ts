@@ -8,7 +8,7 @@ import type { User } from "@/types";
 
 export async function GET(request: NextRequest) {
   const authenticatedUser = getAuthenticatedUser(request);
-  if (!authenticatedUser || !['admin', 'superadmin'].includes(authenticatedUser.role)) {
+  if (!authenticatedUser || !['admin', 'superadmin', 'pimpinan'].includes(authenticatedUser.role)) {
     return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
   }
 

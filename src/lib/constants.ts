@@ -46,6 +46,7 @@ export const ROUTES = {
 
   PIMPINAN_DASHBOARD: '/pimpinan/dashboard',
   PIMPINAN_LAPORAN_CETAK: '/pimpinan/laporan/cetak',
+  PIMPINAN_LAPORAN_KELAS: '/pimpinan/laporan/kelas',
   
   DATA_VISUALIZATION: '/data-visualization',
   NOTIFICATIONS: '/notifications', 

@@ -1,3 +1,4 @@
+
 import "reflect-metadata";
 import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
@@ -30,7 +31,17 @@ export async function GET(request: NextRequest) {
     });
 
     if (allGradesInClass.length === 0) {
-        return NextResponse.json({ students: [], subjects: [] });
+        // To handle cases where a class exists but has no grades yet, fetch students separately
+        const userRepo = dataSource.getRepository(UserEntity);
+        const studentsInClass = await userRepo.find({ where: { kelasId, role: 'siswa' }, select: ['id', 'fullName', 'name', 'nis']});
+        const students = studentsInClass.map(s => ({
+            id: s.id,
+            name: s.fullName || s.name || "Nama Tidak Ada",
+            nis: s.nis || null,
+            grades: {},
+            average: 0
+        }));
+        return NextResponse.json({ students, subjects: [] });
     }
 
     // Get all unique subjects in this class from the grades data
