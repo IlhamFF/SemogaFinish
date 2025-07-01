@@ -9,24 +9,12 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { BarChart3, Search, Loader2, Printer } from "lucide-react";
+import { BarChart3, Search, Loader2, Printer, ChevronRight, Users, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, SCHOOL_CLASSES_PER_MAJOR_GRADE } from "@/lib/constants";
 import { Label } from '@/components/ui/label';
-
-interface ReportStudent {
-  id: string;
-  name: string;
-  nis: string | null;
-  kelas: string | null;
-  grades: Record<string, number | null>; // Key: mapel name, Value: grade
-  average: number;
-}
-
-interface ReportData {
-  students: ReportStudent[];
-  subjects: string[];
-}
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import type { ClassReport, ReportData } from '@/app/api/laporan/kelas-detail/route';
 
 export default function LaporanAkademikPage() {
   const { user } = useAuth();
@@ -50,7 +38,6 @@ export default function LaporanAkademikPage() {
   }, [selectedTingkat]);
 
   useEffect(() => {
-    // Reset filter kelas jika angkatan berubah
     setSelectedKelas("semua");
     setReportData(null);
   }, [selectedTingkat]);
@@ -84,7 +71,7 @@ export default function LaporanAkademikPage() {
   };
 
   const getGradeColor = (grade: number | null) => {
-    if (grade === null) return "text-muted-foreground";
+    if (grade === null || typeof grade !== 'number' || isNaN(grade)) return "text-muted-foreground";
     if (grade >= 90) return "text-green-500 font-bold";
     if (grade >= 75) return "text-sky-500 font-medium";
     if (grade >= 60) return "text-yellow-500";
@@ -118,7 +105,7 @@ export default function LaporanAkademikPage() {
         </Button>
       </div>
 
-      <Card className="shadow-lg">
+      <Card className="shadow-lg print:hidden">
         <CardHeader>
           <CardTitle>Filter Laporan</CardTitle>
           <CardDescription>Pilih angkatan dan kelas untuk melihat laporan rincian nilai.</CardDescription>
@@ -166,37 +153,62 @@ export default function LaporanAkademikPage() {
           <CardHeader>
             <div className="print:text-center">
               <CardTitle>{reportTitle}</CardTitle>
-              <CardDescription>Menampilkan rekap nilai akhir untuk setiap siswa. Diurutkan berdasarkan rata-rata tertinggi.</CardDescription>
+              <CardDescription>
+                Menampilkan rekapitulasi nilai per kelas, diurutkan berdasarkan rata-rata kelas tertinggi.
+              </CardDescription>
             </div>
           </CardHeader>
           <CardContent>
-            {reportData.students.length > 0 && reportData.subjects.length > 0 ? (
-              <ScrollArea className="max-h-[70vh] w-full">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="sticky left-0 bg-card z-10 min-w-[200px]">Nama Siswa (Kelas)</TableHead>
-                      {reportData.subjects.map(subject => <TableHead key={subject} className="text-center min-w-[120px]">{subject}</TableHead>)}
-                      <TableHead className="text-center sticky right-0 bg-card z-10 font-bold min-w-[100px]">Rata-Rata</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reportData.students.map(student => (
-                      <TableRow key={student.id}>
-                        <TableCell className="sticky left-0 bg-card z-10 font-medium">{student.name}<span className="text-xs text-muted-foreground block">{student.kelas || 'N/A'}</span></TableCell>
-                        {reportData.subjects.map(subject => (
-                          <TableCell key={subject} className={cn("text-center", getGradeColor(student.grades[subject]))}>
-                            {student.grades[subject]?.toFixed(2) ?? '-'}
-                          </TableCell>
-                        ))}
-                        <TableCell className={cn("text-center sticky right-0 bg-card z-10 font-bold", getGradeColor(student.average))}>
-                          {student.average.toFixed(2)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
+            {reportData.classReports.length > 0 && reportData.subjects.length > 0 ? (
+               <Accordion type="single" collapsible className="w-full" defaultValue={reportData.classReports[0]?.className}>
+                {reportData.classReports.map((classReport) => (
+                  <AccordionItem value={classReport.className} key={classReport.className}>
+                    <AccordionTrigger className="text-lg font-medium hover:no-underline rounded-lg px-4 hover:bg-muted/50">
+                        <div className="flex items-center gap-4">
+                            <span className="text-primary">{classReport.className}</span>
+                            <div className="flex items-center text-sm font-normal text-muted-foreground">
+                                <Users className="mr-1.5 h-4 w-4" />
+                                {classReport.students.length} Siswa
+                            </div>
+                             <div className="flex items-center text-sm font-normal text-muted-foreground">
+                                <Star className="mr-1.5 h-4 w-4" />
+                                Rata-rata: <span className="font-semibold ml-1">{classReport.classAverage.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ScrollArea className="max-h-[70vh] w-full">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                <TableHead className="w-[40px] text-center">#</TableHead>
+                                <TableHead className="sticky left-0 bg-background z-10 min-w-[200px]">Nama Siswa (NIS)</TableHead>
+                                {reportData.subjects.map(subject => <TableHead key={subject} className="text-center min-w-[120px]">{subject}</TableHead>)}
+                                <TableHead className="text-center sticky right-0 bg-background z-10 font-bold min-w-[100px]">Rata-Rata</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {classReport.students.map((student, index) => (
+                                <TableRow key={student.id}>
+                                    <TableCell className="text-center font-medium">{index + 1}</TableCell>
+                                    <TableCell className="sticky left-0 bg-background z-10 font-medium">{student.name}<span className="text-xs text-muted-foreground block">{student.nis || 'N/A'}</span></TableCell>
+                                    {reportData.subjects.map(subject => (
+                                    <TableCell key={subject} className={cn("text-center", getGradeColor(student.grades[subject]))}>
+                                        {student.grades[subject] !== null ? student.grades[subject]?.toFixed(2) : '-'}
+                                    </TableCell>
+                                    ))}
+                                    <TableCell className={cn("text-center sticky right-0 bg-background z-10 font-bold", getGradeColor(student.average))}>
+                                    {student.average.toFixed(2)}
+                                    </TableCell>
+                                </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             ) : (
                 <p className="text-center text-muted-foreground py-8">Tidak ada data nilai yang ditemukan untuk filter yang dipilih.</p>
             )}
