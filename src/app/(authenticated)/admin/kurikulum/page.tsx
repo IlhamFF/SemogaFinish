@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
@@ -13,7 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuth } from "@/hooks/use-auth";
-import { BookOpenCheck, Target, BookCopy, BookUp, Layers, FileText, FolderKanban, PlusCircle, Edit, Loader2, UploadCloud, Link2, Trash2, Book, Library, List, GitMerge, Search, Link as LinkIconLucide } from "lucide-react";
+import { BookOpenCheck, Target, BookCopy, BookUp, Layers, FileText, FolderKanban, PlusCircle, Edit, Loader2, UploadCloud, Link as LinkIconLucide, Trash2, Book, Library, List, GitMerge, Search } from "lucide-react";
 import Link from "next/link";
 import { ROUTES, SCHOOL_GRADE_LEVELS, SCHOOL_MAJORS, KATEGORI_SKL_CONST, FASE_CP_CONST, JENIS_MATERI_AJAR as JENIS_MATERI_AJAR_CONST } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
@@ -714,9 +713,11 @@ export default function AdminKurikulumPage() {
 
   return (
     <div className="space-y-6">
-       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fade-in-up">
         <div>
-          <h1 className="text-3xl font-headline font-semibold">Manajemen Kurikulum</h1>
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+            Manajemen Kurikulum
+          </h1>
           <p className="text-muted-foreground mt-1">Rancang standar, struktur, silabus, RPP, dan materi ajar.</p>
         </div>
         <Button onClick={() => toast({ title: "Fitur Dalam Pengembangan" })} disabled>
@@ -724,38 +725,35 @@ export default function AdminKurikulumPage() {
         </Button>
       </div>
       
-      <Card className="shadow-lg">
-        <CardHeader><CardTitle className="flex items-center"><BookOpenCheck className="mr-2 h-6 w-6 text-primary" />Pengembangan Kurikulum</CardTitle><CardDescription>Rancang standar, struktur, silabus, RPP, dan materi ajar.</CardDescription></CardHeader>
-        <CardContent className="space-y-8">
-          <Card>
+      <div className="space-y-8 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+        <Card className="shadow-xl">
             <CardHeader><CardTitle className="flex items-center text-xl"><Target className="mr-3 h-5 w-5 text-primary" />Standar Kompetensi & Capaian</CardTitle><CardDescription>Kelola SKL dan CP sebagai acuan utama.</CardDescription></CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Button variant="outline" onClick={() => setIsSKLDialogOpen(true)} className="justify-start text-left h-auto py-3"><Layers className="mr-3 h-5 w-5" /><div><p className="font-semibold">Standar Kompetensi Lulusan (SKL)</p><p className="text-xs text-muted-foreground">Definisikan profil lulusan.</p></div></Button>
-              <Button variant="outline" onClick={() => setIsCPDialogOpen(true)} className="justify-start text-left h-auto py-3"><FileText className="mr-3 h-5 w-5" /><div><p className="font-semibold">Capaian Pembelajaran (CP)</p><p className="text-xs text-muted-foreground">Tetapkan target per fase/tingkat.</p></div></Button>
+              <Button variant="outline" onClick={() => setIsSKLDialogOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Layers className="mr-3 h-5 w-5" /><div><p className="font-semibold">Standar Kompetensi Lulusan (SKL)</p><p className="text-xs text-muted-foreground">Definisikan profil lulusan.</p></div></Button>
+              <Button variant="outline" onClick={() => setIsCPDialogOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><FileText className="mr-3 h-5 w-5" /><div><p className="font-semibold">Capaian Pembelajaran (CP)</p><p className="text-xs text-muted-foreground">Tetapkan target per fase/tingkat.</p></div></Button>
               <Button variant="outline" disabled className="justify-start text-left h-auto py-3"><GitMerge className="mr-3 h-5 w-5" /><div><p className="font-semibold">Pemetaan & Analisis SKL-CP</p><p className="text-xs text-muted-foreground">Hubungkan & analisis keselarasan.</p></div></Button>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="shadow-xl">
             <CardHeader><CardTitle className="flex items-center text-xl"><BookCopy className="mr-3 h-5 w-5 text-primary" />Struktur Kurikulum, Silabus & RPP</CardTitle><CardDescription>Susun kerangka, materi pokok, hingga rencana pembelajaran. Pastikan merujuk pada <Link href={ROUTES.ADMIN_MATA_PELAJARAN} className="text-primary hover:underline">daftar mata pelajaran</Link>.</CardDescription></CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Button variant="outline" onClick={() => setIsStrukturKurikulumDialogOpen(true)} className="justify-start text-left h-auto py-3"><Library className="mr-3 h-5 w-5" /><div><p className="font-semibold">Struktur Kurikulum</p><p className="text-xs text-muted-foreground">Atur mapel & alokasi jam.</p></div></Button>
-              <Button variant="outline" onClick={() => setIsSilabusDialogOpen(true)} className="justify-start text-left h-auto py-3"><Book className="mr-3 h-5 w-5" /><div><p className="font-semibold">Pengembangan Silabus</p><p className="text-xs text-muted-foreground">Rancang silabus per mapel.</p></div></Button>
-              <Button variant="outline" onClick={() => setIsRPPDialogOpen(true)} className="justify-start text-left h-auto py-3"><BookUp className="mr-3 h-5 w-5" /><div><p className="font-semibold">Penyusunan RPP</p><p className="text-xs text-muted-foreground">Buat rencana detail per pertemuan.</p></div></Button>
+              <Button variant="outline" onClick={() => setIsStrukturKurikulumDialogOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Library className="mr-3 h-5 w-5" /><div><p className="font-semibold">Struktur Kurikulum</p><p className="text-xs text-muted-foreground">Atur mapel & alokasi jam.</p></div></Button>
+              <Button variant="outline" onClick={() => setIsSilabusDialogOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Book className="mr-3 h-5 w-5" /><div><p className="font-semibold">Pengembangan Silabus</p><p className="text-xs text-muted-foreground">Rancang silabus per mapel.</p></div></Button>
+              <Button variant="outline" onClick={() => setIsRPPDialogOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><BookUp className="mr-3 h-5 w-5" /><div><p className="font-semibold">Penyusunan RPP</p><p className="text-xs text-muted-foreground">Buat rencana detail per pertemuan.</p></div></Button>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="shadow-xl">
             <CardHeader><CardTitle className="flex items-center text-xl"><FolderKanban className="mr-3 h-5 w-5 text-primary" />Bank Materi & Sumber Pembelajaran</CardTitle><CardDescription>Kelola materi ajar, modul, video, dll.{materiList.length > 0 && ` (Total: ${materiList.length} materi)`}</CardDescription></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Button variant="default" onClick={() => openMateriForm()} className="justify-start text-left h-auto py-3"><PlusCircle className="mr-3 h-5 w-5" /><div><p className="font-semibold">Tambah Materi Baru</p><p className="text-xs text-muted-foreground">Unggah file atau tautan.</p></div></Button>
-                <Button variant="outline" onClick={() => setIsKategoriMateriDialogOpen(true)} className="justify-start text-left h-auto py-3"><List className="mr-3 h-5 w-5" /><div><p className="font-semibold">Kategorisasi Materi</p><p className="text-xs text-muted-foreground">Kelola kategori sumber belajar.</p></div></Button>
-                <Button variant="outline" onClick={() => setIsSearchMateriOpen(true)} className="justify-start text-left h-auto py-3"><Search className="mr-3 h-5 w-5" /><div><p className="font-semibold">Pencarian Materi</p><p className="text-xs text-muted-foreground">Temukan sumber belajar.</p></div></Button>
+                <Button variant="default" onClick={() => openMateriForm()} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><PlusCircle className="mr-3 h-5 w-5" /><div><p className="font-semibold">Tambah Materi Baru</p><p className="text-xs text-muted-foreground">Unggah file atau tautan.</p></div></Button>
+                <Button variant="outline" onClick={() => setIsKategoriMateriDialogOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><List className="mr-3 h-5 w-5" /><div><p className="font-semibold">Kategorisasi Materi</p><p className="text-xs text-muted-foreground">Kelola kategori sumber belajar.</p></div></Button>
+                <Button variant="outline" onClick={() => setIsSearchMateriOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Search className="mr-3 h-5 w-5" /><div><p className="font-semibold">Pencarian Materi</p><p className="text-xs text-muted-foreground">Temukan sumber belajar.</p></div></Button>
               </div>
               {isLoadingMateriList ? (<div className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : materiList.length > 0 ? (<div className="pt-4"><h4 className="text-md font-semibold mb-2">Daftar Materi Tersedia:</h4><Table><TableHeader className="bg-muted/50 sticky top-0"><TableRow><TableHead>Judul</TableHead><TableHead>Mapel</TableHead><TableHead>Jenis</TableHead><TableHead>Tgl Upload</TableHead><TableHead>Uploader</TableHead><TableHead className="text-right">Tindakan</TableHead></TableRow></TableHeader><TableBody>{materiList.map(m => (<TableRow key={m.id}><TableCell className="font-medium max-w-xs truncate" title={m.judul}>{m.judul}</TableCell><TableCell>{m.mapelNama}</TableCell><TableCell>{m.jenisMateri}</TableCell><TableCell>{m.tanggalUpload ? format(parseISO(m.tanggalUpload), "dd/MM/yyyy") : "-"}</TableCell><TableCell className="text-xs truncate" title={m.uploader?.email}>{m.uploader?.fullName || m.uploader?.name || m.uploader?.email || "-"}</TableCell><TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => openMateriForm(m)} className="mr-1"><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="sm" onClick={() => openDeleteMateriDialog(m)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody></Table></div>) : (<p className="text-muted-foreground text-center pt-4">Belum ada materi ajar.</p>)}
             </CardContent>
           </Card>
-        </CardContent>
-      </Card>
+      </div>
 
       <Dialog open={isMateriFormOpen} onOpenChange={(open) => { setIsMateriFormOpen(open); if (!open) setCurrentEditingMateri(null); }}>
         <DialogContent className="sm:max-w-lg h-[90vh] flex flex-col">
@@ -769,7 +767,7 @@ export default function AdminKurikulumPage() {
                   <FormField control={materiAjarForm.control} name="judul" render={({ field }) => (<FormItem><FormLabel>Judul Materi</FormLabel><FormControl><Input placeholder="Modul Bab 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={materiAjarForm.control} name="mapelNama" render={({ field }) => (<FormItem><FormLabel>Mata Pelajaran</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih mata pelajaran" /></SelectTrigger></FormControl><SelectContent>{mataPelajaranOptions.length > 0 ? mataPelajaranOptions.map(subject => (<SelectItem key={subject.id} value={subject.nama}>{subject.nama} ({subject.kode})</SelectItem>)) : <SelectItem value="" disabled>Tidak ada mapel</SelectItem>}</SelectContent></Select><FormMessage /></FormItem>)} />
                   <FormField control={materiAjarForm.control} name="deskripsi" render={({ field }) => (<FormItem><FormLabel>Deskripsi (Opsional)</FormLabel><FormControl><Textarea placeholder="Deskripsi singkat materi..." {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={materiAjarForm.control} name="jenisMateri" render={({ field }) => (<FormItem><FormLabel>Jenis Materi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis materi" /></SelectTrigger></FormControl><SelectContent>{JENIS_MATERI_AJAR_CONST.map(jenis => <SelectItem key={jenis} value={jenis}>{jenis === "File" ? <><UploadCloud className="inline-block mr-2 h-4 w-4" />Unggah File</> : <><Link2 className="inline-block mr-2 h-4 w-4" />Tautan Eksternal</>}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                  <FormField control={materiAjarForm.control} name="jenisMateri" render={({ field }) => (<FormItem><FormLabel>Jenis Materi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis materi" /></SelectTrigger></FormControl><SelectContent>{JENIS_MATERI_AJAR_CONST.map(jenis => <SelectItem key={jenis} value={jenis}>{jenis === "File" ? <><UploadCloud className="inline-block mr-2 h-4 w-4" />Unggah File</> : <><LinkIconLucide className="inline-block mr-2 h-4 w-4" />Tautan Eksternal</>}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                   {materiAjarForm.watch("jenisMateri") === "File" && (<FormField control={materiAjarForm.control} name="file" render={({ field: { onChange, value, ...restField } }) => (<FormItem><FormLabel>Unggah File {currentEditingMateri?.namaFileOriginal ? `(Kosongkan jika tidak ubah: ${currentEditingMateri.namaFileOriginal})` : ""}</FormLabel><FormControl><Input type="file" onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} {...restField} /></FormControl><FormDescription>PDF, DOCX, dll.</FormDescription><FormMessage /></FormItem>)} />)}
                   {materiAjarForm.watch("jenisMateri") === "Link" && (<FormField control={materiAjarForm.control} name="externalUrl" render={({ field }) => (<FormItem><FormLabel>URL Materi</FormLabel><FormControl><Input placeholder="https://contoh.com/materi" {...field} /></FormControl><FormDescription>URL lengkap sumber materi.</FormDescription><FormMessage /></FormItem>)} />)}
                 </div>

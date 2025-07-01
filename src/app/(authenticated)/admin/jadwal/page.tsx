@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -208,31 +207,34 @@ export default function AdminJadwalPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-headline font-semibold">Pengelolaan Jadwal Terpusat</h1>
+      <div className="animate-fade-in-up">
+        <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+            Pengelolaan Jadwal Terpusat
+        </h1>
+        <p className="text-muted-foreground mt-1">Atur slot waktu, alokasi guru, ruangan, dan buat jadwal pelajaran untuk seluruh sekolah.</p>
       </div>
       
-      <Card className="shadow-lg">
+      <Card className="shadow-xl animate-fade-in-up" style={{ animationDelay: '200ms' }}>
         <CardHeader>
-          <CardTitle className="flex items-center"><Settings2 className="mr-2 h-6 w-6 text-primary" />Pembuatan &amp; Konfigurasi Jadwal</CardTitle>
-          <CardDescription>Atur slot waktu, hari efektif, durasi pelajaran, dan buat jadwal per kelas atau tingkatan.</CardDescription>
+          <CardTitle className="flex items-center text-xl"><Settings2 className="mr-3 h-6 w-6 text-primary" />Konfigurasi & Pembuatan</CardTitle>
+          <CardDescription>Mulai dengan mengatur komponen dasar atau langsung buat jadwal secara manual dan impor.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" onClick={() => setIsKonfigurasiOpen(true)} className="justify-start text-left h-auto py-3"><Clock className="mr-3 h-5 w-5" /><div><p className="font-semibold">Konfigurasi Jam &amp; Hari</p><p className="text-xs text-muted-foreground">Atur slot waktu dan hari efektif.</p></div></Button>
-            <Button variant="outline" onClick={handleOpenBuatJadwalManual} className="justify-start text-left h-auto py-3"><CalendarCheck className="mr-3 h-5 w-5" /><div><p className="font-semibold">Buat Jadwal per Kelas</p><p className="text-xs text-muted-foreground">Susun jadwal untuk satu kelas.</p></div></Button>
-            <Button variant="outline" onClick={() => setIsImportDialogOpen(true)} className="justify-start text-left h-auto py-3"><Upload className="mr-3 h-5 w-5" /><div><p className="font-semibold">Impor Jadwal</p><p className="text-xs text-muted-foreground">Unggah jadwal dari template.</p></div></Button>
+            <Button variant="outline" onClick={() => setIsKonfigurasiOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Clock className="mr-3 h-5 w-5" /><div><p className="font-semibold">Konfigurasi Jam &amp; Hari</p><p className="text-xs text-muted-foreground">Atur slot waktu dan hari efektif.</p></div></Button>
+            <Button variant="outline" onClick={handleOpenBuatJadwalManual} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><CalendarCheck className="mr-3 h-5 w-5" /><div><p className="font-semibold">Buat Jadwal per Kelas</p><p className="text-xs text-muted-foreground">Susun jadwal untuk satu kelas.</p></div></Button>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Upload className="mr-3 h-5 w-5" /><div><p className="font-semibold">Impor Jadwal (Simulasi)</p><p className="text-xs text-muted-foreground">Unggah jadwal dari template.</p></div></Button>
         </CardContent>
       </Card>
       
-       <Card className="shadow-lg">
+       <Card className="shadow-xl animate-fade-in-up" style={{ animationDelay: '400ms' }}>
         <CardHeader>
-          <CardTitle className="flex items-center"><Building className="mr-2 h-6 w-6 text-primary" />Alokasi Guru &amp; Ruangan</CardTitle>
-          <CardDescription>Tetapkan guru pengampu untuk setiap mata pelajaran dan alokasikan ruangan kelas atau laboratorium.</CardDescription>
+          <CardTitle className="flex items-center text-xl"><Building className="mr-3 h-6 w-6 text-primary" />Alokasi & Validasi</CardTitle>
+          <CardDescription>Kelola sumber daya seperti ruangan, dan periksa validitas jadwal untuk menghindari bentrok.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" onClick={() => toast({ title: "Fitur Dalam Pengembangan" })} className="justify-start text-left h-auto py-3"><Users className="mr-3 h-5 w-5" /><div><p className="font-semibold">Ketersediaan Guru</p><p className="text-xs text-muted-foreground">Lihat dan atur jadwal guru.</p></div></Button>
-            <Button variant="outline" onClick={() => setIsRuanganDialogOpen(true)} className="justify-start text-left h-auto py-3"><Building className="mr-3 h-5 w-5" /><div><p className="font-semibold">Manajemen Ruangan</p><p className="text-xs text-muted-foreground">Kelola daftar dan kapasitas.</p></div></Button>
-            <Button variant="outline" onClick={handleCheckConflicts} className="justify-start text-left h-auto py-3" disabled={isCheckingConflicts}>
+            <Button variant="outline" disabled onClick={() => toast({ title: "Fitur Dalam Pengembangan" })} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Users className="mr-3 h-5 w-5" /><div><p className="font-semibold">Ketersediaan Guru</p><p className="text-xs text-muted-foreground">Lihat dan atur jadwal guru.</p></div></Button>
+            <Button variant="outline" onClick={() => setIsRuanganDialogOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Building className="mr-3 h-5 w-5" /><div><p className="font-semibold">Manajemen Ruangan</p><p className="text-xs text-muted-foreground">Kelola daftar dan kapasitas.</p></div></Button>
+            <Button variant="outline" onClick={handleCheckConflicts} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200" disabled={isCheckingConflicts}>
                 {isCheckingConflicts ? <Loader2 className="mr-3 h-5 w-5 animate-spin"/> : <Search className="mr-3 h-5 w-5" />}
                 <div><p className="font-semibold">Deteksi Konflik</p><p className="text-xs text-muted-foreground">Periksa bentrok jadwal.</p></div>
             </Button>
