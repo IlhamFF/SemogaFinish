@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -178,6 +179,7 @@ export default function AdminJadwalPage() {
   const handleEditJadwalEntry = (entry: JadwalPelajaran) => { setEditingJadwalPelajaranEntry(entry); jadwalPelajaranEntryForm.reset({ id: entry.id, slotWaktuId: entry.slotWaktuId, mapelId: entry.mapelId, guruId: entry.guruId, ruanganId: entry.ruanganId, catatan: entry.catatan || "" }); setIsJadwalEntryFormOpen(true); };
   const handleDeleteJadwalEntry = async (entryId: string) => { if (entryId.startsWith('draft-')) { setJadwalPelajaranList(prev => prev.filter(j => j.id !== entryId)); toast({title: "Entri Dihapus dari Draf", description: "Entri jadwal telah dihapus dari daftar saat ini."}); return; } setIsJadwalPelajaranSubmitting(true); try { const response = await fetch(`/api/jadwal/pelajaran/${entryId}`, { method: 'DELETE' }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'Gagal menghapus entri jadwal.'); } toast({ title: "Entri Dihapus!", description: "Entri jadwal telah dihapus dari database."}); if(selectedKelas && selectedHari) fetchJadwalPelajaran(selectedKelas, selectedHari); } catch (error: any) { toast({ title: "Error Hapus Entri", description: error.message, variant: "destructive" }); } finally { setIsJadwalPelajaranSubmitting(false); } };
   const handleClearJadwalKelasHari = async () => { if (!selectedKelas || !selectedHari) return; setIsJadwalPelajaranSubmitting(true); try { const response = await fetch(`/api/jadwal/pelajaran/by-criteria?kelas=${encodeURIComponent(selectedKelas)}&hari=${encodeURIComponent(selectedHari)}`, { method: 'DELETE', }); if (!response.ok && response.status !== 404) { const errorData = await response.json(); throw new Error(errorData.message || `Gagal membersihkan jadwal untuk ${selectedKelas} - ${selectedHari}.`); } toast({ title: "Jadwal Dikosongkan", description: `Semua jadwal untuk ${selectedKelas} - ${selectedHari} telah dihapus.`}); setJadwalPelajaranList([]); } catch (error: any) { toast({ title: "Error Kosongkan Jadwal", description: error.message, variant: "destructive" }); } finally { setIsJadwalPelajaranSubmitting(false); } };
+  
   const handleImportJadwal = async () => {
     if (!importFile) { toast({ title: "Tidak Ada File", description: "Silakan pilih file CSV untuk diimpor.", variant: "destructive" }); return; }
     setIsImporting(true);
@@ -186,13 +188,27 @@ export default function AdminJadwalPage() {
     try {
       const response = await fetch('/api/jadwal/import', { method: 'POST', body: formData });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Gagal mengimpor jadwal.');
-      toast({ title: "Impor (Simulasi) Berhasil", description: data.message, duration: 7000 });
+      if (!response.ok && response.status !== 207) { // 207 is Multi-Status for partial success
+        throw new Error(data.message || 'Gagal mengimpor jadwal.');
+      }
+      
+      let toastTitle = "Impor Selesai";
+      let toastDescription = data.message;
+      let toastVariant: "default" | "destructive" = "default";
+
+      if (response.status === 207 && data.errors && data.errors.length > 0) {
+        toastTitle = "Impor Selesai dengan Error";
+        toastDescription = `${data.totalSuccess} jadwal berhasil, ${data.totalFailed} gagal. Error pertama: ${data.errors[0]}`;
+        toastVariant = "destructive";
+      }
+
+      toast({ title: toastTitle, description: toastDescription, variant: toastVariant, duration: 9000 });
       setIsImportDialogOpen(false);
       setImportFile(null);
     } catch (error: any) { toast({ title: "Error Impor Jadwal", description: error.message, variant: "destructive" });
     } finally { setIsImporting(false); }
   };
+
   const handleCheckConflicts = async () => {
     setIsCheckingConflicts(true);
     try {
@@ -222,7 +238,7 @@ export default function AdminJadwalPage() {
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Button variant="outline" onClick={() => setIsKonfigurasiOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Clock className="mr-3 h-5 w-5" /><div><p className="font-semibold">Konfigurasi Jam &amp; Hari</p><p className="text-xs text-muted-foreground">Atur slot waktu dan hari efektif.</p></div></Button>
             <Button variant="outline" onClick={handleOpenBuatJadwalManual} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><CalendarCheck className="mr-3 h-5 w-5" /><div><p className="font-semibold">Buat Jadwal per Kelas</p><p className="text-xs text-muted-foreground">Susun jadwal untuk satu kelas.</p></div></Button>
-            <Button variant="outline" onClick={() => setIsImportDialogOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Upload className="mr-3 h-5 w-5" /><div><p className="font-semibold">Impor Jadwal (Simulasi)</p><p className="text-xs text-muted-foreground">Unggah jadwal dari template.</p></div></Button>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Upload className="mr-3 h-5 w-5" /><div><p className="font-semibold">Impor Jadwal</p><p className="text-xs text-muted-foreground">Unggah jadwal dari template CSV.</p></div></Button>
         </CardContent>
       </Card>
       
@@ -378,9 +394,9 @@ export default function AdminJadwalPage() {
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Impor Jadwal (Simulasi)</DialogTitle>
+            <DialogTitle>Impor Jadwal</DialogTitle>
             <DialogDescription>
-              Unggah file CSV untuk mengimpor jadwal pelajaran secara massal. Fitur ini masih dalam tahap simulasi dan belum akan memproses data file.
+              Unggah file CSV untuk mengimpor jadwal pelajaran secara massal. Pastikan file Anda mengikuti format yang benar.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
@@ -397,7 +413,7 @@ export default function AdminJadwalPage() {
                   {importFile && <p className="text-xs text-muted-foreground mt-2">File terpilih: {importFile.name}</p>}
               </div>
               <p className="text-xs text-muted-foreground">
-                  Format yang diharapkan: CSV dengan kolom: `hari`, `kelas`, `slotWaktuId`, `mapelId`, `guruId`, `ruanganId`, `catatan`.
+                  Format yang diharapkan: CSV dengan header: `hari`, `kelas`, `kode_mapel`, `email_guru`, `kode_ruangan`, `nama_slot`, dan `catatan` (opsional).
               </p>
           </div>
           <DialogFooter>
