@@ -76,5 +76,3 @@ export const KATEGORI_MAPEL = [
 export const KATEGORI_SKL_CONST = ["Sikap", "Pengetahuan", "Keterampilan"] as const;
 export const FASE_CP_CONST = ["A", "B", "C", "D", "E", "F", "Lainnya"] as const;
 export const JENIS_MATERI_AJAR = ["File", "Link"] as const;
-
-    
