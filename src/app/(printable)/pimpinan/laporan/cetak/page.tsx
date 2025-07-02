@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Printer, Users, BookOpenCheck, BookCopy } from "lucide-react";
+import { Loader2, Printer } from "lucide-react";
 import { APP_NAME } from '@/lib/constants';
 import { format } from 'date-fns';
 import { id as localeID } from 'date-fns/locale';
@@ -193,4 +193,3 @@ export default function CetakLaporanPimpinanPage() {
     </div>
   );
 }
-
