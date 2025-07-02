@@ -389,7 +389,7 @@ export default function GuruAbsensiPage() {
         <CardHeader><CardTitle className="flex items-center text-xl"><CalendarDays className="mr-3 h-5 w-5 text-primary" />Fitur Tambahan Absensi</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
            <Button variant="outline" onClick={() => setIsRekapDialogOpen(true)} className="justify-start text-left h-auto py-3"><ListChecks className="mr-3 h-5 w-5" /><div><p className="font-semibold">Rekap Bulanan</p><p className="text-xs text-muted-foreground">Lihat rekapitulasi per bulan.</p></div></Button>
-           <Button variant="outline" onClick={()={() => toast({title: "Fitur Dalam Pengembangan"})} className="justify-start text-left h-auto py-3"><BarChart className="mr-3 h-5 w-5" /><div><p className="font-semibold">Statistik Kehadiran</p><p className="text-xs text-muted-foreground">Grafik dan analisis.</p></div></Button>
+           <Button variant="outline" onClick={() => toast({title: "Fitur Dalam Pengembangan"})} className="justify-start text-left h-auto py-3"><BarChart className="mr-3 h-5 w-5" /><div><p className="font-semibold">Statistik Kehadiran</p><p className="text-xs text-muted-foreground">Grafik dan analisis.</p></div></Button>
            <Button variant="outline" onClick={() => toast({title: "Fitur Dalam Pengembangan"})} className="justify-start text-left h-auto py-3"><Printer className="mr-3 h-5 w-5" /><div><p className="font-semibold">Cetak Laporan</p><p className="text-xs text-muted-foreground">Ekspor data absensi.</p></div></Button>
         </CardContent>
       </Card>
@@ -479,5 +479,3 @@ export default function GuruAbsensiPage() {
     </div>
   );
 }
-
-    
