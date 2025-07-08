@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Users, BookOpenCheck, Loader2, Star, CheckCircle, BookCopy, Printer, User, Percent, BarChartHorizontal, PieChart, TrendingUp, UserMinus } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { Bar, BarChart as RechartsBarChart, PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
+import { Line, LineChart as RechartsLineChart, PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Area, AreaChart } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import React, { useMemo, useEffect, useState, useCallback } from "react";
 import type { User as AppUser, Role } from "@/types";
@@ -65,7 +65,6 @@ export default function PimpinanDashboardPage() {
   const fetchAllData = useCallback(async () => {
     setIsLoadingData(true);
     try {
-      // Di masa depan, filter bisa dikirim ke API: ?tahun=${selectedTahun}&semester=${selectedSemester}
       const akademikRes = await fetch('/api/laporan/akademik');
       if (!akademikRes.ok) {
         const errorData = await akademikRes.json();
@@ -91,10 +90,11 @@ export default function PimpinanDashboardPage() {
   const handlePrintReport = () => { window.open(ROUTES.PIMPINAN_LAPORAN_CETAK, '_blank'); };
 
   const pimpinanStats = useMemo(() => {
+    const lastAttendance = akademikData.kehadiranSiswaBulanan.slice(-1)[0]?.Kehadiran;
     return [
       { title: "Total Siswa Aktif", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.totalSiswa.toString(), icon: Users, color: "text-purple-400" },
       { title: "Rasio Guru:Siswa", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : akademikData.rasioGuruSiswa.toString(), icon: User, color: "text-green-400" },
-      { title: "Kehadiran Siswa", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : `${akademikData.kehadiranSiswaBulanan.slice(-1)[0]?.Kehadiran || 0}%`, icon: Percent, color: "text-pink-400" },
+      { title: "Kehadiran (Bulan Ini)", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : lastAttendance ? `${lastAttendance}%` : "N/A", icon: Percent, color: "text-pink-400" },
       { title: "Total Mapel", value: isLoadingData ? <Loader2 className="h-5 w-5 animate-spin" /> : `${akademikData.totalMataPelajaran}`, icon: BookCopy, color: "text-sky-400" },
     ];
   }, [isLoadingData, akademikData]);
@@ -136,8 +136,24 @@ export default function PimpinanDashboardPage() {
 
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
          <Card className="shadow-lg lg:col-span-2">
-            <CardHeader><CardTitle className="flex items-center"><TrendingUp className="mr-2 h-5 w-5 text-primary" /> Tren Kehadiran Siswa</CardTitle><CardDescription>Persentase kehadiran siswa selama 6 bulan terakhir (data simulasi).</CardDescription></CardHeader>
-            <CardContent className="h-[250px] -ml-4"><ChartContainer config={chartConfigVertical} className="w-full h-full"><RechartsBarChart data={akademikData.kehadiranSiswaBulanan}><CartesianGrid vertical={false} /><XAxis dataKey="name" tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12} /><YAxis tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[80, 100]} tickFormatter={(value) => `${value}%`} /><Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<ChartTooltipContent />} /><Bar dataKey="Kehadiran" fill="var(--color-Kehadiran)" radius={[4, 4, 0, 0]} barSize={30} /></RechartsBarChart></ChartContainer></CardContent>
+            <CardHeader><CardTitle className="flex items-center"><TrendingUp className="mr-2 h-5 w-5 text-primary" /> Tren Kehadiran Siswa</CardTitle><CardDescription>Persentase kehadiran siswa selama 6 bulan terakhir.</CardDescription></CardHeader>
+            <CardContent className="h-[250px] -ml-4">
+                <ChartContainer config={chartConfigVertical} className="w-full h-full">
+                    <AreaChart accessibilityLayer data={akademikData.kehadiranSiswaBulanan} margin={{ left: 12, right: 12 }}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                        <YAxis tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[80, 100]} tickFormatter={(value) => `${value}%`} />
+                        <ChartTooltipContent indicator="dot" content={<ChartTooltipContent />} />
+                        <defs>
+                            <linearGradient id="fillKehadiran" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="var(--color-Kehadiran)" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="var(--color-Kehadiran)" stopOpacity={0.1} />
+                            </linearGradient>
+                        </defs>
+                        <Area type="monotone" dataKey="Kehadiran" stroke="var(--color-Kehadiran)" strokeWidth={2} fillOpacity={1} fill="url(#fillKehadiran)" />
+                    </AreaChart>
+                </ChartContainer>
+            </CardContent>
         </Card>
         <Card className="shadow-lg">
             <CardHeader><CardTitle className="flex items-center"><PieChart className="mr-2 h-5 w-5 text-primary" /> Sebaran Siswa</CardTitle><CardDescription>Distribusi siswa berdasarkan jurusan.</CardDescription></CardHeader>
@@ -148,7 +164,7 @@ export default function PimpinanDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
         <Card className="shadow-lg">
           <CardHeader><CardTitle className="flex items-center"><BarChartHorizontal className="mr-2 h-5 w-5 text-primary" /> Rata-rata Nilai per Kelas</CardTitle><CardDescription>Perbandingan rata-rata nilai akhir siswa per kelas.</CardDescription></CardHeader>
-          <CardContent><div className="h-[300px] -ml-4"><ChartContainer config={chartConfigHorizontal} className="w-full h-full"><RechartsBarChart data={[...akademikData.rataRataKelas].sort((a,b)=>a.rataRata - b.rataRata)} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} /><XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[50, 100]} /><YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={10} width={80} interval={0} tickLine={false} axisLine={false} /><Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }}/><Bar dataKey="rataRata" fill="var(--color-rataRata)" radius={[0, 4, 4, 0]} barSize={15} /></RechartsBarChart></ChartContainer></div></CardContent>
+          <CardContent><ScrollArea className="h-[300px]"><Table><TableHeader><TableRow><TableHead>Kelas</TableHead><TableHead className="text-right">Rata-rata</TableHead></TableRow></TableHeader><TableBody>{akademikData.rataRataKelas.map((item, index) => (<TableRow key={index}><TableCell className="font-medium">{item.name}</TableCell><TableCell className="text-right font-semibold text-primary">{item.rataRata.toFixed(2)}</TableCell></TableRow>))}</TableBody></Table></ScrollArea></CardContent>
         </Card>
         <Card className="shadow-lg">
           <CardHeader><CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-yellow-400" /> Peringkat Siswa Terbaik</CardTitle><CardDescription>10 siswa dengan rata-rata nilai tertinggi di sekolah.</CardDescription></CardHeader>

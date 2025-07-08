@@ -7,7 +7,7 @@ import { UserEntity } from "@/entities/user.entity";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 import { MataPelajaranEntity } from "@/entities/mata-pelajaran.entity";
 import { AbsensiSiswaEntity } from "@/entities/absensi-siswa.entity";
-import { format, subDays } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 
 export async function GET(request: NextRequest) {
   const authenticatedUser = await getAuthenticatedUser(request);
@@ -20,8 +20,29 @@ export async function GET(request: NextRequest) {
     const nilaiRepo = dataSource.getRepository(NilaiSemesterSiswaEntity);
     const userRepo = dataSource.getRepository(UserEntity);
     const mapelRepo = dataSource.getRepository(MataPelajaranEntity);
+    const absensiRepo = dataSource.getRepository(AbsensiSiswaEntity);
 
-    // Perform all queries in parallel for efficiency
+    // --- Start Real Attendance Calculation ---
+    const sixMonthsAgo = format(subMonths(new Date(), 5), 'yyyy-MM-01'); // Start of the month, 6 months ago including current
+    const attendanceDataRaw = await absensiRepo.query(
+      `SELECT
+          TO_CHAR(DATE_TRUNC('month', "tanggalAbsensi"), 'Mon') AS "name",
+          COUNT(*) as "total",
+          COUNT(CASE WHEN "statusKehadiran" = 'Hadir' THEN 1 END) as "hadir"
+       FROM absensi_siswa
+       WHERE "tanggalAbsensi" >= $1
+       GROUP BY DATE_TRUNC('month', "tanggalAbsensi")
+       ORDER BY DATE_TRUNC('month', "tanggalAbsensi") ASC;`,
+       [sixMonthsAgo]
+    );
+
+    const kehadiranSiswaBulanan = attendanceDataRaw.map((row: { name: string, total: string, hadir: string }) => ({
+        name: row.name,
+        Kehadiran: row.total === "0" ? 0 : parseFloat(((parseInt(row.hadir, 10) / parseInt(row.total, 10)) * 100).toFixed(1))
+    }));
+    // --- End Real Attendance Calculation ---
+
+    // Perform other queries in parallel for efficiency
     const [
       rataRataKelasData,
       peringkatSiswaData,
@@ -64,7 +85,7 @@ export async function GET(request: NextRequest) {
       userRepo.find({ where: { role: 'guru' } }),
       userRepo.find({ where: { role: 'siswa' } }),
       // Absensi Bermasalah (Alpha terbanyak 30 hari terakhir)
-      dataSource.getRepository(AbsensiSiswaEntity)
+      absensiRepo
         .createQueryBuilder("absensi")
         .select("absensi.siswaId", "siswaId")
         .addSelect("user.fullName", "nama")
@@ -73,7 +94,7 @@ export async function GET(request: NextRequest) {
         .leftJoin("absensi.siswa", "user")
         .where("absensi.statusKehadiran = :status", { status: 'Alpha' })
         .andWhere("absensi.tanggalAbsensi BETWEEN :startDate AND :endDate", { 
-          startDate: format(subDays(new Date(), 30), 'yyyy-MM-dd'), 
+          startDate: format(subMonths(new Date(), 1), 'yyyy-MM-dd'), 
           endDate: format(new Date(), 'yyyy-MM-dd') 
         })
         .groupBy("absensi.siswaId, user.fullName, user.kelasId")
@@ -83,11 +104,8 @@ export async function GET(request: NextRequest) {
     ]);
     
     // --- Additional Calculations ---
-
-    // Rasio Guru:Siswa
     const rasioGuruSiswa = totalGuru > 0 ? `1 : ${(totalSiswa / totalGuru).toFixed(1)}` : "N/A";
 
-    // Distribusi Guru per Mapel
     const guruMapelCount: Record<string, number> = {};
     allGurus.forEach(guru => {
         if (guru.mataPelajaran) {
@@ -98,7 +116,6 @@ export async function GET(request: NextRequest) {
     });
     const distribusiGuruMapel = Object.entries(guruMapelCount).map(([name, value]) => ({ name, value }));
     
-    // Sebaran Siswa per Jurusan
     const siswaJurusanCount: Record<string, number> = { 'IPA': 0, 'IPS': 0, 'Lainnya': 0 };
     allSiswa.forEach(siswa => {
         if(siswa.kelasId?.includes('IPA')) {
@@ -110,19 +127,7 @@ export async function GET(request: NextRequest) {
         }
     });
     const sebaranSiswaJurusan = Object.entries(siswaJurusanCount).filter(([,value]) => value > 0).map(([name, value]) => ({ name, value }));
-
-
-    // Mock Data for Attendance Trend
-    const kehadiranSiswaBulanan = [
-        { name: 'Jan', Kehadiran: 95.5 },
-        { name: 'Feb', Kehadiran: 96.2 },
-        { name: 'Mar', Kehadiran: 94.8 },
-        { name: 'Apr', Kehadiran: 97.1 },
-        { name: 'Mei', Kehadiran: 93.5 },
-        { name: 'Jun', Kehadiran: 98.0 },
-    ];
     
-    // Pastikan tipe data numerik benar
     const rataRataKelas = rataRataKelasData.map(item => ({
         ...item,
         rataRata: parseFloat(item.rataRata)

@@ -5,7 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { NilaiSemesterSiswaEntity } from "@/entities/nilai-semester-siswa.entity";
 import { UserEntity } from "@/entities/user.entity";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
-import { Like, FindOptionsWhere } from "typeorm";
+import { Like, FindOptionsWhere, In } from "typeorm";
 
 export interface ReportStudent {
   id: string;
@@ -51,21 +51,21 @@ export async function GET(request: NextRequest) {
     if (kelas && kelas !== "semua") {
       studentWhereClause.kelasId = kelas;
     } else {
-      studentWhereClause.kelasId = Like(`${tingkat}%`);
+      // Add space to avoid matching 'X' with 'XI'
+      studentWhereClause.kelasId = Like(`${tingkat} %`);
     }
 
-    const studentsInGrade = await userRepo.find({
+    const studentsInFilter = await userRepo.find({
         where: studentWhereClause,
         select: ['id', 'fullName', 'name', 'nis', 'kelasId']
     });
 
-    if (studentsInGrade.length === 0) {
+    if (studentsInFilter.length === 0) {
         return NextResponse.json({ classReports: [], subjects: [] });
     }
 
-    const studentIds = studentsInGrade.map(s => s.id);
+    const studentIds = studentsInFilter.map(s => s.id);
     
-    // Using QueryBuilder to avoid potential issues with 'In' operator import
     const allGradesForStudents = await nilaiRepo.createQueryBuilder("nilai")
         .leftJoinAndSelect("nilai.mapel", "mapel")
         .where("nilai.siswaId IN (:...studentIds)", { studentIds })
@@ -87,17 +87,27 @@ export async function GET(request: NextRequest) {
         gradesByStudentId.get(grade.siswaId)!.push(grade);
     });
 
-    const studentsByClass = studentsInGrade.reduce((acc, student) => {
-        const className = student.kelasId || "Tanpa Kelas";
-        if (!acc[className]) {
-            acc[className] = [];
+    const studentsByGroup = studentsInFilter.reduce((acc, student) => {
+        let groupName = "Lainnya";
+        if (kelas && kelas !== "semua") {
+            groupName = student.kelasId || "Tanpa Kelas";
+        } else if (student.kelasId?.includes("IPA")) {
+            groupName = `Jurusan IPA (Tingkat ${tingkat})`;
+        } else if (student.kelasId?.includes("IPS")) {
+            groupName = `Jurusan IPS (Tingkat ${tingkat})`;
+        } else {
+            groupName = `Lainnya (Tingkat ${tingkat})`;
         }
-        acc[className].push(student);
+        
+        if (!acc[groupName]) {
+            acc[groupName] = [];
+        }
+        acc[groupName].push(student);
         return acc;
     }, {} as Record<string, UserEntity[]>);
 
 
-    const classReports: ClassReport[] = Object.entries(studentsByClass).map(([className, students]) => {
+    const classReports: ClassReport[] = Object.entries(studentsByGroup).map(([groupName, students]) => {
         const processedStudents: ReportStudent[] = students.map(student => {
             const studentGrades = gradesByStudentId.get(student.id) || [];
             const grades: Record<string, number | null> = {};
@@ -123,13 +133,13 @@ export async function GET(request: NextRequest) {
             };
         }).sort((a, b) => b.average - a.average);
 
-        const classTotalAverage = processedStudents.reduce((sum, s) => sum + s.average, 0);
-        const classAverage = processedStudents.length > 0 ? parseFloat((classTotalAverage / processedStudents.length).toFixed(2)) : 0;
+        const groupTotalAverage = processedStudents.reduce((sum, s) => sum + s.average, 0);
+        const groupAverage = processedStudents.length > 0 ? parseFloat((groupTotalAverage / processedStudents.length).toFixed(2)) : 0;
         
         return {
-            className,
+            className: groupName,
             students: processedStudents,
-            classAverage,
+            classAverage: groupAverage,
         };
     }).sort((a, b) => b.classAverage - a.classAverage);
 

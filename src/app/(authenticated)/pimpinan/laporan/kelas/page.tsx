@@ -87,7 +87,7 @@ export default function LaporanAkademikPage() {
     if (!selectedTingkat) return "Analisis Nilai Siswa";
     let title = `Laporan Rincian Nilai: Angkatan Tingkat ${selectedTingkat}`;
     if (selectedKelas !== "semua") {
-        title += ` - Kelas ${selectedKelas}`;
+        title = `Laporan Rincian Nilai: Kelas ${selectedKelas}`;
     }
     return title;
   }, [selectedTingkat, selectedKelas]);
@@ -108,7 +108,7 @@ export default function LaporanAkademikPage() {
     reportData.classReports.forEach(classReport => {
       classReport.students.forEach(student => {
         const row: Record<string, any> = {
-          "Kelas": student.kelas,
+          "Kelompok": classReport.className,
           "NIS": student.nis || "N/A",
           "Nama Siswa": student.name,
         };
@@ -121,7 +121,7 @@ export default function LaporanAkademikPage() {
     });
 
     const csv = Papa.unparse(dataToExport, {
-      columns: ["Kelas", "NIS", "Nama Siswa", ...subjects, "Rata-Rata"],
+      columns: ["Kelompok", "NIS", "Nama Siswa", ...subjects, "Rata-Rata"],
       header: true
     });
 
@@ -132,7 +132,7 @@ export default function LaporanAkademikPage() {
     
     let fileName = `laporan_nilai_angkatan_${selectedTingkat}`;
     if(selectedKelas && selectedKelas !== 'semua') {
-        fileName += `_kelas_${selectedKelas.replace(/ /g, '_')}`;
+        fileName = `laporan_nilai_kelas_${selectedKelas.replace(/ /g, '_')}`;
     }
     fileName += '.csv';
 
@@ -211,7 +211,7 @@ export default function LaporanAkademikPage() {
             <div className="print:text-center">
               <CardTitle>{reportTitle}</CardTitle>
               <CardDescription>
-                Menampilkan rekapitulasi nilai per kelas, diurutkan berdasarkan rata-rata kelas tertinggi.
+                Menampilkan rekapitulasi nilai per kelompok, diurutkan berdasarkan rata-rata kelompok tertinggi.
               </CardDescription>
             </div>
           </CardHeader>

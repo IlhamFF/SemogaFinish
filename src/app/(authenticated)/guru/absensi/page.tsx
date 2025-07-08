@@ -301,7 +301,7 @@ export default function GuruAbsensiPage() {
       {scheduledLessons.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Pilih Sesi Pelajaran untuk {selectedClass} ({format(selectedDate!, "eeee, dd MMM yyyy", { locale: localeID })})</CardTitle>
+            <CardTitle className="text-base">Pilih Sesi Pelajaran untuk {selectedClass} ({selectedDate ? format(selectedDate, "eeee, dd MMM yyyy", { locale: localeID }) : ''})</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingScheduledLessons ? (<div className="flex justify-center items-center h-20"><Loader2 className="h-6 w-6 animate-spin" /></div>
@@ -331,7 +331,7 @@ export default function GuruAbsensiPage() {
       {selectedJadwalPelajaranId && (
         <Card>
           <CardHeader>
-            <CardTitle>Absensi: {scheduledLessons.find(l=>l.id === selectedJadwalPelajaranId)?.mapel?.nama} - {selectedClass} - {format(selectedDate!, "dd MMMM yyyy", { locale: localeID })}</CardTitle>
+            <CardTitle>Absensi: {scheduledLessons.find(l=>l.id === selectedJadwalPelajaranId)?.mapel?.nama} - {selectedClass} - {selectedDate ? format(selectedDate, "dd MMMM yyyy", { locale: localeID }) : ''}</CardTitle>
             <CardDescription>Daftar kehadiran siswa. Silakan pilih status untuk setiap siswa.</CardDescription>
           </CardHeader>
           <CardContent>
