@@ -21,6 +21,7 @@ export const NAV_LINKS_CONFIG: NavLink[] = [
   { href: ROUTES.SISWA_DASHBOARD, label: 'Dasbor', icon: LayoutDashboard, roles: ['siswa'] as Role[] },
   { href: ROUTES.PIMPINAN_DASHBOARD, label: 'Dasbor Utama', icon: LayoutDashboard, roles: ['pimpinan'] as Role[] },
   { href: ROUTES.PIMPINAN_LAPORAN_KELAS, label: 'Analisis Nilai Siswa', icon: BarChart3, roles: ['pimpinan'] as Role[] },
+  { href: ROUTES.PIMPINAN_LAPORAN_KEHADIRAN, label: 'Analisis Kehadiran', icon: UserCheck, roles: ['pimpinan'] as Role[] },
   
   // Admin Links
   { href: ROUTES.ADMIN_USERS, label: 'Manajemen Pengguna', icon: Users, roles: ['admin', 'superadmin'] as Role[] },

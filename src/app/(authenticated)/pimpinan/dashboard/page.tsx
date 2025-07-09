@@ -1,8 +1,8 @@
 
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, BookOpenCheck, Loader2, Star, CheckCircle, BookCopy, Printer, User, Percent, BarChartHorizontal, PieChart, TrendingUp, UserMinus } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Users, BookOpenCheck, Loader2, Star, CheckCircle, BookCopy, Printer, User, Percent, BarChartHorizontal, PieChart, TrendingUp, UserMinus, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Line, LineChart as RechartsLineChart, PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Area, AreaChart } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
@@ -14,6 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
 
 interface AkademikData {
   rataRataKelas: { name: string; rataRata: number }[];
@@ -135,9 +137,9 @@ export default function PimpinanDashboardPage() {
       </div>
 
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-         <Card className="shadow-lg lg:col-span-2">
+         <Card className="shadow-lg lg:col-span-2 flex flex-col">
             <CardHeader><CardTitle className="flex items-center"><TrendingUp className="mr-2 h-5 w-5 text-primary" /> Tren Kehadiran Siswa</CardTitle><CardDescription>Persentase kehadiran siswa selama 6 bulan terakhir.</CardDescription></CardHeader>
-            <CardContent className="h-[250px] -ml-4">
+            <CardContent className="h-[250px] -ml-4 flex-grow">
                 <ChartContainer config={chartConfigVertical} className="w-full h-full">
                     <AreaChart accessibilityLayer data={akademikData.kehadiranSiswaBulanan} margin={{ left: 12, right: 12 }}>
                         <CartesianGrid vertical={false} />
@@ -154,6 +156,14 @@ export default function PimpinanDashboardPage() {
                     </AreaChart>
                 </ChartContainer>
             </CardContent>
+            <CardFooter className="border-t pt-4">
+                <Button asChild variant="outline" size="sm" className="ml-auto">
+                    <Link href={ROUTES.PIMPINAN_LAPORAN_KEHADIRAN}>
+                        Lihat Laporan Detail
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                </Button>
+            </CardFooter>
         </Card>
         <Card className="shadow-lg">
             <CardHeader><CardTitle className="flex items-center"><PieChart className="mr-2 h-5 w-5 text-primary" /> Sebaran Siswa</CardTitle><CardDescription>Distribusi siswa berdasarkan jurusan.</CardDescription></CardHeader>
