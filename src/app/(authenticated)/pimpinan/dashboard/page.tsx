@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Users, BookOpenCheck, Loader2, Star, CheckCircle, BookCopy, Printer, User, Percent, BarChartHorizontal, PieChart, TrendingUp, UserMinus, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { Line, LineChart as RechartsLineChart, PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Area, AreaChart } from "recharts";
+import { Line, LineChart as RechartsLineChart, PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Area, AreaChart, BarChart as RechartsBarChart, Bar } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import React, { useMemo, useEffect, useState, useCallback } from "react";
 import type { User as AppUser, Role } from "@/types";
@@ -173,8 +173,41 @@ export default function PimpinanDashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
         <Card className="shadow-lg">
-          <CardHeader><CardTitle className="flex items-center"><BarChartHorizontal className="mr-2 h-5 w-5 text-primary" /> Rata-rata Nilai per Kelas</CardTitle><CardDescription>Perbandingan rata-rata nilai akhir siswa per kelas.</CardDescription></CardHeader>
-          <CardContent><ScrollArea className="h-[300px]"><Table><TableHeader><TableRow><TableHead>Kelas</TableHead><TableHead className="text-right">Rata-rata</TableHead></TableRow></TableHeader><TableBody>{akademikData.rataRataKelas.map((item, index) => (<TableRow key={index}><TableCell className="font-medium">{item.name}</TableCell><TableCell className="text-right font-semibold text-primary">{item.rataRata.toFixed(2)}</TableCell></TableRow>))}</TableBody></Table></ScrollArea></CardContent>
+          <CardHeader>
+            <CardTitle className="flex items-center"><BarChartHorizontal className="mr-2 h-5 w-5 text-primary" /> Rata-rata Nilai per Kelas</CardTitle>
+            <CardDescription>Perbandingan rata-rata nilai akhir siswa per kelas.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px] pl-0">
+            <ChartContainer config={chartConfigHorizontal} className="w-full h-full">
+              <RechartsBarChart
+                accessibilityLayer
+                data={akademikData.rataRataKelas}
+                layout="vertical"
+                margin={{ left: 10, right: 30 }}
+              >
+                <CartesianGrid horizontal={false} />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                  tickFormatter={(value) => value}
+                  className="text-xs"
+                />
+                <XAxis dataKey="rataRata" type="number" hide />
+                <Tooltip
+                  cursor={{ fill: 'hsl(var(--muted))' }}
+                  content={<ChartTooltipContent indicator="dot" />}
+                />
+                <Bar dataKey="rataRata" layout="vertical" fill="var(--color-rataRata)" radius={5}>
+                  {akademikData.rataRataKelas.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill="var(--color-rataRata)" />
+                  ))}
+                </Bar>
+              </RechartsBarChart>
+            </ChartContainer>
+          </CardContent>
         </Card>
         <Card className="shadow-lg">
           <CardHeader><CardTitle className="flex items-center"><Star className="mr-2 h-5 w-5 text-yellow-400" /> Peringkat Siswa Terbaik</CardTitle><CardDescription>10 siswa dengan rata-rata nilai tertinggi di sekolah.</CardDescription></CardHeader>
