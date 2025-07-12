@@ -181,7 +181,7 @@ export default function PimpinanDashboardPage() {
             <ChartContainer config={chartConfigHorizontal} className="w-full h-full">
               <RechartsBarChart
                 accessibilityLayer
-                data={akademikData.rataRataKelas}
+                data={akademikData.rataRataKelas.sort((a, b) => a.rataRata - b.rataRata)}
                 layout="vertical"
                 margin={{ left: 10, right: 30 }}
               >
