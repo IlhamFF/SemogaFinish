@@ -392,3 +392,148 @@ export function DonutChartComponent() {
   );
 }
 ```
+
+---
+
+## 6. End-to-End Visualisasi Data (API ke Diagram Batang)
+
+Berikut adalah contoh lengkap bagaimana data diambil dari database melalui API, lalu diubah menjadi diagram batang di frontend. Ini menunjukkan alur kerja penuh dari backend ke frontend.
+
+### Langkah 1: Backend - Membuat API Endpoint
+Buat file baru, misalnya `src/app/api/laporan/nilai-per-mapel/route.ts`. Endpoint ini akan melakukan query ke database untuk menghitung rata-rata nilai akhir untuk setiap mata pelajaran.
+
+```typescript
+// src/app/api/laporan/nilai-per-mapel/route.ts
+
+import "reflect-metadata";
+import { NextRequest, NextResponse } from "next/server";
+import { getInitializedDataSource } from "@/lib/data-source";
+import { NilaiSemesterSiswaEntity } from "@/entities/nilai-semester-siswa.entity";
+import { getAuthenticatedUser } from "@/lib/auth-utils-node";
+
+export async function GET(request: NextRequest) {
+  const authenticatedUser = getAuthenticatedUser(request);
+  // Pastikan hanya role tertentu yang bisa akses
+  if (!authenticatedUser || !['pimpinan', 'admin', 'superadmin'].includes(authenticatedUser.role)) {
+    return NextResponse.json({ message: "Akses ditolak." }, { status: 403 });
+  }
+
+  try {
+    const dataSource = await getInitializedDataSource();
+    const nilaiRepo = dataSource.getRepository(NilaiSemesterSiswaEntity);
+
+    const data = await nilaiRepo.createQueryBuilder("nilai")
+      .leftJoin("nilai.mapel", "mapel")
+      .select("mapel.nama", "mapelNama")
+      .addSelect("AVG(nilai.nilaiAkhir)", "rataRata")
+      .where("nilai.nilaiAkhir IS NOT NULL")
+      .groupBy("mapel.nama")
+      .orderBy('"rataRata"', "DESC") // Urutkan dari rata-rata tertinggi
+      .getRawMany();
+
+    // Pastikan nilai 'rataRata' adalah angka
+    const formattedData = data.map(item => ({
+      mapel: item.mapelNama,
+      rataRata: parseFloat(item.rataRata).toFixed(2)
+    }));
+      
+    return NextResponse.json(formattedData);
+  } catch (error: any) {
+    console.error("Error fetching nilai per mapel:", error);
+    return NextResponse.json({ message: "Terjadi kesalahan internal server." }, { status: 500 });
+  }
+}
+```
+
+### Langkah 2: Frontend - Komponen React untuk Menampilkan Diagram
+Komponen ini akan memanggil API di atas saat dimuat, menyimpan data di dalam *state*, dan kemudian me-render diagram batang menggunakan data tersebut.
+
+```tsx
+// Contoh komponen: src/components/charts/nilai-per-mapel-chart.tsx
+
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { Bar, BarChart, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { ChartContainer, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
+
+// Tipe data yang diharapkan dari API
+type NilaiPerMapelData = {
+  mapel: string;
+  rataRata: number;
+};
+
+// Konfigurasi diagram
+const chartConfig = {
+  rataRata: {
+    label: "Nilai Rata-Rata",
+    color: "hsl(var(--primary))",
+  },
+} satisfies ChartConfig;
+
+export function NilaiPerMapelChart() {
+  const [chartData, setChartData] = useState<NilaiPerMapelData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch('/api/laporan/nilai-per-mapel');
+        if (!response.ok) {
+          throw new Error('Gagal mengambil data dari server.');
+        }
+        const data = await response.json();
+        setChartData(data);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: "Gagal memuat data diagram: " + error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [toast]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Rata-Rata Nilai per Mata Pelajaran</CardTitle>
+        <CardDescription>Visualisasi perbandingan kinerja akademik di setiap mapel.</CardDescription>
+      </CardHeader>
+      <CardContent className="h-[400px]">
+        {isLoading ? (
+          <div className="flex h-full w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : chartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} layout="vertical" margin={{ left: 30 }}>
+              <XAxis type="number" dataKey="rataRata" hide />
+              <YAxis
+                type="category"
+                dataKey="mapel"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={10}
+                width={120} // Beri ruang lebih untuk nama mapel
+              />
+              <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<ChartTooltipContent />} />
+              <Bar dataKey="rataRata" fill="var(--color-rataRata)" radius={5} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="text-center text-muted-foreground">Tidak ada data untuk ditampilkan.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+```
