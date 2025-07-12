@@ -178,35 +178,30 @@ export default function PimpinanDashboardPage() {
             <CardDescription>Perbandingan rata-rata nilai akhir siswa per kelas.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] pl-0">
-            <ChartContainer config={chartConfigHorizontal} className="w-full h-full">
+            <ResponsiveContainer width="100%" height="100%">
               <RechartsBarChart
-                accessibilityLayer
                 data={akademikData.rataRataKelas.sort((a, b) => a.rataRata - b.rataRata)}
                 layout="vertical"
-                margin={{ left: 10, right: 30 }}
+                margin={{ left: 10, right: 30, top: 5, bottom: 5 }}
               >
-                <CartesianGrid horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <YAxis
                   dataKey="name"
                   type="category"
                   tickLine={false}
-                  tickMargin={10}
                   axisLine={false}
-                  tickFormatter={(value) => value}
+                  tickMargin={10}
+                  width={80}
                   className="text-xs"
                 />
-                <XAxis dataKey="rataRata" type="number" hide />
+                <XAxis dataKey="rataRata" type="number" hide domain={[0, 100]} />
                 <Tooltip
                   cursor={{ fill: 'hsl(var(--muted))' }}
                   content={<ChartTooltipContent indicator="dot" />}
                 />
-                <Bar dataKey="rataRata" layout="vertical" fill="var(--color-rataRata)" radius={5}>
-                  {akademikData.rataRataKelas.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill="var(--color-rataRata)" />
-                  ))}
-                </Bar>
+                <Bar dataKey="rataRata" fill="hsl(var(--primary))" radius={4} barSize={20} />
               </RechartsBarChart>
-            </ChartContainer>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
         <Card className="shadow-lg">
