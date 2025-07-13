@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Users, BookOpenCheck, Loader2, Star, CheckCircle, BookCopy, Printer, User, Percent, BarChartHorizontal, PieChart, TrendingUp, UserMinus, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Line, LineChart as RechartsLineChart, PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Area, AreaChart, BarChart as RechartsBarChart, Bar } from "recharts";
-import { ChartConfig, ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
+import { ChartConfig, ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartTooltip } from "@/components/ui/chart";
 import React, { useMemo, useEffect, useState, useCallback } from "react";
 import type { User as AppUser, Role } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -145,7 +145,7 @@ export default function PimpinanDashboardPage() {
                         <CartesianGrid vertical={false} />
                         <XAxis dataKey="name" tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12} />
                         <YAxis tickLine={false} axisLine={false} stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[80, 100]} tickFormatter={(value) => `${value}%`} />
-                        <ChartTooltipContent indicator="dot" content={<ChartTooltipContent />} />
+                        <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
                         <defs>
                             <linearGradient id="fillKehadiran" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="var(--color-Kehadiran)" stopOpacity={0.8} />
@@ -178,7 +178,7 @@ export default function PimpinanDashboardPage() {
             <CardDescription>Perbandingan rata-rata nilai akhir siswa per kelas.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] pl-0">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer config={chartConfigHorizontal} className="w-full h-full">
               <RechartsBarChart
                 data={akademikData.rataRataKelas.sort((a, b) => a.rataRata - b.rataRata)}
                 layout="vertical"
@@ -195,13 +195,13 @@ export default function PimpinanDashboardPage() {
                   className="text-xs"
                 />
                 <XAxis dataKey="rataRata" type="number" hide domain={[0, 100]} />
-                <Tooltip
+                <ChartTooltip
                   cursor={{ fill: 'hsl(var(--muted))' }}
                   content={<ChartTooltipContent indicator="dot" />}
                 />
                 <Bar dataKey="rataRata" fill="hsl(var(--primary))" radius={4} barSize={20} />
               </RechartsBarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
         <Card className="shadow-lg">
