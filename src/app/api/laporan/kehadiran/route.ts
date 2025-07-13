@@ -65,6 +65,21 @@ export async function GET(request: NextRequest) {
     const statsMap = new Map<string, { hadir: number, izin: number, sakit: number, alpha: number, total: number }>();
     students.forEach(s => statsMap.set(s.id, { hadir: 0, izin: 0, sakit: 0, alpha: 0, total: 0 }));
 
+    // Ambil total jadwal untuk setiap siswa dalam rentang waktu
+    const totalJadwalQuery = await dataSource.query(`
+        SELECT jp."kelas", COUNT(DISTINCT jp.id) AS "totalSesi"
+        FROM jadwal_pelajaran jp
+        WHERE jp.kelas IN (:...kelasIds)
+        GROUP BY jp."kelas"
+    `, [ [...new Set(students.map(s => s.kelasId))] ]);
+    
+    const sesiPerKelas = new Map<string, number>();
+    totalJadwalQuery.forEach((item: { kelas: string, totalSesi: string }) => {
+        // Asumsi 4 minggu per bulan, dan 6 bulan per semester
+        const totalSesiSemester = parseInt(item.totalSesi, 10) * 4 * 6;
+        sesiPerKelas.set(item.kelas, totalSesiSemester);
+    });
+
     attendanceRecords.forEach(rec => {
         const stat = statsMap.get(rec.siswaId);
         if (stat) {
@@ -72,19 +87,20 @@ export async function GET(request: NextRequest) {
             else if (rec.statusKehadiran === 'Izin') stat.izin++;
             else if (rec.statusKehadiran === 'Sakit') stat.sakit++;
             else if (rec.statusKehadiran === 'Alpha') stat.alpha++;
-            stat.total++;
         }
     });
 
     const studentStats = students.map(s => {
         const stat = statsMap.get(s.id)!;
+        const totalPertemuan = sesiPerKelas.get(s.kelasId || "") || (stat.hadir + stat.izin + stat.sakit + stat.alpha);
         return {
             id: s.id,
             name: s.fullName || s.name || "Nama Tidak Ada",
             nis: s.nis || null,
             kelas: s.kelasId || "N/A",
             ...stat,
-            persentaseKehadiran: stat.total > 0 ? (stat.hadir / stat.total) * 100 : 0,
+            total: totalPertemuan,
+            persentaseKehadiran: totalPertemuan > 0 ? (stat.hadir / totalPertemuan) * 100 : 0,
         }
     }).sort((a, b) => b.alpha - a.alpha || a.persentaseKehadiran - b.persentaseKehadiran);
 
@@ -107,7 +123,7 @@ export async function GET(request: NextRequest) {
     });
 
     const trendData = Object.entries(trendMap).map(([monthKey, data]) => ({
-      name: format(new Date(monthKey), 'MMM yy'),
+      name: format(new Date(monthKey + '-02'), 'MMM yy'), // use day 2 to avoid timezone issues
       Kehadiran: data.total > 0 ? parseFloat(((data.hadir / data.total) * 100).toFixed(1)) : 0,
     }));
 

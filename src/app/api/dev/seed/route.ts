@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getInitializedDataSource } from "@/lib/data-source";
 import { In, Not } from "typeorm";
 import bcrypt from "bcryptjs";
+import { format, subDays, addDays } from 'date-fns';
 
 // Import all entities
 import { UserEntity } from "@/entities/user.entity";
@@ -209,22 +210,34 @@ export async function GET(request: NextRequest) {
         }
         console.log(`${createdJadwal.length} jadwal pelajaran berhasil dibuat.`);
         
-        // --- Seed Absensi ---
+        // --- Seed Absensi (diperkaya) ---
         const absensiRepo = queryRunner.manager.getRepository(AbsensiSiswaEntity);
         let createdAbsensiCount = 0;
         const absensiStatuses: StatusKehadiran[] = ["Hadir", "Hadir", "Hadir", "Hadir", "Hadir", "Hadir", "Sakit", "Izin", "Alpha"];
-        for (const jadwal of createdJadwal.slice(0, 50)) { // Ambil 50 jadwal acak untuk diisi absensinya
+        
+        for (const jadwal of createdJadwal) { 
             const siswaDiKelas = createdSiswa.filter(s => s.kelasId === jadwal.kelas);
-            for(const siswa of siswaDiKelas) {
-                const status = absensiStatuses[Math.floor(Math.random() * absensiStatuses.length)];
-                const newAbsensi = absensiRepo.create({
-                    siswaId: siswa.id,
-                    jadwalPelajaranId: jadwal.id,
-                    tanggalAbsensi: new Date().toISOString().split('T')[0],
-                    statusKehadiran: status
-                });
-                await absensiRepo.save(newAbsensi);
-                createdAbsensiCount++;
+            // Buat data absensi untuk 2 bulan terakhir
+            for (let d = 0; d < 60; d++) {
+                const tanggalAbsensi = subDays(new Date(), d);
+                // Hanya buat absensi jika hari sama dengan hari jadwal
+                if (format(tanggalAbsensi, 'eeee', { locale: { code: 'id' } }) === jadwal.hari) {
+                    for(const siswa of siswaDiKelas) {
+                        const status = absensiStatuses[Math.floor(Math.random() * absensiStatuses.length)];
+                        // Hindari membuat duplikat
+                        const exists = await absensiRepo.findOne({where: {siswaId: siswa.id, jadwalPelajaranId: jadwal.id, tanggalAbsensi: format(tanggalAbsensi, 'yyyy-MM-dd')}});
+                        if(!exists) {
+                            const newAbsensi = absensiRepo.create({
+                                siswaId: siswa.id,
+                                jadwalPelajaranId: jadwal.id,
+                                tanggalAbsensi: format(tanggalAbsensi, 'yyyy-MM-dd'),
+                                statusKehadiran: status
+                            });
+                            await absensiRepo.save(newAbsensi);
+                            createdAbsensiCount++;
+                        }
+                    }
+                }
             }
         }
         console.log(`${createdAbsensiCount} absensi berhasil dibuat.`);
@@ -436,5 +449,3 @@ export async function GET(request: NextRequest) {
         await queryRunner.release();
     }
 }
-
-    

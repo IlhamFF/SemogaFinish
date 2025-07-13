@@ -39,8 +39,16 @@ interface ReportData {
   trendData: TrendData[];
 }
 
-const TAHUN_AJARAN_OPTIONS = ["2023/2024", "2022/2023", "2021/2022"];
 const SEMESTER_OPTIONS = ["Genap", "Ganjil"];
+
+const generateTahunAjaranOptions = () => {
+    const currentYear = new Date().getFullYear();
+    const isNewAcademicYear = new Date().getMonth() >= 6; // Anggap tahun ajaran baru mulai Juli
+    const startYear = isNewAcademicYear ? currentYear : currentYear - 1;
+    return Array.from({ length: 4 }, (_, i) => `${startYear - i}/${startYear - i + 1}`);
+};
+
+const TAHUN_AJARAN_OPTIONS = generateTahunAjaranOptions();
 
 const chartConfig = {
   Kehadiran: { label: "Kehadiran (%)", color: "hsl(var(--primary))" },
