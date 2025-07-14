@@ -5,6 +5,7 @@ import { getInitializedDataSource } from "@/lib/data-source";
 import { In, Not } from "typeorm";
 import bcrypt from "bcryptjs";
 import { format, subDays, addDays } from 'date-fns';
+import { id as localeID } from 'date-fns/locale';
 
 // Import all entities
 import { UserEntity } from "@/entities/user.entity";
@@ -116,17 +117,19 @@ export async function GET(request: NextRequest) {
     try {
         console.log("--- Memulai Proses Seeding ---");
 
-        // --- Hapus Data Lama (kecuali superadmin) ---
+        // --- Hapus Data Lama (kecuali superadmin dan admin) ---
         console.log("Menghapus data lama...");
-        const superAdmin = await queryRunner.manager.findOne(UserEntity, { where: { role: 'superadmin' } });
+        const adminUsers = await queryRunner.manager.find(UserEntity, { where: { role: In(['superadmin', 'admin']) } });
+        const adminIdsToKeep = adminUsers.map(u => u.id);
+
         const tablesToClear = [
             "nilai_semester_siswa", "absensi_siswa", "bank_soal_test", "test_submissions", "tugas_submissions", "soal", "tugas", "tests", "jadwal_pelajaran", "slot_waktu", "ruangan", "mata_pelajaran"
         ];
         for (const table of tablesToClear) {
-            await queryRunner.query(`DELETE FROM ${table};`);
+            await queryRunner.query(`TRUNCATE TABLE "${table}" RESTART IDENTITY CASCADE;`);
         }
-        if (superAdmin) {
-            await queryRunner.manager.delete(UserEntity, { id: Not(superAdmin.id) });
+        if (adminIdsToKeep.length > 0) {
+            await queryRunner.manager.delete(UserEntity, { id: Not(In(adminIdsToKeep)) });
         } else {
             await queryRunner.manager.clear(UserEntity);
         }
@@ -221,7 +224,7 @@ export async function GET(request: NextRequest) {
             for (let d = 0; d < 60; d++) {
                 const tanggalAbsensi = subDays(new Date(), d);
                 // Hanya buat absensi jika hari sama dengan hari jadwal
-                if (format(tanggalAbsensi, 'eeee', { locale: { code: 'id' } }) === jadwal.hari) {
+                if (format(tanggalAbsensi, 'eeee', { locale: localeID }) === jadwal.hari) {
                     for(const siswa of siswaDiKelas) {
                         const status = absensiStatuses[Math.floor(Math.random() * absensiStatuses.length)];
                         // Hindari membuat duplikat
@@ -449,3 +452,5 @@ export async function GET(request: NextRequest) {
         await queryRunner.release();
     }
 }
+
+    
