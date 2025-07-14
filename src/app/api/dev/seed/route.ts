@@ -152,9 +152,23 @@ export async function GET(request: NextRequest) {
         const slotWaktuRepo = queryRunner.manager.getRepository(SlotWaktuEntity);
         const createdSlots = await slotWaktuRepo.save(SLOT_WAKTU_DATA.map(s => slotWaktuRepo.create(s)));
         console.log(`${createdSlots.length} slot waktu berhasil dibuat.`);
+        
+        const userRepo = queryRunner.manager.getRepository(UserEntity);
+
+        // --- Seed Admin & Pimpinan ---
+        const adminSeed = userRepo.create({
+            fullName: "Admin Sekolah", email: "admin@azbail.sch.id", passwordHash: hashedPassword, role: 'admin' as Role, isVerified: true, emailVerified: new Date(), nip: `ADM${Date.now()}`
+        });
+        await userRepo.save(adminSeed);
+        console.log(`Akun Admin berhasil dibuat.`);
+
+        const pimpinanSeed = userRepo.create({
+            fullName: "Pimpinan Sekolah", email: "pimpinan@azbail.sch.id", passwordHash: hashedPassword, role: 'pimpinan' as Role, isVerified: true, emailVerified: new Date(), nip: `PIM${Date.now()}`
+        });
+        await userRepo.save(pimpinanSeed);
+        console.log(`Akun Pimpinan berhasil dibuat.`);
 
         // --- Seed Guru ---
-        const userRepo = queryRunner.manager.getRepository(UserEntity);
         const createdGurus = [];
         for (const [i, guru] of GURU_DATA.entries()) {
             const newGuru = userRepo.create({
@@ -440,7 +454,7 @@ export async function GET(request: NextRequest) {
         // Commit transaction
         await queryRunner.commitTransaction();
         console.log("--- Seeding Selesai ---");
-        return NextResponse.json({ message: `Database berhasil di-seed. ${createdGurus.length} guru, ${createdSiswa.length} siswa, ${createdTugasCount} tugas, dan data lainnya telah ditambahkan.` });
+        return NextResponse.json({ message: `Database berhasil di-seed. Data baru telah ditambahkan.` });
 
     } catch (error: any) {
         // Rollback transaction on error
@@ -452,5 +466,3 @@ export async function GET(request: NextRequest) {
         await queryRunner.release();
     }
 }
-
-    
