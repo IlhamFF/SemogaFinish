@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     const semuaJadwal = await jadwalRepo.find({
         relations: ["guru", "ruangan", "slotWaktu", "mapel"],
-        order: { hari: "ASC", waktuMulai: "ASC" } // Assuming slotWaktu has waktuMulai
+        order: { hari: "ASC", "slotWaktu.waktuMulai": "ASC" }
     });
 
     const conflicts: { guru: string[], ruangan: string[] } = {

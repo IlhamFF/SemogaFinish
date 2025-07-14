@@ -96,8 +96,8 @@ export async function POST(request: NextRequest) {
     let createdCount = 0;
     
     // Deleting existing schedules for the classes in the import to prevent conflicts
-    const uniqueKelasInImport = [...new Set(jadwalToCreate.map(j => j.kelas))];
-    await jadwalRepo.delete({ kelas: In(uniqueKelasInImport as string[]) });
+    // const uniqueKelasInImport = [...new Set(jadwalToCreate.map(j => j.kelas))];
+    // await jadwalRepo.delete({ kelas: In(uniqueKelasInImport as string[]) });
     
     // Save in chunks to avoid overwhelming the DB, although for a few hundred rows, one go is fine.
     try {
