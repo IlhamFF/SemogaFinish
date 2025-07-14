@@ -7,6 +7,7 @@ import { AbsensiSiswaEntity } from "@/entities/absensi-siswa.entity";
 import { getAuthenticatedUser } from "@/lib/auth-utils-node";
 import { Like, FindOptionsWhere, In } from "typeorm";
 import { startOfMonth, endOfMonth, eachMonthOfInterval, format } from 'date-fns';
+import { JadwalPelajaranEntity } from "@/entities/jadwal-pelajaran.entity";
 
 export async function GET(request: NextRequest) {
   const authenticatedUser = getAuthenticatedUser(request);
@@ -66,12 +67,14 @@ export async function GET(request: NextRequest) {
     students.forEach(s => statsMap.set(s.id, { hadir: 0, izin: 0, sakit: 0, alpha: 0, total: 0 }));
 
     // Ambil total jadwal untuk setiap siswa dalam rentang waktu
-    const totalJadwalQuery = await dataSource.query(`
-        SELECT jp."kelas", COUNT(DISTINCT jp.id) AS "totalSesi"
-        FROM jadwal_pelajaran jp
-        WHERE jp.kelas IN (:...kelasIds)
-        GROUP BY jp."kelas"
-    `, [ [...new Set(students.map(s => s.kelasId))] ]);
+    const kelasIds = [...new Set(students.map(s => s.kelasId).filter(Boolean))] as string[];
+    const totalJadwalQuery = await dataSource.getRepository(JadwalPelajaranEntity)
+        .createQueryBuilder("jp")
+        .select(`jp.kelas`, "kelas")
+        .addSelect(`COUNT(DISTINCT jp.id)`, "totalSesi")
+        .where(`jp.kelas IN (:...kelasIds)`, { kelasIds })
+        .groupBy(`jp.kelas`)
+        .getRawMany();
     
     const sesiPerKelas = new Map<string, number>();
     totalJadwalQuery.forEach((item: { kelas: string, totalSesi: string }) => {
