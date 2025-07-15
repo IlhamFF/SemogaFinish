@@ -70,10 +70,10 @@ export async function GET(request: NextRequest) {
     const kelasIds = [...new Set(students.map(s => s.kelasId).filter(Boolean))] as string[];
     const totalJadwalQuery = await dataSource.getRepository(JadwalPelajaranEntity)
         .createQueryBuilder("jp")
-        .select(`jp.kelas`, "kelas")
-        .addSelect(`COUNT(DISTINCT jp.id)`, "totalSesi")
-        .where(`jp.kelas IN (:...kelasIds)`, { kelasIds })
-        .groupBy(`jp.kelas`)
+        .select("jp.kelas", "kelas")
+        .addSelect("COUNT(DISTINCT jp.id)", "totalSesi")
+        .where("jp.kelas IN (:...kelasIds)", { kelasIds })
+        .groupBy("jp.kelas")
         .getRawMany();
     
     const sesiPerKelas = new Map<string, number>();
