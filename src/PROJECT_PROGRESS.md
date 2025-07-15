@@ -1,4 +1,3 @@
-
 # Checklist Perkembangan Proyek EduCentral SMA Az-Bail
 
 Ini adalah ringkasan progres pengembangan aplikasi.
