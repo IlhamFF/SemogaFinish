@@ -238,25 +238,25 @@ export default function AdminDashboardPage() {
                 )}
             </CardContent>
         </Card>
-      </div>
+      {/* </div>
 
       {isDev && (
-        <Card className="shadow-lg border-dashed border-primary/50">
-          <CardHeader>
-            <CardTitle className="flex items-center text-primary"><Database className="mr-2 h-5 w-5" /> Tindakan Developer</CardTitle>
-            <CardDescription>Aksi ini hanya tersedia dalam mode pengembangan.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={handleSeedDatabase} disabled={isSeeding}>
-              {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Database className="mr-2 h-4 w-4" />}
-              Seed Database dengan Data Dummy
-            </Button>
-            <p className="text-xs text-muted-foreground mt-2">
-              Aksi ini akan menghapus semua data (kecuali superadmin) dan mengisi ulang dengan data dummy baru (termasuk jadwal, tugas, dan nilai).
-            </p>
-          </CardContent>
-        </Card>
+        // <Card className="shadow-lg border-dashed border-primary/50">
+        //   <CardHeader>
+        //     <CardTitle className="flex items-center text-primary"><Database className="mr-2 h-5 w-5" /> Tindakan Developer</CardTitle>
+        //     <CardDescription>Aksi ini hanya tersedia dalam mode pengembangan.</CardDescription>
+        //   </CardHeader>
+        //   <CardContent>
+        //     <Button onClick={handleSeedDatabase} disabled={isSeeding}>
+        //       {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Database className="mr-2 h-4 w-4" />}
+        //       Seed Database dengan Data Dummy
+        //     </Button>
+        //     <p className="text-xs text-muted-foreground mt-2">
+        //       Aksi ini akan menghapus semua data (kecuali superadmin) dan mengisi ulang dengan data dummy baru (termasuk jadwal, tugas, dan nilai).
+        //     </p>
+        //   </CardContent>
+        // </Card>
       )}
-    </div>
+    </div> */}
   );
 }

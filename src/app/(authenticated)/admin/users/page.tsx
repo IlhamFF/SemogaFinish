@@ -256,9 +256,9 @@ export default function AdminUsersPage() {
           <p className="text-muted-foreground">Lihat, buat, dan kelola profil pengguna di sistem.</p>
         </div>
         <div className="flex gap-2">
-           <Button onClick={() => setIsImportDialogOpen(true)} variant="outline" disabled={pageLoading}>
+           {/* <Button onClick={() => setIsImportDialogOpen(true)} variant="outline" disabled={pageLoading}>
             <Upload className="mr-2 h-4 w-4" /> Impor Pengguna
-          </Button>
+          </Button> */}
           <Button onClick={handleCreateUser} disabled={pageLoading}>
             <UserPlus className="mr-2 h-4 w-4" /> Buat Pengguna Baru
           </Button>

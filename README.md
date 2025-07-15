@@ -1,187 +1,219 @@
 
-# EduCentral SMA Az-Bail
+# 🎓 EduCentral SMA Az-Bail
 
-Selamat datang di EduCentral, Sistem Informasi Manajemen Pendidikan (SIMDIK) yang dirancang khusus untuk memenuhi kebutuhan SMA Az-Bail. Aplikasi ini menyediakan platform terpusat dan komprehensif untuk mengelola semua aspek kegiatan akademik dan administratif, menghubungkan admin, pimpinan, guru, dan siswa dalam satu ekosistem digital yang efisien.
+**Selamat datang di EduCentral**, Sistem Informasi Manajemen Pendidikan (SIMDIK) yang dirancang khusus untuk memenuhi kebutuhan **SMA Az-Bail**.  
+Aplikasi ini menyatukan **admin, pimpinan, guru, dan siswa** dalam satu ekosistem digital yang efisien dan terintegrasi.
 
-![Dashboard Admin](https://placehold.co/800x400.png?text=Screenshot+Dashboard+Admin)
+---
 
-## Daftar Isi
+## 📑 Daftar Isi
 
-- [Fitur Utama](#fitur-utama)
-- [Tumpukan Teknologi](#tumpukan-teknologi)
-- [Struktur Proyek](#struktur-proyek)
-- [Panduan Instalasi Lokal](#panduan-instalasi-lokal)
-  - [Prasyarat](#prasyarat)
-  - [Langkah-langkah Instalasi](#langkah-langkah-instalasi)
-- [Akun Demo](#akun-demo)
+- [🎯 Fitur Utama](#-fitur-utama)  
+- [🚀 Tumpukan Teknologi](#-tumpukan-teknologi)  
+- [📁 Struktur Proyek](#-struktur-proyek)  
+- [🛠️ Panduan Instalasi Lokal](#️-panduan-instalasi-lokal)  
+- [🧑‍💻 Akun Demo](#-akun-demo)  
+- [📚 Dokumentasi Tambahan](#-dokumentasi-tambahan)  
+- [🧩 Kontribusi](#-kontribusi)
 
-## Fitur Utama
+---
 
-Aplikasi ini mencakup berbagai modul yang dirancang untuk setiap peran pengguna, memastikan alur kerja yang lancar dan terintegrasi.
+## 🎯 Fitur Utama
 
-- **Manajemen Autentikasi**:
-  - Registrasi & Login berbasis JWT.
-  - Verifikasi email dan alur reset kata sandi.
-  - Proteksi rute berdasarkan peran (Admin, Guru, Siswa, Pimpinan).
+### 🔐 Manajemen Autentikasi
+- Registrasi & Login berbasis JWT  
+- Verifikasi email & reset kata sandi  
+- Proteksi rute berdasarkan peran (Admin, Guru, Siswa, Pimpinan)
 
-- **Dasbor Dinamis**:
-  - **Admin**: Statistik pengguna, mata pelajaran, dan pendaftaran baru.
-  - **Guru**: Ringkasan jadwal mengajar, tugas, dan test.
-  - **Siswa**: Agenda pelajaran, tugas, dan ujian mendatang.
-  - **Pimpinan**: Visualisasi data kinerja sekolah, rata-rata nilai, dan peringkat siswa.
+### 📊 Dasbor Dinamis
+- **Admin:** Statistik pengguna & pendaftaran
+- **Guru:** Jadwal, tugas, dan test
+- **Siswa:** Agenda belajar, tugas & ujian
+- **Pimpinan:** Visualisasi data sekolah & performa siswa
 
-- **Manajemen Kurikulum (Admin)**:
-  - CRUD penuh untuk SKL, Capaian Pembelajaran, Materi Ajar, Struktur Kurikulum, Silabus, dan RPP.
+### 🧠 Manajemen Kurikulum (Admin)
+- CRUD: SKL, CP, Materi, Struktur Kurikulum, Silabus, RPP
 
-- **Manajemen Pengguna & Sekolah (Admin)**:
-  - CRUD profil pengguna dan verifikasi siswa.
-  - Pengelolaan mata pelajaran, ruangan, dan jadwal pelajaran dengan deteksi konflik.
-  - Fitur impor data untuk pengguna dan jadwal.
+### 👥 Manajemen Pengguna & Sekolah (Admin)
+- CRUD profil pengguna
+- Verifikasi siswa
+- Manajemen pelajaran, ruangan, jadwal dengan deteksi konflik
+- Impor data pengguna & jadwal
 
-- **Modul Guru**:
-  - Melihat jadwal mengajar.
-  - Upload materi, membuat tugas, dan bank soal.
-  - Melakukan absensi harian dan rekapitulasi.
-  - Input nilai semester dan mencetak rapor.
+### 🧑‍🏫 Modul Guru
+- Jadwal mengajar
+- Upload materi, buat tugas & soal
+- Absensi harian & rekap
+- Input nilai & cetak rapor
 
-- **Modul Siswa**:
-  - Melihat jadwal, tugas, dan materi pelajaran.
-  - Mengumpulkan tugas secara online.
-  - Mengerjakan ujian online.
-  - Melihat transkrip nilai dan mencetak rapor.
+### 🎓 Modul Siswa
+- Lihat jadwal, tugas & materi
+- Kumpulkan tugas & kerjakan ujian online
+- Akses transkrip & cetak rapor
 
-- **Modul Pimpinan**:
-  - Akses ke laporan analitik kinerja akademik dan kehadiran.
-  - Visualisasi data sekolah dalam bentuk grafik dan tabel.
-  - Fitur untuk mencetak laporan resmi.
+### 🏫 Modul Pimpinan
+- Laporan performa akademik & kehadiran
+- Visualisasi data sekolah (grafik & tabel)
+- Cetak laporan resmi
 
-## Tumpukan Teknologi
+---
 
-Proyek ini dibangun menggunakan tumpukan teknologi modern yang tangguh dan skalabel.
+## 🚀 Tumpukan Teknologi
 
-- **Framework**: [Next.js](https://nextjs.org/) (dengan App Router)
-- **Bahasa**: [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Komponen UI**: [ShadCN/UI](https://ui.shadcn.com/) & [Lucide Icons](https://lucide.dev/)
-- **Manajemen State**: React Hooks & Context API
-- **Form**: [React Hook Form](https://react-hook-form.com/) & [Zod](https://zod.dev/) (untuk validasi)
-- **Database**: [PostgreSQL](https://www.postgresql.org/)
-- **ORM**: [TypeORM](https://typeorm.io/)
-- **Autentikasi**: Implementasi kustom dengan JWT & Cookies
-- **Layanan Email**: [Nodemailer](https://nodemailer.com/) (untuk verifikasi & reset password)
-- **Visualisasi Data**: [Recharts](https://recharts.org/)
+| Teknologi | Deskripsi |
+|----------|-----------|
+| **Next.js** | Framework React modern dengan App Router |
+| **TypeScript** | Superset JavaScript yang aman |
+| **Tailwind CSS** | Styling utility-first |
+| **ShadCN/UI + Lucide** | Komponen UI modern & ikon |
+| **React Hook Form + Zod** | Form handling & validasi |
+| **PostgreSQL + TypeORM** | Database relasional & ORM |
+| **JWT & Cookies** | Autentikasi kustom |
+| **Nodemailer** | Layanan email verifikasi |
+| **Recharts** | Visualisasi data |
+| **npm / pnpm** | Manajer dependensi |
 
-## Struktur Proyek
+---
 
-Struktur folder utama proyek diatur sebagai berikut untuk menjaga keterbacaan dan skalabilitas.
+## 📁 Struktur Proyek
 
 ```
 /
-├── public/               # Aset statis (gambar, logo, file uploads)
+├── public/              # Aset statis
 ├── src/
-│   ├── app/              # Rute utama aplikasi (App Router)
-│   │   ├── (authenticated)/ # Grup rute yang memerlukan login
-│   │   │   ├── admin/       # Halaman khusus Admin
-│   │   │   ├── guru/        # Halaman khusus Guru
-│   │   │   ├── siswa/       # Halaman khusus Siswa
-│   │   │   └── ...
-│   │   ├── (auth)/          # Grup rute untuk autentikasi (login, register)
-│   │   └── api/             # Backend API Routes
-│   ├── components/       # Komponen React (UI, Layout, Form)
-│   ├── entities/         # Definisi entitas TypeORM untuk database
-│   ├── hooks/            # Custom React Hooks (e.g., useAuth)
-│   ├── lib/              # Fungsi utilitas, konstanta, koneksi database
-│   └── types/            # Definisi tipe TypeScript
-├── .env.local.example    # Contoh file environment variable
-└── ...                   # File konfigurasi lainnya (Next.js, Tailwind, dll.)
+│   ├── app/             # Rute utama (Next.js App Router)
+│   │   ├── (authenticated)/ # Halaman per peran
+│   │   │   ├── admin/
+│   │   │   ├── guru/
+│   │   │   ├── siswa/
+│   │   ├── (auth)/        # Login, register, dll
+│   │   └── api/           # API routes (serverless)
+│   ├── components/        # Komponen UI
+│   ├── entities/          # Model database (TypeORM)
+│   ├── hooks/             # Custom hooks
+│   ├── lib/               # Utilitas & konfigurasi
+│   └── types/             # Definisi tipe global
+├── .env.local            # Variabel lingkungan pribadi
+├── .env.local.example    # Template env
+├── next.config.ts        # Konfigurasi Next.js
+├── tailwind.config.ts    # Konfigurasi Tailwind
+├── package.json          # Skrip & dependensi
+├── tsconfig.json         # Konfigurasi TypeScript
+└── apphosting.yaml       # Konfigurasi deployment
 ```
 
-## Panduan Instalasi Lokal
+---
 
-### Prasyarat
+## 🛠️ Panduan Instalasi Lokal
 
-Pastikan perangkat lunak berikut sudah terinstal di komputer Anda:
-- **Node.js**: `v18.x` atau lebih baru
-- **Git**: Untuk meng-clone repositori
-- **PostgreSQL**: Database yang digunakan aplikasi
+### 📋 Prasyarat
 
-### Langkah-langkah Instalasi
+Pastikan perangkat Anda telah terinstal:
+- Node.js (v18.x atau lebih)
+- Git
+- PostgreSQL
 
-1.  **Clone Repositori**
-    ```bash
-    git clone [URL_REPOSITORI_PROYEK]
-    cd [NAMA_FOLDER_PROYEK]
-    ```
+### 🔧 Langkah Instalasi
 
-2.  **Setup Database PostgreSQL**
-    - Buka `psql` atau pgAdmin.
-    - Buat database baru untuk aplikasi ini.
-      ```sql
-      CREATE DATABASE educentral;
-      ```
+1. **Clone repositori**
+   ```bash
+   git clone [URL_REPOSITORI_PROYEK]
+   cd [NAMA_FOLDER_PROYEK]
+   ```
 
-3.  **Konfigurasi Environment Variable**
-    - Buat file `.env.local` di root proyek.
-    - Salin konten dari file `env.local.example` (jika ada) atau gunakan template di bawah ini.
-    - Sesuaikan nilai variabel dengan konfigurasi lokal Anda.
+2. **Buat database PostgreSQL**
+   ```sql
+   CREATE DATABASE educentral;
+   ```
 
-    ```env
-    # PostgreSQL Database Connection
-    POSTGRES_HOST=localhost
-    POSTGRES_PORT=5432
-    POSTGRES_USER=postgres
-    POSTGRES_PASSWORD=password_anda
-    POSTGRES_DB=educentral
+3. **Salin dan edit `.env.local`**
+   ```env
+   POSTGRES_HOST=localhost
+   POSTGRES_PORT=5432
+   POSTGRES_USER=postgres
+   POSTGRES_PASSWORD=your_password
+   POSTGRES_DB=educentral
 
-    # JWT Secret for Authentication
-    JWT_SECRET=ganti-dengan-kunci-rahasia-yang-sangat-kuat-dan-aman
+   JWT_SECRET=secret-yang-kuat
 
-    # Application URL
-    NEXT_PUBLIC_APP_URL=http://localhost:3000
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-    # SMTP Configuration for Email Service (contoh menggunakan Ethereal)
-    SMTP_HOST=smtp.ethereal.email
-    SMTP_PORT=587
-    SMTP_USER=user@ethereal.email
-    SMTP_PASS=password_ethereal
-    EMAIL_FROM="EduCentral" <noreply@example.com>
-    ```
+   SMTP_HOST=smtp.ethereal.email
+   SMTP_PORT=587
+   SMTP_USER=user@ethereal.email
+   SMTP_PASS=password_ethereal
+   EMAIL_FROM="EduCentral" <noreply@example.com>
+   ```
 
-4.  **Buat Folder Upload**
-    Aplikasi ini menyimpan file unggahan secara lokal. Buat folder `uploads` di dalam direktori `public`.
-    ```bash
-    mkdir -p public/uploads
-    ```
-    Folder ini sudah ada di `.gitignore` untuk mencegah file unggahan masuk ke repositori.
+4. **Buat folder upload**
+   ```bash
+   mkdir -p public/uploads
+   ```
 
-5.  **Instalasi Dependensi**
-    ```bash
-    npm install
-    ```
-    Atau jika Anda menggunakan `pnpm`:
-    ```bash
-    pnpm install
-    ```
+5. **Instal dependensi**
+   ```bash
+   npm install
+   # atau
+   pnpm install
+   ```
 
-6.  **Jalankan Aplikasi**
-    Server pengembangan akan berjalan dengan fitur *hot-reloading*.
-    ```bash
-    npm run dev
-    ```
-    Buka browser Anda dan navigasi ke [http://localhost:3000](http://localhost:3000).
+6. **Jalankan aplikasi**
+   ```bash
+   npm run dev
+   ```
 
-7.  **Isi Database dengan Data Dummy (Opsional)**
-    Untuk memulai dengan data yang sudah ada (pengguna, jadwal, nilai, dll.), Anda bisa menjalankan proses *seeding* database.
-    - Login sebagai **Super Admin** (`superadmin@azbail.sch.id`).
-    - Navigasi ke **Dasbor Admin**.
-    - Klik tombol **"Seed Database dengan Data Dummy"**.
+7. **Akses di browser**
+   > http://localhost:3000
 
-## Akun Demo
+8. **(Opsional) Seed data dummy**
+   - Login sebagai Super Admin
+   - Masuk ke Dasbor Admin
+   - Klik **"Seed Database dengan Data Dummy"**
 
-Setelah menjalankan *seeding*, Anda dapat menggunakan akun-akun berikut untuk menguji setiap peran. Kata sandi untuk semua akun adalah `password`.
+---
 
-- **Super Admin**: `superadmin@azbail.sch.id`
-- **Admin**: `admin@azbail.sch.id`
-- **Pimpinan**: `pimpinan@azbail.sch.id`
-- **Guru**: `guru1@azbail.sch.id`, `guru2@azbail.sch.id`, dst.
-- **Siswa**: `siswa1@azbail.sch.id`, `siswa2@azbail.sch.id`, dst.
+## 🧑‍💻 Akun Demo
+
+| Peran      | Email |
+|------------|-------------------------------|
+| Super Admin | `superadmin@azbail.sch.id` |
+| Admin       | `admin@azbail.sch.id`       |
+| Pimpinan    | `pimpinan@azbail.sch.id`    |
+| Guru        | `guru1@azbail.sch.id`, `guru2@...` |
+| Siswa       | `siswa1@azbail.sch.id`, `siswa2@...` |
+
+> **Password semua akun:** `password`
+
+---
+
+## 📚 Dokumentasi Tambahan
+
+- `LOCAL_SETUP_GUIDE.md` – Panduan instalasi lokal lanjutan  
+- `STORAGE_SETUP.md` – Panduan pengelolaan file  
+- `PROJECT_PROGRESS.md` – Catatan perkembangan proyek
+
+---
+
+## 🧩 Kontribusi
+
+Kami sangat terbuka untuk kontribusi!  
+Berikut langkah-langkahnya:
+
+1. Fork repositori ini
+2. Buat branch baru
+   ```bash
+   git checkout -b fitur-keren-baru
+   ```
+3. Lakukan perubahan & commit
+   ```bash
+   git commit -m "feat: Menambahkan fitur keren baru"
+   ```
+4. Push ke GitHub
+   ```bash
+   git push origin fitur-keren-baru
+   ```
+5. Buka Pull Request 🎉
+
+---
+
+> **EduCentral – Meningkatkan manajemen pendidikan dengan teknologi.**

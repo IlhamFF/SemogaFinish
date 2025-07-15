@@ -720,9 +720,9 @@ export default function AdminKurikulumPage() {
           </h1>
           <p className="text-muted-foreground mt-1">Rancang standar, struktur, silabus, RPP, dan materi ajar.</p>
         </div>
-        <Button onClick={() => toast({ title: "Fitur Dalam Pengembangan" })} disabled>
+        {/* <Button onClick={() => toast({ title: "Fitur Dalam Pengembangan" })} disabled>
           <PlusCircle className="mr-2 h-4 w-4" /> Buat Kurikulum Baru (Holistik)
-        </Button>
+        </Button> */}
       </div>
       
       <div className="space-y-8 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
@@ -731,7 +731,7 @@ export default function AdminKurikulumPage() {
             <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Button variant="outline" onClick={() => setIsSKLDialogOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Layers className="mr-3 h-5 w-5" /><div><p className="font-semibold">Standar Kompetensi Lulusan (SKL)</p><p className="text-xs text-muted-foreground">Definisikan profil lulusan.</p></div></Button>
               <Button variant="outline" onClick={() => setIsCPDialogOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><FileText className="mr-3 h-5 w-5" /><div><p className="font-semibold">Capaian Pembelajaran (CP)</p><p className="text-xs text-muted-foreground">Tetapkan target per fase/tingkat.</p></div></Button>
-              <Button variant="outline" disabled className="justify-start text-left h-auto py-3"><GitMerge className="mr-3 h-5 w-5" /><div><p className="font-semibold">Pemetaan & Analisis SKL-CP</p><p className="text-xs text-muted-foreground">Hubungkan & analisis keselarasan.</p></div></Button>
+              {/* <Button variant="outline" disabled className="justify-start text-left h-auto py-3"><GitMerge className="mr-3 h-5 w-5" /><div><p className="font-semibold">Pemetaan & Analisis SKL-CP</p><p className="text-xs text-muted-foreground">Hubungkan & analisis keselarasan.</p></div></Button> */}
             </CardContent>
           </Card>
           <Card className="shadow-xl">

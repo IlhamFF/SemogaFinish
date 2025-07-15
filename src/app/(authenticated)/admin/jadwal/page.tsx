@@ -248,11 +248,11 @@ export default function AdminJadwalPage() {
           <CardDescription>Kelola sumber daya seperti ruangan, dan periksa validitas jadwal untuk menghindari bentrok.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" disabled onClick={() => toast({ title: "Fitur Dalam Pengembangan" })} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Users className="mr-3 h-5 w-5" /><div><p className="font-semibold">Ketersediaan Guru</p><p className="text-xs text-muted-foreground">Lihat dan atur jadwal guru.</p></div></Button>
+            {/* <Button variant="outline" disabled onClick={() => toast({ title: "Fitur Dalam Pengembangan" })} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Users className="mr-3 h-5 w-5" /><div><p className="font-semibold">Ketersediaan Guru</p><p className="text-xs text-muted-foreground">Lihat dan atur jadwal guru.</p></div></Button> */}
             <Button variant="outline" onClick={() => setIsRuanganDialogOpen(true)} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200"><Building className="mr-3 h-5 w-5" /><div><p className="font-semibold">Manajemen Ruangan</p><p className="text-xs text-muted-foreground">Kelola daftar dan kapasitas.</p></div></Button>
             <Button variant="outline" onClick={handleCheckConflicts} className="justify-start text-left h-auto py-3 hover:-translate-y-1 transition-transform duration-200" disabled={isCheckingConflicts}>
                 {isCheckingConflicts ? <Loader2 className="mr-3 h-5 w-5 animate-spin"/> : <Search className="mr-3 h-5 w-5" />}
-                <div><p className="font-semibold">Deteksi Konflik</p><p className="text-xs text-muted-foreground">Periksa bentrok jadwal.</p></div>
+                {/* <div><p className="font-semibold">Deteksi Konflik</p><p className="text-xs text-muted-foreground">Periksa bentrok jadwal.</p></div> */}
             </Button>
         </CardContent>
       </Card>
